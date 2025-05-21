@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Coffee Shop POS</title>
     <style>
         :root {
@@ -18,19 +18,27 @@
             padding: 0;
             box-sizing: border-box;
             font-family: 'Helvetica Neue', Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            position: fixed;
         }
         
         body {
             background-color: var(--light);
             color: var(--dark);
-            height: 100vh;
-            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
         
         .container {
             display: flex;
-            height: 100vh;
-            max-height: 100vh;
+            flex: 1;
+            overflow: hidden;
         }
         
         /* Left Panel - Menu Items */
@@ -39,7 +47,9 @@
             background-color: white;
             border-right: 1px solid #e0e0e0;
             padding: 10px;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
         
         .category-tabs {
@@ -48,10 +58,12 @@
             margin-bottom: 15px;
             border-bottom: 1px solid #e0e0e0;
             padding-bottom: 10px;
+            flex-shrink: 0;
+            -webkit-overflow-scrolling: touch;
         }
         
         .category-tab {
-            padding: 10px 20px;
+            padding: 8px 15px;
             background-color: var(--light);
             border: none;
             border-radius: 20px;
@@ -60,6 +72,7 @@
             white-space: nowrap;
             font-weight: bold;
             color: var(--dark);
+            font-size: 14px;
         }
         
         .category-tab.active {
@@ -71,6 +84,9 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 12px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 10px;
         }
         
         .item-card {
@@ -81,10 +97,13 @@
             cursor: pointer;
             transition: transform 0.2s;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            min-height: 80px;
+            min-height: 44px;
+            min-width: 44px;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
         }
         
         .item-card:hover {
@@ -93,13 +112,13 @@
         }
         
         .item-name {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
             margin-bottom: 8px;
         }
         
         .item-price {
-            font-size: 14px;
+            font-size: 13px;
             color: var(--secondary);
         }
         
@@ -110,6 +129,7 @@
             flex-direction: column;
             background-color: #f5f5f5;
             padding: 15px;
+            overflow: hidden;
         }
         
         .order-header {
@@ -120,7 +140,7 @@
         }
         
         .order-title {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             color: var(--primary);
         }
@@ -132,12 +152,17 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            min-height: 44px;
+            min-width: 44px;
+            user-select: none;
+            -webkit-user-select: none;
         }
         
         .order-items {
             flex: 1;
             overflow-y: auto;
             margin-bottom: 15px;
+            -webkit-overflow-scrolling: touch;
         }
         
         .order-item {
@@ -181,6 +206,10 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            min-height: 44px;
+            min-width: 44px;
+            user-select: none;
+            -webkit-user-select: none;
         }
         
         .quantity-value {
@@ -227,6 +256,10 @@
             cursor: pointer;
             margin-top: 15px;
             transition: background-color 0.2s;
+            min-height: 44px;
+            min-width: 44px;
+            user-select: none;
+            -webkit-user-select: none;
         }
         
         .checkout-btn:hover {
@@ -235,7 +268,6 @@
         
         /* Payment Modal */
         .modal {
-            display: none;
             position: fixed;
             top: 0;
             left: 0;
@@ -243,16 +275,21 @@
             height: 100%;
             background-color: rgba(0,0,0,0.5);
             z-index: 100;
+            display: none;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
         }
         
         .modal-content {
             background-color: white;
             border-radius: 10px;
-            width: 80%;
+            width: 90%;
             max-width: 500px;
             padding: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         .payment-options {
@@ -268,6 +305,10 @@
             border-radius: 8px;
             text-align: center;
             cursor: pointer;
+            min-height: 44px;
+            min-width: 44px;
+            user-select: none;
+            -webkit-user-select: none;
         }
         
         .payment-option.selected {
@@ -289,6 +330,10 @@
             background-color: white;
             font-size: 18px;
             cursor: pointer;
+            min-height: 44px;
+            min-width: 44px;
+            user-select: none;
+            -webkit-user-select: none;
         }
         
         .action-buttons {
@@ -303,6 +348,10 @@
             border: none;
             font-weight: bold;
             cursor: pointer;
+            min-height: 44px;
+            min-width: 44px;
+            user-select: none;
+            -webkit-user-select: none;
         }
         
         .cancel-btn {
@@ -323,6 +372,7 @@
             background-color: var(--primary);
             color: white;
             padding: 10px 15px;
+            flex-shrink: 0;
         }
         
         .logo {
@@ -344,38 +394,42 @@
         }
         
         /* Add new styles for order log */
-        .order-log {
+        .order-log-container {
             display: none;
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
+            width: 100%;
         }
         
-        .order-log.active {
+        .order-log-container.active {
             display: block;
         }
         
         .order-log-item {
             background: white;
             padding: 20px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             width: 100%;
-            overflow: hidden;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
         }
         
         .order-log-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
             border-bottom: 2px solid var(--light);
         }
         
         .order-number {
-            font-size: 18px;
+            font-size: 22px;
             font-weight: bold;
             color: var(--primary);
             white-space: nowrap;
@@ -387,15 +441,15 @@
         }
         
         .order-log-items {
-            margin-left: 20px;
-            margin-bottom: 15px;
-            width: 100%;
+            margin-left: 25px;
+            margin-bottom: 20px;
+            width: calc(100% - 25px);
         }
         
         .order-log-item-row {
             display: flex;
             align-items: center;
-            padding: 8px 0;
+            padding: 12px 0;
             border-bottom: 1px dashed #eee;
             width: 100%;
         }
@@ -406,22 +460,26 @@
         
         .order-log-item-name {
             flex: 1;
-            margin: 0 10px;
+            margin: 0 20px;
             word-break: break-word;
+            font-size: 17px;
         }
         
         .order-log-item-options {
             color: #666;
-            font-size: 13px;
-            margin-left: 10px;
+            font-size: 15px;
+            margin-left: 15px;
             word-break: break-word;
+            flex: 1;
         }
         
         .order-log-item-quantity {
             color: #666;
-            min-width: 40px;
+            min-width: 60px;
             text-align: center;
             flex-shrink: 0;
+            font-size: 17px;
+            font-weight: bold;
         }
         
         .order-log-item-price {
@@ -438,18 +496,18 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 15px;
-            padding-top: 15px;
+            margin-top: 20px;
+            padding-top: 20px;
             border-top: 2px solid var(--light);
             font-weight: bold;
-            font-size: 16px;
+            font-size: 20px;
             width: 100%;
         }
         
         .order-log-payment {
             color: #666;
-            font-size: 14px;
-            margin-top: 5px;
+            font-size: 16px;
+            margin-top: 10px;
             word-break: break-word;
         }
         
@@ -953,18 +1011,20 @@
             closeCustomItemModal();
         }
 
-        // Generate progressive order number (0-100)
+        // Generate progressive order number
         function generateOrderNumber() {
-            // Get the last used order number from localStorage
-            let lastOrderNumber = parseInt(localStorage.getItem('lastOrderNumber') || '0');
+            // Get order history from localStorage
+            const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
             
-            // Increment the order number
-            lastOrderNumber = (lastOrderNumber + 1) % 101; // This will reset to 0 after reaching 100
+            if (orderHistory.length === 0) {
+                return 1; // Start with #1 if no orders exist
+            }
             
-            // Save the new order number
-            localStorage.setItem('lastOrderNumber', lastOrderNumber);
+            // Find the highest order number
+            const lastOrderNumber = Math.max(...orderHistory.map(order => order.orderNumber));
             
-            return lastOrderNumber;
+            // Return the next number
+            return lastOrderNumber + 1;
         }
 
         // Reset order history
@@ -1084,20 +1144,27 @@
                 ],
                 'Snacks': [
                     { name: 'Fries', price: 400 },
-                    { name: 'Nachos', price: 1200 },
                     { name: 'Edamame', price: 450 },
+                    { name: 'Nachos', price: 1200 },
                     { name: 'Ice Cream', price: 450, hasFlavor: true },
                     { name: 'Cake', price: 680, hasFlavor: true },
-                    { name: 'Whipped Cream', price: 50 }
                 ]
             };
             
             // Milk options
             const milkOptions = ['Normal', 'Oat', 'Soy'];
             const temperatureOptions = ['Hot', 'Iced'];
-            const jamOptions = ['Strawberry', 'Raspberry', 'Blueberry'];
+            const jamOptions = ['Strawberry', 'Raspberry', 'Marmelade'];
             const cakeOptions = ['Matcha', 'Cheesecake', 'Chocolate'];
-            const iceCreamOptions = ['Vanilla', 'Matcha', 'Cookies and Cream'];
+            const iceCreamOptions = ['Vanilla', 'Matcha', 'Cookies and Cream', 'Chocolate'];
+            
+            // Initialize current order with the next order number
+            currentOrder = {
+                items: [],
+                subtotal: 0,
+                total: 0,
+                orderNumber: generateOrderNumber()
+            };
             
             // Load menu items for the active category
             loadMenuItems(activeCategory);
@@ -1116,16 +1183,35 @@
             // Load menu items for a category
             function loadMenuItems(category) {
                 const itemsGrid = document.querySelector('.items-grid');
+                const orderLogContainer = document.querySelector('.order-log-container');
                 itemsGrid.innerHTML = '';
                 
                 if (category === 'Order Log') {
-                    displayOrderLog();
+                    itemsGrid.style.display = 'none';
+                    if (!orderLogContainer) {
+                        const newOrderLogContainer = document.createElement('div');
+                        newOrderLogContainer.className = 'order-log-container active';
+                        document.querySelector('.menu-panel').appendChild(newOrderLogContainer);
+                        displayOrderLog(newOrderLogContainer);
+                    } else {
+                        orderLogContainer.style.display = 'block';
+                        displayOrderLog(orderLogContainer);
+                    }
                     return;
                 }
                 
                 if (category === 'Settings') {
+                    itemsGrid.style.display = 'grid';
+                    if (orderLogContainer) {
+                        orderLogContainer.style.display = 'none';
+                    }
                     displaySettings();
                     return;
+                }
+                
+                itemsGrid.style.display = 'grid';
+                if (orderLogContainer) {
+                    orderLogContainer.style.display = 'none';
                 }
                 
                 menuData[category].forEach(item => {
@@ -1402,14 +1488,13 @@
             }
             
             // Display order log
-            function displayOrderLog() {
-                const itemsGrid = document.querySelector('.items-grid');
-                itemsGrid.innerHTML = '';
+            function displayOrderLog(container) {
+                container.innerHTML = '';
                 
                 const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
                 
                 if (orderHistory.length === 0) {
-                    itemsGrid.innerHTML = `
+                    container.innerHTML = `
                         <div class="order-log-item">
                             <div class="order-log-header">
                                 <div class="order-number">No Orders</div>
@@ -1450,7 +1535,7 @@
                         </div>
                     `;
                     
-                    itemsGrid.appendChild(orderLogItem);
+                    container.appendChild(orderLogItem);
                 });
             }
             
