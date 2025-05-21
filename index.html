@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Coffee Shop POS</title>
     <style>
         :root {
@@ -26,19 +29,22 @@
             width: 100%;
             overflow: hidden;
             position: fixed;
+            background-color: var(--light);
         }
         
         body {
-            background-color: var(--light);
             color: var(--dark);
             display: flex;
             flex-direction: column;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
         
         .container {
             display: flex;
             flex: 1;
             overflow: hidden;
+            width: 100%;
+            height: 100%;
         }
         
         /* Left Panel - Menu Items */
@@ -50,6 +56,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            height: 100%;
         }
         
         .category-tabs {
@@ -130,6 +137,7 @@
             background-color: #f5f5f5;
             padding: 15px;
             overflow: hidden;
+            height: 100%;
         }
         
         .order-header {
@@ -424,8 +432,14 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            padding-bottom: 15px;
+            padding: 15px;
             border-bottom: 2px solid var(--light);
+            border-radius: 8px 8px 0 0;
+            transition: background-color 0.3s ease;
+        }
+
+        .order-log-header.completed {
+            background-color: #e8f5e9;
         }
         
         .order-number {
@@ -611,13 +625,25 @@
         }
         
         /* Add new styles for settings */
-        .settings-panel {
+        .settings-container {
             display: none;
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             padding: 20px;
+            width: 100%;
         }
         
-        .settings-panel.active {
+        .settings-container.active {
             display: block;
+        }
+        
+        .settings-panel {
+            display: block;
+            padding: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
         }
         
         .settings-section {
@@ -626,6 +652,7 @@
             border-radius: 8px;
             margin-bottom: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            width: 100%;
         }
         
         .settings-title {
@@ -633,6 +660,50 @@
             font-weight: bold;
             color: var(--primary);
             margin-bottom: 15px;
+        }
+        
+        .float-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .float-input input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+            font-size: 14px;
+        }
+        
+        .revenue-display {
+            background: var(--light);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+            width: 100%;
+        }
+        
+        .revenue-display.active {
+            display: block;
+        }
+        
+        .revenue-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+        
+        .revenue-row.total {
+            font-weight: bold;
+            font-size: 16px;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+            margin-top: 10px;
         }
         
         .settings-button {
@@ -1093,24 +1164,83 @@
         }
 
         // Display settings panel
-        function displaySettings() {
-            const itemsGrid = document.querySelector('.items-grid');
-            itemsGrid.innerHTML = `
-                <div class="settings-panel active">
+        function displaySettings(container) {
+            container.innerHTML = `
+                <div class="settings-panel">
+                    <div class="settings-section">
+                        <div class="settings-title">Float Management</div>
+                        <div class="float-input">
+                            <input type="number" id="floatAmount" placeholder="Enter float amount" min="0">
+                            <button class="settings-button" id="setFloatBtn">Set Float</button>
+                        </div>
+                        <div class="revenue-display" id="revenueDisplay">
+                            <div class="revenue-row">
+                                <div>Starting Float:</div>
+                                <div>¥<span id="startingFloat">0</span></div>
+                            </div>
+                            <div class="revenue-row">
+                                <div>Total Sales:</div>
+                                <div>¥<span id="totalSales">0</span></div>
+                            </div>
+                            <div class="revenue-row">
+                                <div>Current Float:</div>
+                                <div>¥<span id="currentFloat">0</span></div>
+                            </div>
+                            <div class="revenue-row total">
+                                <div>Revenue:</div>
+                                <div>¥<span id="totalRevenue">0</span></div>
+                            </div>
+                        </div>
+                        <button class="settings-button" id="showRevenueBtn">Show Revenue</button>
+                    </div>
                     <div class="settings-section">
                         <div class="settings-title">Order Management</div>
                         <button class="settings-button" id="exportOrdersBtn">Export Today's Orders</button>
                         <button class="settings-button danger" id="resetOrdersBtn">Reset Order History</button>
-                        <div class="settings-info">
-                     
-                        </div>
                     </div>
                 </div>
             `;
 
-            // Add event listeners to the buttons
+            // Add event listeners
             document.getElementById('exportOrdersBtn').addEventListener('click', exportTodayOrders);
             document.getElementById('resetOrdersBtn').addEventListener('click', resetOrderHistory);
+            
+            // Float management
+            const floatInput = document.getElementById('floatAmount');
+            const setFloatBtn = document.getElementById('setFloatBtn');
+            const showRevenueBtn = document.getElementById('showRevenueBtn');
+            const revenueDisplay = document.getElementById('revenueDisplay');
+            
+            // Load saved float amount
+            const savedFloat = localStorage.getItem('startingFloat');
+            if (savedFloat) {
+                floatInput.value = savedFloat;
+            }
+            
+            setFloatBtn.addEventListener('click', () => {
+                const floatAmount = parseInt(floatInput.value);
+                if (isNaN(floatAmount) || floatAmount < 0) {
+                    alert('Please enter a valid float amount');
+                    return;
+                }
+                localStorage.setItem('startingFloat', floatAmount);
+                alert('Float amount has been set');
+            });
+            
+            showRevenueBtn.addEventListener('click', () => {
+                const startingFloat = parseInt(localStorage.getItem('startingFloat') || '0');
+                const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+                const totalSales = orderHistory.reduce((sum, order) => sum + order.total, 0);
+                const currentFloat = startingFloat + totalSales;
+                const revenue = totalSales;
+                
+                document.getElementById('startingFloat').textContent = startingFloat;
+                document.getElementById('totalSales').textContent = totalSales;
+                document.getElementById('currentFloat').textContent = currentFloat;
+                document.getElementById('totalRevenue').textContent = revenue;
+                
+                revenueDisplay.classList.add('active');
+            });
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -1184,36 +1314,37 @@
             function loadMenuItems(category) {
                 const itemsGrid = document.querySelector('.items-grid');
                 const orderLogContainer = document.querySelector('.order-log-container');
+                const settingsContainer = document.querySelector('.settings-container');
+                
+                // Remove existing containers if they exist
+                if (orderLogContainer) {
+                    orderLogContainer.remove();
+                }
+                if (settingsContainer) {
+                    settingsContainer.remove();
+                }
+                
                 itemsGrid.innerHTML = '';
                 
                 if (category === 'Order Log') {
                     itemsGrid.style.display = 'none';
-                    if (!orderLogContainer) {
-                        const newOrderLogContainer = document.createElement('div');
-                        newOrderLogContainer.className = 'order-log-container active';
-                        document.querySelector('.menu-panel').appendChild(newOrderLogContainer);
-                        displayOrderLog(newOrderLogContainer);
-                    } else {
-                        orderLogContainer.style.display = 'block';
-                        displayOrderLog(orderLogContainer);
-                    }
+                    const newOrderLogContainer = document.createElement('div');
+                    newOrderLogContainer.className = 'order-log-container active';
+                    document.querySelector('.menu-panel').appendChild(newOrderLogContainer);
+                    displayOrderLog(newOrderLogContainer);
                     return;
                 }
                 
                 if (category === 'Settings') {
-                    itemsGrid.style.display = 'grid';
-                    if (orderLogContainer) {
-                        orderLogContainer.style.display = 'none';
-                    }
-                    displaySettings();
+                    itemsGrid.style.display = 'none';
+                    const newSettingsContainer = document.createElement('div');
+                    newSettingsContainer.className = 'settings-container active';
+                    document.querySelector('.menu-panel').appendChild(newSettingsContainer);
+                    displaySettings(newSettingsContainer);
                     return;
                 }
                 
                 itemsGrid.style.display = 'grid';
-                if (orderLogContainer) {
-                    orderLogContainer.style.display = 'none';
-                }
-                
                 menuData[category].forEach(item => {
                     const itemCard = document.createElement('div');
                     itemCard.className = 'item-card';
@@ -1378,6 +1509,12 @@
                 optionsDiv.style.left = itemCard.offsetLeft + 'px';
                 optionsDiv.style.top = (itemCard.offsetTop + itemCard.offsetHeight) + 'px';
                 
+                // Create a new item object with the correct base price
+                const espressoItem = {
+                    ...item,
+                    price: 500
+                };
+                
                 const options = ['No Extra Shot', 'Add Extra Shot (+¥100)'];
                 
                 options.forEach(option => {
@@ -1386,13 +1523,22 @@
                     optionEl.textContent = option;
                     optionEl.addEventListener('click', (e) => {
                         e.stopPropagation();
+                        let price = 500;
+                        let customizations = [];
+                        if (option === 'Add Extra Shot (+¥100)') {
+                            price = 600;
+                            customizations = [option];
+                        }
                         const customizedItem = {
-                            ...item,
-                            price: option.includes('Extra Shot') ? item.price + 100 : item.price,
-                            customizations: [option]
+                            ...espressoItem,
+                            price: price,
+                            customizations: customizations
                         };
+                        console.log('Adding espresso with price:', customizedItem.price);
                         addItemToOrder(customizedItem);
-                        document.body.removeChild(optionsDiv);
+                        if (optionsDiv.parentNode) {
+                            optionsDiv.parentNode.removeChild(optionsDiv);
+                        }
                     });
                     optionsDiv.appendChild(optionEl);
                 });
@@ -1401,7 +1547,9 @@
                 
                 const closeOptions = (e) => {
                     if (!optionsDiv.contains(e.target) && e.target !== itemCard) {
-                        document.body.removeChild(optionsDiv);
+                        if (optionsDiv.parentNode) {
+                            optionsDiv.parentNode.removeChild(optionsDiv);
+                        }
                         document.removeEventListener('click', closeOptions);
                     }
                 };
@@ -1492,6 +1640,7 @@
                 container.innerHTML = '';
                 
                 const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+                const completedOrders = JSON.parse(localStorage.getItem('completedOrders') || '[]');
                 
                 if (orderHistory.length === 0) {
                     container.innerHTML = `
@@ -1512,10 +1661,18 @@
                 orderHistory.forEach(order => {
                     const orderLogItem = document.createElement('div');
                     orderLogItem.className = 'order-log-item';
+                    const isCompleted = completedOrders.includes(order.orderNumber);
                     
                     orderLogItem.innerHTML = `
-                        <div class="order-log-header">
+                        <div class="order-log-header ${isCompleted ? 'completed' : ''}">
                             <div class="order-number">Order #${order.orderNumber}</div>
+                            <div class="order-completion">
+                                <input type="checkbox" 
+                                       class="completion-checkbox" 
+                                       id="order-${order.orderNumber}"
+                                       ${isCompleted ? 'checked' : ''}>
+                                <label class="completion-label" for="order-${order.orderNumber}">Completed</label>
+                            </div>
                         </div>
                         <div class="order-log-items">
                             ${order.items.map(item => `
@@ -1534,6 +1691,23 @@
                             Payment: ${order.paymentMethod} (Tendered: ¥${order.tenderedAmount}, Change: ¥${order.change})
                         </div>
                     `;
+                    
+                    // Add event listener for the checkbox
+                    const checkbox = orderLogItem.querySelector('.completion-checkbox');
+                    const header = orderLogItem.querySelector('.order-log-header');
+                    checkbox.addEventListener('change', function() {
+                        let completedOrders = JSON.parse(localStorage.getItem('completedOrders') || '[]');
+                        if (this.checked) {
+                            if (!completedOrders.includes(order.orderNumber)) {
+                                completedOrders.push(order.orderNumber);
+                            }
+                            header.classList.add('completed');
+                        } else {
+                            completedOrders = completedOrders.filter(num => num !== order.orderNumber);
+                            header.classList.remove('completed');
+                        }
+                        localStorage.setItem('completedOrders', JSON.stringify(completedOrders));
+                    });
                     
                     container.appendChild(orderLogItem);
                 });
