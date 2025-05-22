@@ -39,7 +39,10 @@
             color: var(--dark);
             display: flex;
             flex-direction: column;
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            padding: 0;
+            height: 100vh;
+            height: -webkit-fill-available;
+            height: fill-available;
         }
         
         .container {
@@ -60,6 +63,7 @@
             flex-direction: column;
             overflow: hidden;
             height: 100%;
+            padding-top: 60px;
         }
         
         .category-tabs {
@@ -418,6 +422,11 @@
             color: white;
             padding: 10px 15px;
             flex-shrink: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
         }
         
         .logo {
@@ -467,6 +476,8 @@
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             width: 100%;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
         
         .order-log-header {
@@ -478,6 +489,7 @@
             border-bottom: 2px solid var(--light);
             border-radius: 8px 8px 0 0;
             transition: background-color 0.3s ease;
+            background-color: #ffebee;
         }
 
         .order-log-header.completed {
@@ -565,6 +577,15 @@
             font-size: 16px;
             margin-top: 10px;
             word-break: break-word;
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+        
+        .payment-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
         }
         
         .milk-options {
@@ -897,7 +918,6 @@
     <div class="header">
         <div class="logo">Izumiya</div>
         <div class="user-controls">
-            <div class="user-info">Barista :kelvin</div>
             <div class="time">10:30 AM</div>
         </div>
     </div>
@@ -921,7 +941,6 @@
         <div class="order-panel">
             <div class="order-header">
                 <div class="order-title">Current Order #042</div>
-                <button class="new-order-btn">New Order</button>
             </div>
             
             <div class="order-items">
@@ -1468,11 +1487,11 @@
                     { name: 'Ice Matcha Latte', price: 680, hasMilk: true },
                     { name: 'Ice Chocolate', price: 650, hasMilk: true },
                     { type: 'divider' },
-                    { name: 'Soy Milk', isMilkAddon: true },
-                    { name: 'Oat Milk', isMilkAddon: true },
-                    { type: 'divider' },
                     { name: 'Soft Drink', price: 550, hasMilk: false },
                     { name: 'Beer', price: 680, hasMilk: false },
+                    { type: 'divider' },
+                    { name: 'Soy Milk', isMilkAddon: true },
+                    { name: 'Oat Milk', isMilkAddon: true },
                     { name: '', price: 0, isBlank: true },
                     { name: '', price: 0, isBlank: true },
                     { name: 'Other...', price: 0, isCustom: true }
@@ -1491,6 +1510,8 @@
                     { name: 'Fries', price: 400, section: 3 },
                     { name: 'Edamame', price: 450, section: 3 },
                     { name: 'Nachos', price: 1200, section: 3 },
+                                        { type: 'divider' },
+
                     { name: 'Ice Cream', price: 450, hasFlavor: true, section: 3 },
                     { name: 'Cake', price: 680, hasFlavor: true, section: 3 }
                 ],
@@ -1595,6 +1616,8 @@
                                 } else if (item.name === 'Ice Cream') {
                                     showIceCreamOptions(item, itemCard);
                                 }
+                            } else if (item.name === 'Caprese Sandwich') {
+                                showCappriciosaOptions(item, itemCard);
                             } else {
                                 addItemToOrder(item);
                             }
@@ -1783,6 +1806,57 @@
                     document.addEventListener('click', closeOptions);
                 }, 0);
             }
+
+            // Show Cappriciosa options for Caprese Sandwich
+            function showCappriciosaOptions(item, itemCard) {
+                const optionsDiv = document.createElement('div');
+                optionsDiv.className = 'milk-options';
+                optionsDiv.style.display = 'block';
+                optionsDiv.style.left = itemCard.offsetLeft + 'px';
+                optionsDiv.style.top = (itemCard.offsetTop + itemCard.offsetHeight) + 'px';
+                
+                const options = ['No Cappriciosa', 'Add Cappriciosa (+¥200)'];
+                
+                options.forEach(option => {
+                    const optionEl = document.createElement('div');
+                    optionEl.className = 'milk-option';
+                    optionEl.textContent = option;
+                    optionEl.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        let price = item.price;
+                        let customizations = [];
+                        if (option === 'Add Cappriciosa (+¥200)') {
+                            price = item.price + 200;
+                            customizations = ['Cappriciosa'];
+                        }
+                        const customizedItem = {
+                            ...item,
+                            price: price,
+                            customizations: customizations
+                        };
+                        addItemToOrder(customizedItem);
+                        if (optionsDiv.parentNode) {
+                            optionsDiv.parentNode.removeChild(optionsDiv);
+                        }
+                    });
+                    optionsDiv.appendChild(optionEl);
+                });
+                
+                document.body.appendChild(optionsDiv);
+                
+                const closeOptions = (e) => {
+                    if (!optionsDiv.contains(e.target) && e.target !== itemCard) {
+                        if (optionsDiv.parentNode) {
+                            optionsDiv.parentNode.removeChild(optionsDiv);
+                        }
+                        document.removeEventListener('click', closeOptions);
+                    }
+                };
+                
+                setTimeout(() => {
+                    document.addEventListener('click', closeOptions);
+                }, 0);
+            }
             
             // Display order log
             function displayOrderLog(container) {
@@ -1820,19 +1894,43 @@
                     orderLogItem.className = 'order-log-item';
                     const isCompleted = completedOrders.includes(order.orderNumber);
                     
+                    // Calculate relative time
+                    const orderTime = new Date(order.timestamp);
+                    const now = new Date();
+                    const diffMs = now - orderTime;
+                    const diffMins = Math.floor(diffMs / (1000 * 60));
+                    const diffHours = Math.floor(diffMins / 60);
+                    
+                    let timeAgo;
+                    if (diffMins < 1) {
+                        timeAgo = 'Just now';
+                    } else if (diffMins < 60) {
+                        timeAgo = `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
+                    } else {
+                        timeAgo = `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+                    }
+                    
+                    // Combine identical items
+                    const combinedItems = order.items.reduce((acc, item) => {
+                        const key = `${item.name}${item.customizations ? `-${item.customizations.join(',')}` : ''}`;
+                        if (!acc[key]) {
+                            acc[key] = {
+                                ...item,
+                                quantity: item.quantity
+                            };
+                        } else {
+                            acc[key].quantity += item.quantity;
+                        }
+                        return acc;
+                    }, {});
+                    
                     orderLogItem.innerHTML = `
                         <div class="order-log-header ${isCompleted ? 'completed' : ''}">
                             <div class="order-number">Order #${order.orderNumber}</div>
-                            <div class="order-completion">
-                                <input type="checkbox" 
-                                       class="completion-checkbox" 
-                                       id="order-${order.orderNumber}"
-                                       ${isCompleted ? 'checked' : ''}>
-                                <label class="completion-label" for="order-${order.orderNumber}">Completed</label>
-                            </div>
+                            <div class="order-time">${timeAgo}</div>
                         </div>
                         <div class="order-log-items">
-                            ${order.items.map(item => `
+                            ${Object.values(combinedItems).map(item => `
                                 <div class="order-log-item-row">
                                     <div class="order-log-item-quantity">x${item.quantity}</div>
                                     <div class="order-log-item-name">${item.name}</div>
@@ -1845,24 +1943,26 @@
                             <div>¥${order.total}</div>
                         </div>
                         <div class="order-log-payment">
-                            Payment: ${order.paymentMethod} (Tendered: ¥${order.tenderedAmount}, Change: ¥${order.change})
+                            <div class="payment-info">
+                                <div>Tendered: ¥${order.tenderedAmount}</div>
+                                <div>Change: ¥${order.change}</div>
+                            </div>
                         </div>
                     `;
                     
-                    // Add event listener for the checkbox
-                    const checkbox = orderLogItem.querySelector('.completion-checkbox');
-                    const header = orderLogItem.querySelector('.order-log-header');
-                    checkbox.addEventListener('change', function() {
+                    // Add click event listener to toggle completion
+                    orderLogItem.addEventListener('click', function() {
                         let completedOrders = JSON.parse(localStorage.getItem('completedOrders') || '[]');
-                        if (this.checked) {
-                            if (!completedOrders.includes(order.orderNumber)) {
-                                completedOrders.push(order.orderNumber);
-                            }
-                            header.classList.add('completed');
-                        } else {
+                        const header = this.querySelector('.order-log-header');
+                        
+                        if (completedOrders.includes(order.orderNumber)) {
                             completedOrders = completedOrders.filter(num => num !== order.orderNumber);
                             header.classList.remove('completed');
+                        } else {
+                            completedOrders.push(order.orderNumber);
+                            header.classList.add('completed');
                         }
+                        
                         localStorage.setItem('completedOrders', JSON.stringify(completedOrders));
                     });
                     
@@ -1916,32 +2016,48 @@
                 // Close the payment modal
                 document.getElementById('paymentModal').style.display = 'none';
                 
+                // Create overlay
+                const overlay = document.createElement('div');
+                overlay.style.position = 'fixed';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                overlay.style.zIndex = '999';
+                overlay.style.cursor = 'pointer';
+                
                 // Show success message
                 const successMessage = document.createElement('div');
                 successMessage.style.position = 'fixed';
                 successMessage.style.top = '50%';
                 successMessage.style.left = '50%';
                 successMessage.style.transform = 'translate(-50%, -50%)';
-                successMessage.style.backgroundColor = '#2ecc71';
+                successMessage.style.backgroundColor = '#4CAF50';
                 successMessage.style.color = 'white';
-                successMessage.style.padding = '20px';
-                successMessage.style.borderRadius = '10px';
-                successMessage.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+                successMessage.style.padding = '40px';
+                successMessage.style.borderRadius = '15px';
+                successMessage.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
                 successMessage.style.zIndex = '1000';
+                successMessage.style.textAlign = 'center';
+                successMessage.style.minWidth = '300px';
                 successMessage.innerHTML = `
-                    <h3>Payment Successful!</h3>
-                    <p>Order #${currentOrder.orderNumber} has been completed</p>
-                    <p>Change: ¥${tenderedAmount - totalAmount}</p>
+                    <div style="font-size: 32px; font-weight: bold; margin-bottom: 10px;">Change: ¥${tenderedAmount - totalAmount}</div>
+                    <div style="font-size: 16px; opacity: 0.8;">Order #${currentOrder.orderNumber}</div>
                 `;
                 
+                document.body.appendChild(overlay);
                 document.body.appendChild(successMessage);
                 
-                // Remove the message after 3 seconds
-                setTimeout(() => {
+                // Add click event to remove the message and start new order
+                const dismissPopup = () => {
+                    document.body.removeChild(overlay);
                     document.body.removeChild(successMessage);
-                    // Start a new order
                     startNewOrder();
-                }, 3000);
+                };
+                
+                overlay.addEventListener('click', dismissPopup);
+                successMessage.addEventListener('click', dismissPopup);
             }
             
             // Update payment modal when opened
@@ -2015,29 +2131,16 @@
             
             processBtn.addEventListener('click', processPayment);
             
-            // New order button
-            const newOrderBtn = document.querySelector('.new-order-btn');
-            newOrderBtn.addEventListener('click', function() {
-                if (currentOrder.items.length > 0) {
-                    if (confirm('Start a new order? Current order will be cleared.')) {
-                        startNewOrder();
-                    }
-                } else {
-                    startNewOrder();
-                }
-            });
-            
             // Update time
             function updateTime() {
                 const timeElement = document.querySelector('.time');
                 const now = new Date();
                 const hours = now.getHours();
                 const minutes = now.getMinutes();
-                const ampm = hours >= 12 ? 'PM' : 'AM';
-                const formattedHours = hours % 12 || 12;
+                const formattedHours = hours < 10 ? '0' + hours : hours;
                 const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
                 
-                timeElement.textContent = `${formattedHours}:${formattedMinutes} ${ampm}`;
+                timeElement.textContent = `${formattedHours}:${formattedMinutes}`;
             }
             
             // ============ EVENT LISTENERS ============
