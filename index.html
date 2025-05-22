@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Coffee Shop POS</title>
+    <meta name="apple-mobile-web-app-title" content="Izumiya POS">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#6F4E37">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
+    <title>Izumiya POS</title>
     <style>
         :root {
             --primary: #6F4E37;
@@ -1269,6 +1272,10 @@
                     { name: 'Latte', price: 680, hasMilk: true },
                     { name: 'Matcha Latte', price: 680, hasMilk: true },
                     { name: 'Hot Chocolate', price: 650, hasMilk: true },
+                    { name: 'Ice Americano', price: 650, hasMilk: false },
+                    { name: 'Ice Latte', price: 680, hasMilk: true },
+                    { name: 'Ice Matcha Latte', price: 680, hasMilk: true },
+                    { name: 'Ice Chocolate', price: 650, hasMilk: true },
                     { name: 'Tea', price: 550, hasMilk: false },
                     { name: 'Soft Drink', price: 550, hasMilk: false },
                     { name: 'Beer', price: 680, hasMilk: false },
@@ -1350,11 +1357,20 @@
                     document.querySelector('.menu-panel').appendChild(newOrderLogContainer);
                     displayOrderLog(newOrderLogContainer);
                     return;
-                } else {
-                    orderPanel.style.display = 'flex'; // Show order panel for other categories
+                }
+                
+                if (category === 'Settings') {
+                    itemsGrid.style.display = 'none';
+                    orderPanel.style.display = 'none'; // Hide order panel
+                    const newSettingsContainer = document.createElement('div');
+                    newSettingsContainer.className = 'settings-container active';
+                    document.querySelector('.menu-panel').appendChild(newSettingsContainer);
+                    displaySettings(newSettingsContainer);
+                    return;
                 }
                 
                 itemsGrid.style.display = 'grid';
+                orderPanel.style.display = 'flex'; // Show order panel for other categories
                 menuData[category].forEach(item => {
                     const itemCard = document.createElement('div');
                     itemCard.className = 'item-card';
