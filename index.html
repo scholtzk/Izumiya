@@ -90,6 +90,15 @@
             color: white;
         }
         
+        .category-divider {
+            width: 100%;
+            height: 2px;
+            background-color: var(--primary);
+            margin: 25px 0;
+            opacity: 0.2;
+            grid-column: 1 / -1;
+        }
+        
         .items-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -114,6 +123,15 @@
             justify-content: center;
             user-select: none;
             -webkit-user-select: none;
+        }
+        
+        .item-card[data-milk-addon="true"] {
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .item-card[data-milk-addon="true"] .item-name {
+            margin: 0;
         }
         
         .item-card:hover {
@@ -185,6 +203,13 @@
             border-radius: 8px;
             margin-bottom: 8px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .order-item.selected {
+            background-color: var(--light);
+            border: 2px solid var(--primary);
         }
         
         .item-info {
@@ -823,6 +848,49 @@
             background-color: #f0f0f0;
             color: var(--dark);
         }
+        
+        .category-label {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 20px 0 10px 0;
+            padding-left: 10px;
+        }
+
+        .milk-type-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: var(--light);
+            border-radius: 8px;
+        }
+
+        .milk-type-btn {
+            padding: 8px 15px;
+            background-color: white;
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            color: var(--primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .milk-type-btn:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .milk-type-btn.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        /* Add styles for selected menu items */
+        .item-card.selected {
+            background-color: var(--light);
+            border: 2px solid var(--primary);
+        }
     </style>
 </head>
 <body>
@@ -839,9 +907,7 @@
         <div class="menu-panel">
             <div class="category-tabs">
                 <button class="category-tab active">Drinks</button>
-                <button class="category-tab">Breakfast</button>
-                <button class="category-tab">Pantry</button>
-                <button class="category-tab">Snacks</button>
+                <button class="category-tab">Food</button>
                 <button class="category-tab">Order Log</button>
                 <button class="category-tab">Settings</button>
             </div>
@@ -948,14 +1014,89 @@
             orderNumber: 0
         };
 
+        // Global variable to track selected milk addon
+        let selectedMilkAddon = null;
+
         // Add item to order
         function addItemToOrder(item) {
+            // If it's a milk addon, handle selection and check for selected drink
+            if (item.isMilkAddon) {
+                const itemCard = document.querySelector(`.item-card[data-milk-addon="true"] .item-name[data-name="${item.name}"]`)?.closest('.item-card');
+                
+                if (selectedMilkAddon && selectedMilkAddon.name === item.name) {
+                    // Deselect if already selected
+                    selectedMilkAddon = null;
+                    if (itemCard) {
+                        itemCard.classList.remove('selected');
+                    }
+                } else {
+                    // Select new milk addon
+                    selectedMilkAddon = item;
+                    // Remove selection from all milk addons
+                    document.querySelectorAll('.item-card[data-milk-addon="true"]').forEach(card => {
+                        card.classList.remove('selected');
+                    });
+                    // Add selection to clicked milk addon
+                    if (itemCard) {
+                        itemCard.classList.add('selected');
+                    }
+
+                    // Check if there's a selected drink in the order
+                    const selectedOrderItem = document.querySelector('.order-item.selected');
+                    if (selectedOrderItem) {
+                        const selectedItemId = parseInt(selectedOrderItem.dataset.id);
+                        const drinkItem = currentOrder.items.find(i => i.id === selectedItemId);
+                        if (drinkItem) {
+                            // Toggle milk type
+                            drinkItem.customizations = drinkItem.customizations || [];
+                            const existingMilkIndex = drinkItem.customizations.findIndex(c => c === item.name);
+                            if (existingMilkIndex !== -1) {
+                                // Remove the milk type if it's already there
+                                drinkItem.customizations.splice(existingMilkIndex, 1);
+                            } else {
+                                // Remove any existing milk customizations first
+                                drinkItem.customizations = drinkItem.customizations.filter(c => 
+                                    !c.includes('Milk'));
+                                // Add the new milk type
+                                drinkItem.customizations.push(item.name);
+                            }
+                            // Reset selected milk addon
+                            selectedMilkAddon = null;
+                            // Remove highlight from milk addon in menu
+                            if (itemCard) {
+                                itemCard.classList.remove('selected');
+                            }
+                            // Update the order display
+                            renderOrderItems();
+                            return;
+                        }
+                    }
+                }
+                return;
+            }
+
             // Deep copy the item to avoid reference issues
             const orderItem = {
                 ...item,
                 quantity: 1,
                 id: Date.now() // Unique ID for the order item
             };
+
+            // If there's a selected milk addon, add it as a customization
+            if (selectedMilkAddon) {
+                orderItem.customizations = orderItem.customizations || [];
+                // Remove any existing milk customizations first
+                orderItem.customizations = orderItem.customizations.filter(c => 
+                    !c.includes('Milk'));
+                // Add the new milk type
+                orderItem.customizations.push(selectedMilkAddon.name);
+                // Reset selected milk addon
+                selectedMilkAddon = null;
+                // Remove highlight from milk addon in menu
+                document.querySelectorAll('.item-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+            }
             
             // Add to order
             currentOrder.items.push(orderItem);
@@ -978,6 +1119,7 @@
                 
                 const orderItemEl = document.createElement('div');
                 orderItemEl.className = 'order-item';
+                orderItemEl.dataset.id = item.id;
                 orderItemEl.innerHTML = `
                     <div class="item-info">
                         <div class="item-title">${item.name}</div>
@@ -995,12 +1137,59 @@
                 const minusBtn = orderItemEl.querySelector('.minus');
                 const plusBtn = orderItemEl.querySelector('.plus');
                 
-                minusBtn.addEventListener('click', () => {
+                minusBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     updateItemQuantity(item.id, -1);
                 });
                 
-                plusBtn.addEventListener('click', () => {
+                plusBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     updateItemQuantity(item.id, 1);
+                });
+
+                // Add click event for selection
+                orderItemEl.addEventListener('click', () => {
+                    // Remove selected class from all items
+                    document.querySelectorAll('.order-item').forEach(el => {
+                        el.classList.remove('selected');
+                    });
+                    // Add selected class to clicked item
+                    orderItemEl.classList.add('selected');
+                    
+                    // If there's a selected milk addon, add it to this item
+                    if (selectedMilkAddon) {
+                        const selectedItem = currentOrder.items.find(i => i.id === item.id);
+                        if (selectedItem) {
+                            selectedItem.customizations = selectedItem.customizations || [];
+                            // Check if the same milk type is already added
+                            const existingMilkIndex = selectedItem.customizations.findIndex(c => c === selectedMilkAddon.name);
+                            if (existingMilkIndex !== -1) {
+                                // Remove the milk type if it's already there
+                                selectedItem.customizations.splice(existingMilkIndex, 1);
+                            } else {
+                                // Remove any existing milk customizations first
+                                selectedItem.customizations = selectedItem.customizations.filter(c => 
+                                    !c.includes('Milk'));
+                                // Add the new milk type
+                                selectedItem.customizations.push(selectedMilkAddon.name);
+                            }
+                            // Reset selected milk addon
+                            selectedMilkAddon = null;
+                            // Remove highlight from milk addon in menu
+                            document.querySelectorAll('.item-card').forEach(card => {
+                                card.classList.remove('selected');
+                            });
+                            // Update the order display
+                            renderOrderItems();
+                        }
+                    }
+                    
+                    // Show milk type buttons if item has milk
+                    if (item.hasMilk) {
+                        showMilkTypeButtons(item);
+                    } else {
+                        hideMilkTypeButtons();
+                    }
                 });
                 
                 orderItemsContainer.appendChild(orderItemEl);
@@ -1272,43 +1461,42 @@
                     { name: 'Latte', price: 680, hasMilk: true },
                     { name: 'Matcha Latte', price: 680, hasMilk: true },
                     { name: 'Hot Chocolate', price: 650, hasMilk: true },
+                    { name: 'Tea', price: 550, hasMilk: false },
+                    { type: 'divider' },
                     { name: 'Ice Americano', price: 650, hasMilk: false },
                     { name: 'Ice Latte', price: 680, hasMilk: true },
                     { name: 'Ice Matcha Latte', price: 680, hasMilk: true },
                     { name: 'Ice Chocolate', price: 650, hasMilk: true },
-                    { name: 'Tea', price: 550, hasMilk: false },
+                    { type: 'divider' },
+                    { name: 'Soy Milk', isMilkAddon: true },
+                    { name: 'Oat Milk', isMilkAddon: true },
+                    { type: 'divider' },
                     { name: 'Soft Drink', price: 550, hasMilk: false },
                     { name: 'Beer', price: 680, hasMilk: false },
+                    { name: '', price: 0, isBlank: true },
+                    { name: '', price: 0, isBlank: true },
                     { name: 'Other...', price: 0, isCustom: true }
                 ],
-                'Breakfast': [
-                { name: 'Toast', price: 440, hasJam: true },
-                { name: 'Museli Yogurt', price: 980 },
-                    { name: 'Breakfast', price: 1200 },
-
+                'Food': [
+                    { name: 'Toast', price: 440, hasJam: true, section: 1 },
+                    { name: 'Museli Yogurt', price: 980, section: 1 },
+                    { name: 'Breakfast', price: 1200, section: 1 },
+                    { type: 'divider' },
+                    { name: 'Croissant', price: 400, section: 2 },
+                    { name: 'Cookie', price: 400, section: 2 },
+                    { name: 'Caprese Sandwich', price: 1500, section: 2 },
+                    { name: 'Tuna Sandwich', price: 1500, section: 2 },
+                    { name: 'Salmon Sandwich', price: 1700, section: 2 },
+                    { type: 'divider' },
+                    { name: 'Fries', price: 400, section: 3 },
+                    { name: 'Edamame', price: 450, section: 3 },
+                    { name: 'Nachos', price: 1200, section: 3 },
+                    { name: 'Ice Cream', price: 450, hasFlavor: true, section: 3 },
+                    { name: 'Cake', price: 680, hasFlavor: true, section: 3 }
                 ],
-                'Pantry': [
-                    { name: 'Croissant', price: 400 },
-                    { name: 'Cookie', price: 400 },
-                    { name: 'Caprese Sandwich', price: 1500 },
-                    { name: 'Salmon Sandwich', price: 1700 },
-                    { name: 'Tuna Sandwich', price: 1500 }
-                ],
-                'Snacks': [
-                    { name: 'Fries', price: 400 },
-                    { name: 'Edamame', price: 450 },
-                    { name: 'Nachos', price: 1200 },
-                    { name: 'Ice Cream', price: 450, hasFlavor: true },
-                    { name: 'Cake', price: 680, hasFlavor: true },
-                ]
+                'Order Log': [],
+                'Settings': []
             };
-            
-            // Milk options
-            const milkOptions = ['Normal', 'Oat', 'Soy'];
-            const temperatureOptions = ['Hot', 'Iced'];
-            const jamOptions = ['Strawberry', 'Raspberry', 'Marmelade'];
-            const cakeOptions = ['Matcha', 'Cheesecake', 'Chocolate'];
-            const iceCreamOptions = ['Vanilla', 'Matcha', 'Cookies and Cream', 'Chocolate'];
             
             // Initialize current order with the next order number
             currentOrder = {
@@ -1351,7 +1539,7 @@
                 
                 if (category === 'Order Log') {
                     itemsGrid.style.display = 'none';
-                    orderPanel.style.display = 'none'; // Hide order panel
+                    orderPanel.style.display = 'none';
                     const newOrderLogContainer = document.createElement('div');
                     newOrderLogContainer.className = 'order-log-container active';
                     document.querySelector('.menu-panel').appendChild(newOrderLogContainer);
@@ -1361,7 +1549,7 @@
                 
                 if (category === 'Settings') {
                     itemsGrid.style.display = 'none';
-                    orderPanel.style.display = 'none'; // Hide order panel
+                    orderPanel.style.display = 'none';
                     const newSettingsContainer = document.createElement('div');
                     newSettingsContainer.className = 'settings-container active';
                     document.querySelector('.menu-panel').appendChild(newSettingsContainer);
@@ -1370,122 +1558,51 @@
                 }
                 
                 itemsGrid.style.display = 'grid';
-                orderPanel.style.display = 'flex'; // Show order panel for other categories
+                orderPanel.style.display = 'flex';
+
                 menuData[category].forEach(item => {
-                    const itemCard = document.createElement('div');
-                    itemCard.className = 'item-card';
-                    itemCard.innerHTML = `
-                        <div class="item-name">${item.name}</div>
-                        <div class="item-price">¥${item.price}</div>
-                    `;
-                    
-                    itemCard.addEventListener('click', () => {
-                        if (item.isCustom) {
-                            showCustomItemModal();
-                        } else if (item.hasMilk) {
-                            showMilkOptions(item, itemCard);
-                        } else if (item.hasJam) {
-                            showJamOptions(item, itemCard);
-                        } else if (item.name === 'Americano') {
-                            showTemperatureOptions(item, null, itemCard);
-                        } else if (item.hasExtraShot) {
-                            showExtraShotOptions(item, itemCard);
-                        } else if (item.hasFlavor) {
-                            if (item.name === 'Cake') {
-                                showCakeOptions(item, itemCard);
-                            } else if (item.name === 'Ice Cream') {
-                                showIceCreamOptions(item, itemCard);
-                            }
-                        } else {
-                            addItemToOrder(item);
+                    if (item.type === 'divider') {
+                        const divider = document.createElement('div');
+                        divider.className = 'category-divider';
+                        itemsGrid.appendChild(divider);
+                    } else if (item.isBlank) {
+                        // Create an empty div for blank spaces
+                        const blankSpace = document.createElement('div');
+                        blankSpace.className = 'item-card';
+                        blankSpace.style.visibility = 'hidden';
+                        itemsGrid.appendChild(blankSpace);
+                    } else {
+                        const itemCard = document.createElement('div');
+                        itemCard.className = 'item-card';
+                        if (item.isMilkAddon) {
+                            itemCard.setAttribute('data-milk-addon', 'true');
                         }
-                    });
-                    
-                    itemsGrid.appendChild(itemCard);
-                });
-            }
-            
-            // Show milk options
-            function showMilkOptions(item, itemCard) {
-                const milkOptionsDiv = document.createElement('div');
-                milkOptionsDiv.className = 'milk-options';
-                milkOptionsDiv.style.display = 'block';
-                milkOptionsDiv.style.left = itemCard.offsetLeft + 'px';
-                milkOptionsDiv.style.top = (itemCard.offsetTop + itemCard.offsetHeight) + 'px';
-                
-                milkOptions.forEach(milk => {
-                    const option = document.createElement('div');
-                    option.className = 'milk-option';
-                    option.textContent = milk;
-                    option.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        showTemperatureOptions(item, milk, itemCard);
-                        document.body.removeChild(milkOptionsDiv);
-                    });
-                    milkOptionsDiv.appendChild(option);
-                });
-                
-                document.body.appendChild(milkOptionsDiv);
-                
-                // Close milk options when clicking outside
-                const closeMilkOptions = (e) => {
-                    if (!milkOptionsDiv.contains(e.target) && e.target !== itemCard) {
-                        document.body.removeChild(milkOptionsDiv);
-                        document.removeEventListener('click', closeMilkOptions);
+                        itemCard.innerHTML = `
+                            <div class="item-name" data-name="${item.name}">${item.name}</div>
+                            ${!item.isMilkAddon ? `<div class="item-price">¥${item.price}</div>` : ''}
+                        `;
+                        
+                        itemCard.addEventListener('click', () => {
+                            if (item.isCustom) {
+                                showCustomItemModal();
+                            } else if (item.hasJam) {
+                                showJamOptions(item, itemCard);
+                            } else if (item.hasExtraShot) {
+                                showExtraShotOptions(item, itemCard);
+                            } else if (item.hasFlavor) {
+                                if (item.name === 'Cake') {
+                                    showCakeOptions(item, itemCard);
+                                } else if (item.name === 'Ice Cream') {
+                                    showIceCreamOptions(item, itemCard);
+                                }
+                            } else {
+                                addItemToOrder(item);
+                            }
+                        });
+                        
+                        itemsGrid.appendChild(itemCard);
                     }
-                };
-                
-                setTimeout(() => {
-                    document.addEventListener('click', closeMilkOptions);
-                }, 0);
-            }
-            
-            // Show temperature options
-            function showTemperatureOptions(item, milk = null, itemCard = null) {
-                const tempOptionsDiv = document.createElement('div');
-                tempOptionsDiv.className = 'temperature-options';
-                tempOptionsDiv.style.display = 'block';
-                
-                // Position the temperature options below the item card
-                if (itemCard) {
-                    tempOptionsDiv.style.left = itemCard.offsetLeft + 'px';
-                    tempOptionsDiv.style.top = (itemCard.offsetTop + itemCard.offsetHeight) + 'px';
-                } else {
-                    // Fallback to center if no itemCard provided
-                    tempOptionsDiv.style.left = '50%';
-                    tempOptionsDiv.style.top = '50%';
-                    tempOptionsDiv.style.transform = 'translate(-50%, -50%)';
-                }
-                
-                temperatureOptions.forEach(temp => {
-                    const option = document.createElement('div');
-                    option.className = 'temperature-option';
-                    option.textContent = temp;
-                    option.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        const customizedItem = {
-                            ...item,
-                            customizations: milk ? [`${temp}`, `${milk} Milk`] : [`${temp}`]
-                        };
-                        addItemToOrder(customizedItem);
-                        document.body.removeChild(tempOptionsDiv);
-                    });
-                    tempOptionsDiv.appendChild(option);
                 });
-                
-                document.body.appendChild(tempOptionsDiv);
-                
-                // Close temperature options when clicking outside
-                const closeTempOptions = (e) => {
-                    if (!tempOptionsDiv.contains(e.target)) {
-                        document.body.removeChild(tempOptionsDiv);
-                        document.removeEventListener('click', closeTempOptions);
-                    }
-                };
-                
-                setTimeout(() => {
-                    document.addEventListener('click', closeTempOptions);
-                }, 0);
             }
             
             // Show jam options
@@ -1495,6 +1612,8 @@
                 jamOptionsDiv.style.display = 'block';
                 jamOptionsDiv.style.left = itemCard.offsetLeft + 'px';
                 jamOptionsDiv.style.top = (itemCard.offsetTop + itemCard.offsetHeight) + 'px';
+                
+                const jamOptions = ['Strawberry', 'Raspberry', 'Marmelade'];
                 
                 jamOptions.forEach(jam => {
                     const option = document.createElement('div');
@@ -1593,6 +1712,8 @@
                 optionsDiv.style.left = itemCard.offsetLeft + 'px';
                 optionsDiv.style.top = (itemCard.offsetTop + itemCard.offsetHeight) + 'px';
                 
+                const cakeOptions = ['Matcha', 'Cheesecake', 'Chocolate'];
+                
                 cakeOptions.forEach(flavor => {
                     const option = document.createElement('div');
                     option.className = 'milk-option';
@@ -1630,6 +1751,8 @@
                 optionsDiv.style.display = 'block';
                 optionsDiv.style.left = itemCard.offsetLeft + 'px';
                 optionsDiv.style.top = (itemCard.offsetTop + itemCard.offsetHeight) + 'px';
+                
+                const iceCreamOptions = ['Vanilla', 'Matcha', 'Cookies and Cream', 'Chocolate'];
                 
                 iceCreamOptions.forEach(flavor => {
                     const option = document.createElement('div');
@@ -1952,6 +2075,67 @@
                     addCustomItem();
                 }
             });
+
+            // Show milk type buttons
+            function showMilkTypeButtons(item) {
+                let milkButtonsContainer = document.querySelector('.milk-type-buttons');
+                if (!milkButtonsContainer) {
+                    milkButtonsContainer = document.createElement('div');
+                    milkButtonsContainer.className = 'milk-type-buttons';
+                    document.querySelector('.order-items').appendChild(milkButtonsContainer);
+                }
+
+                // Get current milk type if any
+                const currentMilkType = item.customizations?.find(c => c.includes('Milk'));
+
+                milkButtonsContainer.innerHTML = `
+                    <button class="milk-type-btn ${currentMilkType === 'Normal Milk' ? 'active' : ''}" data-milk="Normal">Normal</button>
+                    <button class="milk-type-btn ${currentMilkType === 'Oat Milk' ? 'active' : ''}" data-milk="Oat">Oat</button>
+                    <button class="milk-type-btn ${currentMilkType === 'Soy Milk' ? 'active' : ''}" data-milk="Soy">Soy</button>
+                `;
+
+                milkButtonsContainer.querySelectorAll('.milk-type-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const milkType = btn.dataset.milk;
+                        const selectedItem = currentOrder.items.find(i => i.id === item.id);
+                        
+                        if (selectedItem) {
+                            selectedItem.customizations = selectedItem.customizations || [];
+                            const milkCustomization = `${milkType} Milk`;
+                            
+                            // Check if the same milk type is already added
+                            const existingMilkIndex = selectedItem.customizations.findIndex(c => c === milkCustomization);
+                            if (existingMilkIndex !== -1) {
+                                // Remove the milk type if it's already there
+                                selectedItem.customizations.splice(existingMilkIndex, 1);
+                                btn.classList.remove('active');
+                            } else {
+                                // Remove any existing milk customizations first
+                                selectedItem.customizations = selectedItem.customizations.filter(c => 
+                                    !c.includes('Milk'));
+                                // Add the new milk type
+                                selectedItem.customizations.push(milkCustomization);
+                                // Update active state of buttons
+                                milkButtonsContainer.querySelectorAll('.milk-type-btn').forEach(b => {
+                                    b.classList.remove('active');
+                                });
+                                btn.classList.add('active');
+                            }
+                            
+                            // Re-render order items
+                            renderOrderItems();
+                        }
+                    });
+                });
+            }
+
+            // Hide milk type buttons
+            function hideMilkTypeButtons() {
+                const milkButtonsContainer = document.querySelector('.milk-type-buttons');
+                if (milkButtonsContainer) {
+                    milkButtonsContainer.remove();
+                }
+            }
         });
     </script>
 </body>
