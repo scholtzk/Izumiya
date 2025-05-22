@@ -414,17 +414,22 @@
         .order-log-container.active {
             display: block;
         }
+
+        .order-log-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
         
         .order-log-item {
             background: white;
             padding: 20px;
-            margin-bottom: 20px;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 1200px;
-            margin-left: auto;
-            margin-right: auto;
         }
         
         .order-log-header {
@@ -1315,6 +1320,7 @@
                 const itemsGrid = document.querySelector('.items-grid');
                 const orderLogContainer = document.querySelector('.order-log-container');
                 const settingsContainer = document.querySelector('.settings-container');
+                const orderPanel = document.querySelector('.order-panel');
                 
                 // Remove existing containers if they exist
                 if (orderLogContainer) {
@@ -1328,20 +1334,14 @@
                 
                 if (category === 'Order Log') {
                     itemsGrid.style.display = 'none';
+                    orderPanel.style.display = 'none'; // Hide order panel
                     const newOrderLogContainer = document.createElement('div');
                     newOrderLogContainer.className = 'order-log-container active';
                     document.querySelector('.menu-panel').appendChild(newOrderLogContainer);
                     displayOrderLog(newOrderLogContainer);
                     return;
-                }
-                
-                if (category === 'Settings') {
-                    itemsGrid.style.display = 'none';
-                    const newSettingsContainer = document.createElement('div');
-                    newSettingsContainer.className = 'settings-container active';
-                    document.querySelector('.menu-panel').appendChild(newSettingsContainer);
-                    displaySettings(newSettingsContainer);
-                    return;
+                } else {
+                    orderPanel.style.display = 'flex'; // Show order panel for other categories
                 }
                 
                 itemsGrid.style.display = 'grid';
@@ -1642,8 +1642,13 @@
                 const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
                 const completedOrders = JSON.parse(localStorage.getItem('completedOrders') || '[]');
                 
+                // Create grid container
+                const orderLogGrid = document.createElement('div');
+                orderLogGrid.className = 'order-log-grid';
+                container.appendChild(orderLogGrid);
+                
                 if (orderHistory.length === 0) {
-                    container.innerHTML = `
+                    orderLogGrid.innerHTML = `
                         <div class="order-log-item">
                             <div class="order-log-header">
                                 <div class="order-number">No Orders</div>
@@ -1657,6 +1662,9 @@
                     `;
                     return;
                 }
+                
+                // Sort orders by timestamp in reverse order (newest first)
+                orderHistory.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 
                 orderHistory.forEach(order => {
                     const orderLogItem = document.createElement('div');
@@ -1709,7 +1717,7 @@
                         localStorage.setItem('completedOrders', JSON.stringify(completedOrders));
                     });
                     
-                    container.appendChild(orderLogItem);
+                    orderLogGrid.appendChild(orderLogItem);
                 });
             }
             
