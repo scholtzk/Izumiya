@@ -1353,8 +1353,8 @@
                 <button class="category-tab active" data-category="Drinks">Drinks</button>
                 <button class="category-tab" data-category="Food">Food</button>
                 <button class="category-tab" data-category="Order Log">Order Log</button>
-                <button class="category-tab" data-category="Settings">Settings</button>
                 <button class="category-tab" data-category="Analysis">Analysis</button>
+                <button class="category-tab" data-category="Settings">Settings</button>
             </div>
             
             <div class="items-grid">
@@ -1944,32 +1944,6 @@
             container.innerHTML = `
                 <div class="settings-panel">
                     <div class="settings-section">
-                        <div class="settings-title">Float Management</div>
-                        <div class="float-input">
-                            <input type="number" id="floatAmount" placeholder="Enter float amount" min="0">
-                            <button class="settings-button" id="setFloatBtn">Set Float</button>
-                        </div>
-                        <div class="revenue-display" id="revenueDisplay">
-                            <div class="revenue-row">
-                                <div>Starting Float:</div>
-                                <div>¥<span id="startingFloat">0</span></div>
-                            </div>
-                            <div class="revenue-row">
-                                <div>Total Sales:</div>
-                                <div>¥<span id="totalSales">0</span></div>
-                            </div>
-                            <div class="revenue-row">
-                                <div>Current Float:</div>
-                                <div>¥<span id="currentFloat">0</span></div>
-                            </div>
-                            <div class="revenue-row total">
-                                <div>Revenue:</div>
-                                <div>¥<span id="totalRevenue">0</span></div>
-                            </div>
-                        </div>
-                        <button class="settings-button" id="showRevenueBtn">Show Revenue</button>
-                    </div>
-                    <div class="settings-section">
                         <div class="settings-title">Order Management</div>
                         <button class="settings-button" id="exportOrdersBtn">Export Today's Orders</button>
                         <button class="settings-button danger" id="resetOrdersBtn">Reset Today's Orders</button>
@@ -1980,43 +1954,6 @@
             // Add event listeners
             document.getElementById('exportOrdersBtn').addEventListener('click', exportTodayOrders);
             document.getElementById('resetOrdersBtn').addEventListener('click', resetOrderHistory);
-            
-            // Float management
-            const floatInput = document.getElementById('floatAmount');
-            const setFloatBtn = document.getElementById('setFloatBtn');
-            const showRevenueBtn = document.getElementById('showRevenueBtn');
-            const revenueDisplay = document.getElementById('revenueDisplay');
-            
-            // Load saved float amount
-            const savedFloat = localStorage.getItem('startingFloat');
-            if (savedFloat) {
-                floatInput.value = savedFloat;
-            }
-            
-            setFloatBtn.addEventListener('click', () => {
-                const floatAmount = parseInt(floatInput.value);
-                if (isNaN(floatAmount) || floatAmount < 0) {
-                    alert('Please enter a valid float amount');
-                    return;
-                }
-                localStorage.setItem('startingFloat', floatAmount);
-                alert('Float amount has been set');
-            });
-            
-            showRevenueBtn.addEventListener('click', () => {
-                const startingFloat = parseInt(localStorage.getItem('startingFloat') || '0');
-                const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
-                const totalSales = orderHistory.reduce((sum, order) => sum + order.total, 0);
-                const currentFloat = startingFloat + totalSales;
-                const revenue = totalSales;
-                
-                document.getElementById('startingFloat').textContent = startingFloat;
-                document.getElementById('totalSales').textContent = totalSales;
-                document.getElementById('currentFloat').textContent = currentFloat;
-                document.getElementById('totalRevenue').textContent = revenue;
-                
-                revenueDisplay.classList.add('active');
-            });
         }
 
         // Initialize current order with the next order number
@@ -2510,12 +2447,12 @@
                             </div>
                             <div class="order-log-payment">
                                 <div class="payment-status ${order.paymentStatus === 'paid' ? 'paid' : 'unpaid'}">
-                                    ${order.paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}
+                                    ${order.paymentStatus === 'paid' ? t('Paid') : t('Unpaid')}
                                 </div>
                                 <div class="payment-details-right">
                                     ${order.paymentStatus === 'paid' ? `
-                                        <span><span class="payment-detail-label">Cash Given:</span> <span class="payment-detail-value">¥${order.tenderedAmount}</span></span>
-                                        <span><span class="payment-detail-label">Change:</span> <span class="payment-detail-value">¥${order.change}</span></span>
+                                        <span><span class="payment-detail-label">${t('Cash Given:')}</span> <span class="payment-detail-value">¥${order.tenderedAmount}</span></span>
+                                        <span><span class="payment-detail-label">${t('Change:')}</span> <span class="payment-detail-value">¥${order.change}</span></span>
                                     ` : `
                                         <button class="pay-now-btn" data-order-id="${doc.id}">${t('Pay Now')}</button>
                                     `}
@@ -3356,6 +3293,7 @@
                 'No Orders Today': '本日の注文はありません', 'No orders have been placed today.': '本日注文はありません。',
                 'Payment': '支払い', 'Tendered Amount:': 'お預かり:', 'Change:': 'お釣り:', 'Other...': 'その他...',
                 'Order': '注文',
+                'Analysis': '分析',
                 'minutes ago': '分前',
                 'minute ago': '分前',
                 'hours ago': '時間前',
@@ -3379,8 +3317,8 @@
             tabs[0].textContent = t('Drinks');
             tabs[1].textContent = t('Food');
             tabs[2].textContent = t('Order Log');
-            tabs[3].textContent = t('Settings');
-            tabs[4].textContent = t('Analysis');
+            tabs[3].textContent = t('Analysis');
+            tabs[4].textContent = t('Settings');
             // Header button
             document.getElementById('langToggleBtn').textContent = currentLang === 'en' ? '日本語' : 'English';
             // Order title
@@ -3419,6 +3357,11 @@
             }
             // Re-render menu items for the active category
             attachLangToggleHandler();
+            // Re-render Analysis tab if visible
+            const analysisContainer = document.querySelector('.analysis-container');
+            if (analysisContainer && analysisContainer.style.display === 'block' && window.renderAnalysisTab) {
+                window.renderAnalysisTab();
+            }
         }
 
         function attachLangToggleHandler() {
