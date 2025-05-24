@@ -10,6 +10,47 @@
     <meta name="theme-color" content="#6F4E37">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
     <title>Izumiya POS</title>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, updateDoc, doc, deleteDoc, getDoc, Timestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD8nS3tRM8e6eeztv0l7XK9nyjsB9vjRTs",
+            authDomain: "izumiya-pos.firebaseapp.com",
+            projectId: "izumiya-pos",
+            storageBucket: "izumiya-pos.firebasestorage.app",
+            messagingSenderId: "548021570883",
+            appId: "1:548021570883:web:0c9e5057613edd9067f3f6",
+            measurementId: "G-H7F3BEJRQ8"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+
+        // Make Firebase services available globally
+        window.firebaseApp = app;
+        window.firebaseDb = db;
+        window.firebaseServices = {
+            collection,
+            addDoc,
+            getDocs,
+            query,
+            orderBy,
+            updateDoc,
+            doc,
+            deleteDoc,
+            getDoc,
+            Timestamp,
+            setDoc
+        };
+    </script>
     <style>
         :root {
             --primary: #6F4E37;
@@ -325,6 +366,33 @@
             background-color: var(--secondary);
         }
         
+        .checkout-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .pay-later-btn {
+            width: 100%;
+            padding: 15px;
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            min-height: 44px;
+            min-width: 44px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .pay-later-btn:hover {
+            background-color: #f57c00;
+        }
+        
         /* Payment Modal */
         .modal {
             position: fixed;
@@ -393,10 +461,17 @@
         }
         
         .cash-btn {
-            grid-column: span 3;
-            background-color: var(--primary);
+            background-color: white;
             color: var(--dark);
             font-weight: bold;
+            grid-column: span 1.5;
+        }
+        
+        .pay-later-modal-btn {
+            background-color: white;
+            color: var(--dark);
+            font-weight: bold;
+            grid-column: span 1.5;
         }
         
         .backspace-btn {
@@ -487,28 +562,29 @@
             width: 100%;
             max-width: 1200px;
             margin: 0 auto;
+            align-items: start;
         }
         
         .order-log-item {
             background: white;
-            padding: 20px;
-            border-radius: 12px;
+            padding: 0;
+            border-radius: 16px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             width: 100%;
             cursor: pointer;
             transition: all 0.3s ease;
+            overflow: hidden;
         }
         
         .order-log-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding: 15px;
-            border-bottom: 2px solid var(--light);
-            border-radius: 8px 8px 0 0;
-            transition: background-color 0.3s ease;
+            padding: 20px 32px 12px 32px;
+            border-radius: 16px 16px 0 0;
             background-color: #ffebee;
+            border-bottom: none;
+            margin-bottom: 0;
         }
 
         .order-log-header.completed {
@@ -525,24 +601,154 @@
         .order-time {
             color: #666;
             font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .edit-order-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            color: var(--primary);
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+
+        .edit-order-btn:hover {
+            color: var(--secondary);
+        }
+
+        /* Edit Order Modal */
+        .edit-order-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-order-content {
+            background-color: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            padding: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .edit-order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .edit-order-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .edit-order-items {
+            margin-bottom: 20px;
+        }
+
+        .edit-order-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .edit-order-item-info {
+            flex: 1;
+        }
+
+        .edit-order-item-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .edit-order-item-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .edit-order-item-btn.edit {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .edit-order-item-btn.delete {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .edit-order-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .edit-order-actions button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .save-order-btn {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .delete-order-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .cancel-edit-btn {
+            background-color: #f0f0f0;
+            color: var(--dark);
         }
         
         .order-log-items {
-            margin-left: 25px;
-            margin-bottom: 20px;
-            width: calc(100% - 25px);
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            background: #ffebee;
         }
-        
+        .order-log-header.completed + .order-log-items {
+            background: #e8f5e9;
+        }
         .order-log-item-row {
             display: flex;
             align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px dashed #eee;
-            width: 100%;
-        }
-        
-        .order-log-item-row:last-child {
+            padding: 10px 32px;
             border-bottom: none;
+            width: 100%;
+            background: transparent;
+        }
+        .order-log-item-row.completed {
+            background: #e8f5e9;
         }
         
         .order-log-item-name {
@@ -582,29 +788,102 @@
         .order-log-total {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid var(--light);
+            align-items: baseline;
+            padding: 16px 32px 8px 32px;
+            border-radius: 0;
             font-weight: bold;
-            font-size: 20px;
+            font-size: 22px;
             width: 100%;
+            background-color: #ffebee;
+            box-shadow: none;
+            margin-top: 0;
+            border-top: none;
         }
-        
+        .order-log-total.completed {
+            background-color: #e8f5e9;
+        }
+        .order-log-total .total-label {
+            font-size: 1.1em;
+            color: var(--dark);
+        }
+        .order-log-total .total-amount {
+            font-size: 1.3em;
+            color: var(--primary);
+            margin-top: 0;
+        }
         .order-log-payment {
-            color: #666;
-            font-size: 16px;
-            margin-top: 10px;
-            word-break: break-word;
             display: flex;
             justify-content: space-between;
+            align-items: center;
             width: 100%;
+            padding: 0 32px 20px 32px;
+            background-color: #ffebee;
+            border-radius: 0 0 16px 16px;
+            box-shadow: none;
+            margin-top: 0;
+            font-size: 1em;
+        }
+        .order-log-payment.completed {
+            background-color: #e8f5e9;
+        }
+        .order-log-payment .payment-status {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: bold;
+            background: #ffebee;
+            color: #e53935;
+            margin-right: 16px;
+        }
+        .order-log-payment .payment-status.paid {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+        .order-log-payment .payment-details-right {
+            display: flex;
+            gap: 18px;
+            align-items: center;
+            color: #333;
+            font-size: 1em;
+            font-weight: normal;
+        }
+        .order-log-payment .payment-detail-label {
+            color: #888;
+            margin-right: 2px;
+        }
+        .order-log-payment .payment-detail-value {
+            font-weight: bold;
+            color: #333;
         }
         
         .payment-info {
             display: flex;
             justify-content: space-between;
             width: 100%;
+        }
+        
+        .payment-status {
+            font-weight: bold;
+        }
+        
+        .payment-status.unpaid {
+            color: #f44336;
+        }
+        
+        .pay-now-btn {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        
+        .pay-now-btn:hover {
+            background-color: #45a049;
         }
         
         .milk-options {
@@ -931,6 +1210,131 @@
             background-color: var(--light);
             border: 2px solid var(--primary);
         }
+
+        .payment-buttons-row {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .cash-btn {
+            background-color: white;
+            color: var(--dark);
+            font-weight: bold;
+        }
+        
+        .pay-later-modal-btn {
+            background-color: white;
+            color: var(--dark);
+            font-weight: bold;
+        }
+
+        /* Add styles for add item modal */
+        .add-item-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1001;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-item-content {
+            background-color: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            padding: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .add-item-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .add-item-option {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .add-item-option:hover {
+            background-color: var(--light);
+        }
+
+        .add-item-option .item-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .add-item-option .item-price {
+            color: var(--primary);
+        }
+
+        .add-item-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .add-item-btn {
+            background-color: var(--primary);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .cancel-add-item-btn {
+            background-color: #f0f0f0;
+            color: var(--dark);
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .order-log-header,
+        .order-log-items,
+        .order-log-total,
+        .order-log-payment {
+            background-color: #ffebee;
+        }
+        .order-log-item.completed .order-log-header,
+        .order-log-item.completed .order-log-items,
+        .order-log-item.completed .order-log-total,
+        .order-log-item.completed .order-log-payment {
+            background-color: #e8f5e9;
+        }
+        .analysis-container {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            height: 100%;
+        }
+        .analysis-container.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -938,6 +1342,7 @@
         <div class="logo">Izumiya</div>
         <div class="user-controls">
             <div class="time">10:30 AM</div>
+            <button id="langToggleBtn" style="margin-left:20px; font-size:16px; background:none; border:none; color:white; cursor:pointer;">日本語</button>
         </div>
     </div>
     
@@ -945,15 +1350,17 @@
         <!-- Left Panel - Menu Items -->
         <div class="menu-panel">
             <div class="category-tabs">
-                <button class="category-tab active">Drinks</button>
-                <button class="category-tab">Food</button>
-                <button class="category-tab">Order Log</button>
-                <button class="category-tab">Settings</button>
+                <button class="category-tab active" data-category="Drinks">Drinks</button>
+                <button class="category-tab" data-category="Food">Food</button>
+                <button class="category-tab" data-category="Order Log">Order Log</button>
+                <button class="category-tab" data-category="Settings">Settings</button>
+                <button class="category-tab" data-category="Analysis">Analysis</button>
             </div>
             
             <div class="items-grid">
                 <!-- Items will be loaded dynamically via JavaScript -->
             </div>
+            <div class="analysis-container" style="display:none;"></div>
         </div>
         
         <!-- Right Panel - Order Details -->
@@ -1011,12 +1418,15 @@
                 <button class="numpad-btn">0</button>
                 <button class="numpad-btn">00</button>
                 <button class="numpad-btn backspace-btn">⌫</button>
-                <button class="numpad-btn cash-btn">Cash</button>
+                <div class="payment-buttons-row">
+                    <button class="numpad-btn pay-later-modal-btn" id="payLaterBtn">Pay Later</button>
+                    <button class="numpad-btn cash-btn" id="cashBtn">Cash</button>
+                </div>
             </div>
             
             <div class="action-buttons">
-                <button class="action-btn cancel-btn">Cancel</button>
-                <button class="action-btn process-btn">Complete Payment</button>
+                <button class="action-btn cancel-btn" id="cancelPaymentBtn">Cancel</button>
+                <button class="action-btn process-btn" id="completePaymentBtn">Complete Payment</button>
             </div>
         </div>
     </div>
@@ -1042,6 +1452,23 @@
         </div>
     </div>
 
+    <!-- Edit Order Modal -->
+    <div class="edit-order-modal" id="editOrderModal">
+        <div class="edit-order-content">
+            <div class="edit-order-header">
+                <div class="edit-order-title">Edit Order #<span id="editOrderNumber"></span></div>
+            </div>
+            <div class="edit-order-items" id="editOrderItems">
+                <!-- Order items will be loaded here -->
+            </div>
+            <div class="edit-order-actions">
+                <button class="cancel-edit-btn">Cancel</button>
+                <button class="delete-order-btn">Delete Order</button>
+                <button class="save-order-btn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Global variables and functions
         let activeCategory = 'Drinks';
@@ -1052,6 +1479,66 @@
             orderNumber: 0
         };
 
+        const menuData = {
+                'Drinks': [
+                    { name: 'Espresso', name_ja: 'エスプレッソ', price: 500, hasMilk: false, hasExtraShot: true },
+                    { name: 'Cappuccino', name_ja: 'カプチーノ', price: 650, hasMilk: true },
+                    { name: 'Americano', name_ja: 'アメリカーノ', price: 650, hasMilk: false },
+                    { name: 'Latte', name_ja: 'ラテ', price: 680, hasMilk: true },
+                    { name: 'Matcha Latte', name_ja: '抹茶ラテ', price: 680, hasMilk: true },
+                    { name: 'Hot Chocolate', name_ja: 'ホットチョコレート', price: 650, hasMilk: true },
+                    { name: 'Tea', name_ja: '紅茶', price: 550, hasMilk: false },
+                    { type: 'divider' },
+                    { name: 'Ice Americano', name_ja: 'アイスアメリカーノ', price: 650, hasMilk: false },
+                    { name: 'Ice Latte', name_ja: 'アイスラテ', price: 680, hasMilk: true },
+                    { name: 'Ice Matcha Latte', name_ja: 'アイス抹茶ラテ', price: 680, hasMilk: true },
+                    { name: 'Ice Chocolate', name_ja: 'アイスチョコレート', price: 650, hasMilk: true },
+                    { type: 'divider' },
+                    { name: 'Apple Juice', name_ja: 'りんごジュース', price: 550, hasMilk: false },
+                    { name: 'Orange Juice', name_ja: 'オレンジジュース', price: 550, hasMilk: false },
+                    { name: 'Soft Drink', name_ja: 'ソフトドリンク', price: 550, hasMilk: false },
+                    { name: 'Beer', name_ja: 'ビール', price: 580, hasMilk: false },
+                    { type: 'divider' },
+                    { name: 'Soy Milk', name_ja: 'ソイミルク', isMilkAddon: true },
+                    { name: 'Oat Milk', name_ja: 'オーツミルク', isMilkAddon: true },
+                    { name: '', price: 0, isBlank: true },
+                    { name: '', price: 0, isBlank: true },
+                    { name: 'Other...', name_ja: 'その他...', price: 0, isCustom: true }
+                ],
+                'Food': [
+                    { name: 'Toast', name_ja: 'トースト', price: 440, hasJam: true, section: 1 },
+                    { name: 'Museli Yogurt', name_ja: 'ミューズリーヨーグルト', price: 980, section: 1 },
+                    { name: 'Breakfast', name_ja: '朝食セット', price: 1200, section: 1 },
+                    { type: 'divider' },
+                    { name: 'Croissant', name_ja: 'クロワッサン', price: 400, section: 2 },
+                    { name: 'Cookie', name_ja: 'クッキー', price: 400, section: 2 },
+                    { name: 'Caprese Sandwich', name_ja: 'カプレーゼサンド', price: 1500, section: 2 },
+                    { name: 'Tuna Sandwich', name_ja: 'ツナサンド', price: 1500, section: 2 },
+                    { name: 'Salmon Sandwich', name_ja: 'サーモンサンド', price: 1700, section: 2 },
+                    { type: 'divider' },
+                    { name: 'Fries', name_ja: 'フライドポテト', price: 400, section: 3 },
+                    { name: 'Edamame', name_ja: '枝豆', price: 450, section: 3 },
+                    { name: 'Nachos', name_ja: 'ナチョス', price: 1200, section: 3 },
+                    { type: 'divider' },
+                    { name: 'Ice Cream', name_ja: 'アイスクリーム', price: 450, hasFlavor: true, section: 3 },
+                    { name: 'Cake', name_ja: 'ケーキ', price: 680, hasFlavor: true, section: 3 }
+                ],
+                'Order Log': [],
+                'Settings': []
+            };
+
+            // Add this function for menu item translation (must be after menuData)
+            function getDisplayName(englishName) {
+                for (const category of Object.values(menuData)) {
+                    for (const item of category) {
+                        if (item.name === englishName) {
+                            return currentLang === 'ja' && item.name_ja ? item.name_ja : item.name;
+                        }
+                    }
+                }
+                return englishName; // fallback
+            }
+
         // Global variable to track selected milk addon
         let selectedMilkAddon = null;
 
@@ -1059,7 +1546,7 @@
         function addItemToOrder(item) {
             // If it's a milk addon, handle selection and check for selected drink
             if (item.isMilkAddon) {
-                const itemCard = document.querySelector(`.item-card[data-milk-addon="true"] .item-name[data-name="${item.name}"]`)?.closest('.item-card');
+                const itemCard = document.querySelector(`.item-card[data-milk-addon="true"] .item-name[data-name="${getDisplayName(item.name)}"]`)?.closest('.item-card');
                 
                 if (selectedMilkAddon && selectedMilkAddon.name === item.name) {
                     // Deselect if already selected
@@ -1144,6 +1631,9 @@
             
             // Update order summary
             updateOrderSummary();
+            
+            // Add this at the end of the function
+            saveCurrentOrder();
         }
 
         // Render order items
@@ -1160,7 +1650,7 @@
                 orderItemEl.dataset.id = item.id;
                 orderItemEl.innerHTML = `
                     <div class="item-info">
-                        <div class="item-title">${item.name}</div>
+                        <div class="item-title">${getDisplayName(item.name)}</div>
                         ${customizationsText ? `<div class="item-options">${customizationsText}</div>` : ''}
                     </div>
                     <div class="item-quantity">
@@ -1245,6 +1735,7 @@
                 } else {
                     renderOrderItems();
                     updateOrderSummary();
+                    saveCurrentOrder();
                 }
             }
         }
@@ -1254,6 +1745,7 @@
             currentOrder.items = currentOrder.items.filter(item => item.id !== itemId);
             renderOrderItems();
             updateOrderSummary();
+            saveCurrentOrder();
         }
 
         // Update order summary
@@ -1328,84 +1820,123 @@
         }
 
         // Generate progressive order number
-        function generateOrderNumber() {
-            // Get order history from localStorage
-            const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
-            
-            if (orderHistory.length === 0) {
-                return 1; // Start with #1 if no orders exist
+        async function generateOrderNumber() {
+            try {
+                const ordersRef = window.firebaseServices.collection(window.firebaseDb, 'orders');
+                const q = window.firebaseServices.query(ordersRef, window.firebaseServices.orderBy('orderNumber', 'desc'));
+                const querySnapshot = await window.firebaseServices.getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    return 1; // Start with #1 if no orders exist
+                }
+                
+                // Get the highest order number
+                const lastOrder = querySnapshot.docs[0].data();
+                return lastOrder.orderNumber + 1;
+            } catch (error) {
+                console.error('Error generating order number:', error);
+                return 1;
             }
-            
-            // Find the highest order number
-            const lastOrderNumber = Math.max(...orderHistory.map(order => order.orderNumber));
-            
-            // Return the next number
-            return lastOrderNumber + 1;
         }
 
         // Reset order history
-        function resetOrderHistory() {
-            if (confirm('Are you sure you want to reset the entire order history? This action cannot be undone.')) {
-                localStorage.removeItem('orderHistory');
-                alert('Order history has been reset.');
-                if (activeCategory === 'Order Log') {
-                    displayOrderLog();
+        async function resetOrderHistory() {
+            if (confirm("Are you sure you want to reset today's order history? This action cannot be undone.")) {
+                try {
+                    const ordersRef = window.firebaseServices.collection(window.firebaseDb, 'orders');
+                    const querySnapshot = await window.firebaseServices.getDocs(ordersRef);
+                    // Get today's date at midnight
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    // Delete only today's orders
+                    const deletePromises = querySnapshot.docs.map(doc => {
+                        const orderData = doc.data();
+                        if (orderData.timestamp) {
+                            const orderDate = orderData.timestamp.toDate();
+                            orderDate.setHours(0, 0, 0, 0);
+                            if (orderDate.getTime() === today.getTime()) {
+                                return window.firebaseServices.deleteDoc(doc.ref);
+                            }
+                        }
+                        return Promise.resolve();
+                    });
+                    await Promise.all(deletePromises);
+                    alert("Today's order history has been reset.");
+                    if (activeCategory === 'Order Log') {
+                        displayOrderLog();
+                    }
+                } catch (error) {
+                    console.error('Error resetting order history:', error);
+                    alert('Error resetting order history. Please try again.');
                 }
             }
         }
 
         // Export today's orders
-        function exportTodayOrders() {
-            const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            const todayOrders = orderHistory.filter(order => {
-                const orderDate = new Date(order.timestamp);
-                orderDate.setHours(0, 0, 0, 0);
-                return orderDate.getTime() === today.getTime();
-            });
-            
-            if (todayOrders.length === 0) {
-                alert('No orders found for today.');
-                return;
-            }
-            
-            let exportText = `Daily Sales Report - ${today.toLocaleDateString()}\n\n`;
-            let totalSales = 0;
-            
-            todayOrders.forEach(order => {
-                exportText += `Order #${order.orderNumber}\n`;
-                exportText += `Time: ${new Date(order.timestamp).toLocaleTimeString()}\n`;
-                exportText += 'Items:\n';
+        async function exportTodayOrders() {
+            try {
+                const ordersRef = window.firebaseServices.collection(window.firebaseDb, 'orders');
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
                 
-                order.items.forEach(item => {
-                    exportText += `- ${item.quantity}x ${item.name}`;
-                    if (item.customizations) {
-                        exportText += ` (${item.customizations.join(', ')})`;
-                    }
-                    exportText += ` - ¥${item.price * item.quantity}\n`;
+                const q = window.firebaseServices.query(
+                    ordersRef,
+                    window.firebaseServices.orderBy('timestamp', 'desc')
+                );
+                
+                const querySnapshot = await window.firebaseServices.getDocs(q);
+                const todayOrders = querySnapshot.docs
+                    .map(doc => doc.data())
+                    .filter(order => {
+                        const orderDate = order.timestamp.toDate();
+                        orderDate.setHours(0, 0, 0, 0);
+                        return orderDate.getTime() === today.getTime();
+                    });
+                
+                if (todayOrders.length === 0) {
+                    alert('No orders found for today.');
+                    return;
+                }
+                
+                let exportText = `Daily Sales Report - ${today.toLocaleDateString()}\n\n`;
+                let totalSales = 0;
+                
+                todayOrders.forEach(order => {
+                    exportText += `Order #${order.orderNumber}\n`;
+                    exportText += `Time: ${order.timestamp.toDate().toLocaleTimeString()}\n`;
+                    exportText += 'Items:\n';
+                    
+                    order.items.forEach(item => {
+                        exportText += `- ${item.quantity}x ${getDisplayName(item.name)}`;
+                        if (item.customizations) {
+                            exportText += ` (${item.customizations.join(', ')})`;
+                        }
+                        exportText += ` - ¥${item.price * item.quantity}\n`;
+                    });
+                    
+                    exportText += `Total: ¥${order.total}\n`;
+                    exportText += `Payment: ${order.paymentMethod} (Tendered: ¥${order.tenderedAmount}, Change: ¥${order.change})\n\n`;
+                    
+                    totalSales += order.total;
                 });
                 
-                exportText += `Total: ¥${order.total}\n`;
-                exportText += `Payment: Cash (Tendered: ¥${order.tenderedAmount}, Change: ¥${order.change})\n\n`;
+                exportText += `\nTotal Sales: ¥${totalSales}`;
+                exportText += `\nNumber of Orders: ${todayOrders.length}`;
                 
-                totalSales += order.total;
-            });
-            
-            exportText += `\nTotal Sales: ¥${totalSales}`;
-            exportText += `\nNumber of Orders: ${todayOrders.length}`;
-            
-            // Create and download the file
-            const blob = new Blob([exportText], { type: 'text/plain' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `sales-report-${today.toLocaleDateString()}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
+                // Create and download the file
+                const blob = new Blob([exportText], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `sales-report-${today.toLocaleDateString()}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Error exporting orders:', error);
+                alert('Error exporting orders. Please try again.');
+            }
         }
 
         // Display settings panel
@@ -1441,7 +1972,7 @@
                     <div class="settings-section">
                         <div class="settings-title">Order Management</div>
                         <button class="settings-button" id="exportOrdersBtn">Export Today's Orders</button>
-                        <button class="settings-button danger" id="resetOrdersBtn">Reset Order History</button>
+                        <button class="settings-button danger" id="resetOrdersBtn">Reset Today's Orders</button>
                     </div>
                 </div>
             `;
@@ -1488,64 +2019,38 @@
             });
         }
 
+        // Initialize current order with the next order number
+        async function initializeOrder() {
+            try {
+                const orderNumber = await generateOrderNumber();
+                currentOrder = {
+                    items: [],
+                    subtotal: 0,
+                    total: 0,
+                    orderNumber: orderNumber
+                };
+                
+                // Update order number display
+                document.querySelector('.order-title').textContent = `Current Order #${currentOrder.orderNumber}`;
+                
+                // Clear order items container
+                document.querySelector('.order-items').innerHTML = '';
+                
+                // Update order summary
+                updateOrderSummary();
+            } catch (error) {
+                console.error('Error initializing order:', error);
+                alert('Error initializing order. Please refresh the page.');
+            }
+        }
+
+        // Call initializeOrder when the document is loaded
         document.addEventListener('DOMContentLoaded', function() {
+            initializeOrder();
             // ============ DATA STRUCTURE ============
             // Menu categories and items
-            const menuData = {
-                'Drinks': [
-                    { name: 'Espresso', price: 500, hasMilk: false, hasExtraShot: true },
-                    { name: 'Cappuccino', price: 650, hasMilk: true },
-                    { name: 'Americano', price: 650, hasMilk: false },
-                    { name: 'Latte', price: 680, hasMilk: true },
-                    { name: 'Matcha Latte', price: 680, hasMilk: true },
-                    { name: 'Hot Chocolate', price: 650, hasMilk: true },
-                    { name: 'Tea', price: 550, hasMilk: false },
-                    { type: 'divider' },
-                    { name: 'Ice Americano', price: 650, hasMilk: false },
-                    { name: 'Ice Latte', price: 680, hasMilk: true },
-                    { name: 'Ice Matcha Latte', price: 680, hasMilk: true },
-                    { name: 'Ice Chocolate', price: 650, hasMilk: true },
-                    { type: 'divider' },
-                    { name: 'Soft Drink', price: 550, hasMilk: false },
-                    { name: 'Beer', price: 680, hasMilk: false },
-                    { type: 'divider' },
-                    { name: 'Soy Milk', isMilkAddon: true },
-                    { name: 'Oat Milk', isMilkAddon: true },
-                    { name: '', price: 0, isBlank: true },
-                    { name: '', price: 0, isBlank: true },
-                    { name: 'Other...', price: 0, isCustom: true }
-                ],
-                'Food': [
-                    { name: 'Toast', price: 440, hasJam: true, section: 1 },
-                    { name: 'Museli Yogurt', price: 980, section: 1 },
-                    { name: 'Breakfast', price: 1200, section: 1 },
-                    { type: 'divider' },
-                    { name: 'Croissant', price: 400, section: 2 },
-                    { name: 'Cookie', price: 400, section: 2 },
-                    { name: 'Caprese Sandwich', price: 1500, section: 2 },
-                    { name: 'Tuna Sandwich', price: 1500, section: 2 },
-                    { name: 'Salmon Sandwich', price: 1700, section: 2 },
-                    { type: 'divider' },
-                    { name: 'Fries', price: 400, section: 3 },
-                    { name: 'Edamame', price: 450, section: 3 },
-                    { name: 'Nachos', price: 1200, section: 3 },
-                                        { type: 'divider' },
+ 
 
-                    { name: 'Ice Cream', price: 450, hasFlavor: true, section: 3 },
-                    { name: 'Cake', price: 680, hasFlavor: true, section: 3 }
-                ],
-                'Order Log': [],
-                'Settings': []
-            };
-            
-            // Initialize current order with the next order number
-            currentOrder = {
-                items: [],
-                subtotal: 0,
-                total: 0,
-                orderNumber: generateOrderNumber()
-            };
-            
             // Load menu items for the active category
             loadMenuItems(activeCategory);
             
@@ -1580,6 +2085,7 @@
                 if (category === 'Order Log') {
                     itemsGrid.style.display = 'none';
                     orderPanel.style.display = 'none';
+                    document.querySelector('.analysis-container').style.display = 'none';
                     const newOrderLogContainer = document.createElement('div');
                     newOrderLogContainer.className = 'order-log-container active';
                     document.querySelector('.menu-panel').appendChild(newOrderLogContainer);
@@ -1590,11 +2096,32 @@
                 if (category === 'Settings') {
                     itemsGrid.style.display = 'none';
                     orderPanel.style.display = 'none';
+                    document.querySelector('.analysis-container').style.display = 'none';
                     const newSettingsContainer = document.createElement('div');
                     newSettingsContainer.className = 'settings-container active';
                     document.querySelector('.menu-panel').appendChild(newSettingsContainer);
                     displaySettings(newSettingsContainer);
                     return;
+                }
+                
+                if (category === 'Analysis') {
+                    itemsGrid.style.display = 'none';
+                    orderPanel.style.display = 'none';
+                    document.querySelector('.analysis-container').style.display = 'block';
+                    // Remove any existing order-log or settings containers
+                    const orderLogContainer = document.querySelector('.order-log-container');
+                    if (orderLogContainer) orderLogContainer.remove();
+                    const settingsContainer = document.querySelector('.settings-container');
+                    if (settingsContainer) settingsContainer.remove();
+                    if (window.renderAnalysisTab) window.renderAnalysisTab();
+                    return;
+                } else {
+                    document.querySelector('.analysis-container').style.display = 'none';
+                    // Remove any existing order-log or settings containers
+                    const orderLogContainer = document.querySelector('.order-log-container');
+                    if (orderLogContainer) orderLogContainer.remove();
+                    const settingsContainer = document.querySelector('.settings-container');
+                    if (settingsContainer) settingsContainer.remove();
                 }
                 
                 itemsGrid.style.display = 'grid';
@@ -1612,13 +2139,14 @@
                         blankSpace.style.visibility = 'hidden';
                         itemsGrid.appendChild(blankSpace);
                     } else {
+                        const displayName = currentLang === 'ja' && item.name_ja ? item.name_ja : item.name;
                         const itemCard = document.createElement('div');
                         itemCard.className = 'item-card';
                         if (item.isMilkAddon) {
                             itemCard.setAttribute('data-milk-addon', 'true');
                         }
                         itemCard.innerHTML = `
-                            <div class="item-name" data-name="${item.name}">${item.name}</div>
+                            <div class="item-name" data-name="${getDisplayName(item.name)}">${displayName}</div>
                             ${!item.isMilkAddon ? `<div class="item-price">¥${item.price}</div>` : ''}
                         `;
                         
@@ -1636,7 +2164,7 @@
                                     showIceCreamOptions(item, itemCard);
                                 }
                             } else if (item.name === 'Caprese Sandwich') {
-                                showCappriciosaOptions(item, itemCard);
+                                showProscuittoOptions(item, itemCard);
                             } else {
                                 addItemToOrder(item);
                             }
@@ -1826,15 +2354,15 @@
                 }, 0);
             }
 
-            // Show Cappriciosa options for Caprese Sandwich
-            function showCappriciosaOptions(item, itemCard) {
+            // Show Proscuitto options for Caprese Sandwich
+            function showProscuittoOptions(item, itemCard) {
                 const optionsDiv = document.createElement('div');
                 optionsDiv.className = 'milk-options';
                 optionsDiv.style.display = 'block';
                 optionsDiv.style.left = itemCard.offsetLeft + 'px';
                 optionsDiv.style.top = (itemCard.offsetTop + itemCard.offsetHeight) + 'px';
                 
-                const options = ['No Cappriciosa', 'Add Cappriciosa (+¥200)'];
+                const options = ['No Proscuitto', 'Add Proscuitto (+¥200)'];
                 
                 options.forEach(option => {
                     const optionEl = document.createElement('div');
@@ -1844,9 +2372,9 @@
                         e.stopPropagation();
                         let price = item.price;
                         let customizations = [];
-                        if (option === 'Add Cappriciosa (+¥200)') {
+                        if (option === 'Add Proscuitto (+¥200)') {
                             price = item.price + 200;
-                            customizations = ['Cappriciosa'];
+                            customizations = ['Proscuitto'];
                         }
                         const customizedItem = {
                             ...item,
@@ -1878,138 +2406,270 @@
             }
             
             // Display order log
-            function displayOrderLog(container) {
+            async function displayOrderLog(container) {
                 container.innerHTML = '';
                 
-                const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
-                const completedOrders = JSON.parse(localStorage.getItem('completedOrders') || '[]');
-                
-                // Create grid container
-                const orderLogGrid = document.createElement('div');
-                orderLogGrid.className = 'order-log-grid';
-                container.appendChild(orderLogGrid);
-                
-                if (orderHistory.length === 0) {
-                    orderLogGrid.innerHTML = `
-                        <div class="order-log-item">
-                            <div class="order-log-header">
-                                <div class="order-number">No Orders</div>
-                            </div>
-                            <div class="order-log-items">
-                                <div class="order-log-item-row">
-                                    <div class="order-log-item-name">No orders have been placed yet.</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                // Sort orders by timestamp in reverse order (newest first)
-                orderHistory.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                
-                orderHistory.forEach(order => {
-                    const orderLogItem = document.createElement('div');
-                    orderLogItem.className = 'order-log-item';
-                    const isCompleted = completedOrders.includes(order.orderNumber);
+                try {
+                    const ordersRef = window.firebaseServices.collection(window.firebaseDb, 'orders');
                     
-                    // Calculate relative time
-                    const orderTime = new Date(order.timestamp);
-                    const now = new Date();
-                    const diffMs = now - orderTime;
-                    const diffMins = Math.floor(diffMs / (1000 * 60));
-                    const diffHours = Math.floor(diffMins / 60);
+                    // Get today's date at midnight
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
                     
-                    let timeAgo;
-                    if (diffMins < 1) {
-                        timeAgo = 'Just now';
-                    } else if (diffMins < 60) {
-                        timeAgo = `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
-                    } else {
-                        timeAgo = `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
-                    }
+                    // Create a query for orders from today onwards
+                    const q = window.firebaseServices.query(
+                        ordersRef,
+                        window.firebaseServices.orderBy('timestamp', 'desc')
+                    );
                     
-                    // Combine identical items
-                    const combinedItems = order.items.reduce((acc, item) => {
-                        const key = `${item.name}${item.customizations ? `-${item.customizations.join(',')}` : ''}`;
-                        if (!acc[key]) {
-                            acc[key] = {
-                                ...item,
-                                quantity: item.quantity
-                            };
-                        } else {
-                            acc[key].quantity += item.quantity;
-                        }
-                        return acc;
-                    }, {});
+                    const querySnapshot = await window.firebaseServices.getDocs(q);
                     
-                    orderLogItem.innerHTML = `
-                        <div class="order-log-header ${isCompleted ? 'completed' : ''}">
-                            <div class="order-number">Order #${order.orderNumber}</div>
-                            <div class="order-time">${timeAgo}</div>
-                        </div>
-                        <div class="order-log-items">
-                            ${Object.values(combinedItems).map(item => `
-                                <div class="order-log-item-row">
-                                    <div class="order-log-item-quantity">x${item.quantity}</div>
-                                    <div class="order-log-item-name">${item.name}</div>
-                                    ${item.customizations ? `<div class="order-log-item-options">${item.customizations.join(', ')}</div>` : ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                        <div class="order-log-total">
-                            <div>Total Amount</div>
-                            <div>¥${order.total}</div>
-                        </div>
-                        <div class="order-log-payment">
-                            <div class="payment-info">
-                                <div>Tendered: ¥${order.tenderedAmount}</div>
-                                <div>Change: ¥${order.change}</div>
-                            </div>
-                        </div>
-                    `;
+                    // Create grid container
+                    const orderLogGrid = document.createElement('div');
+                    orderLogGrid.className = 'order-log-grid';
+                    container.appendChild(orderLogGrid);
                     
-                    // Add click event listener to toggle completion
-                    orderLogItem.addEventListener('click', function() {
-                        let completedOrders = JSON.parse(localStorage.getItem('completedOrders') || '[]');
-                        const header = this.querySelector('.order-log-header');
-                        
-                        if (completedOrders.includes(order.orderNumber)) {
-                            completedOrders = completedOrders.filter(num => num !== order.orderNumber);
-                            header.classList.remove('completed');
-                        } else {
-                            completedOrders.push(order.orderNumber);
-                            header.classList.add('completed');
-                        }
-                        
-                        localStorage.setItem('completedOrders', JSON.stringify(completedOrders));
+                    // Filter orders to only include today's orders
+                    const todayOrders = querySnapshot.docs.filter(doc => {
+                        const orderDate = doc.data().timestamp.toDate();
+                        orderDate.setHours(0, 0, 0, 0);
+                        return orderDate.getTime() === today.getTime();
                     });
                     
-                    orderLogGrid.appendChild(orderLogItem);
-                });
+                    if (todayOrders.length === 0) {
+                        orderLogGrid.innerHTML = `
+                            <div class="order-log-item">
+                                <div class="order-log-header">
+                                    <div class="order-number">No Orders Today</div>
+                                </div>
+                                <div class="order-log-items">
+                                    <div class="order-log-item-row">
+                                        <div class="order-log-item-name">No orders have been placed today.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    todayOrders.forEach(doc => {
+                        const order = doc.data();
+                        const orderLogItem = document.createElement('div');
+                        orderLogItem.className = 'order-log-item' + (order.completed ? ' completed' : '');
+                        
+                        // Calculate relative time
+                        const orderTime = order.timestamp.toDate();
+                        const now = new Date();
+                        const diffMs = now - orderTime;
+                        const diffMins = Math.floor(diffMs / (1000 * 60));
+                        const diffHours = Math.floor(diffMins / 60);
+                        
+                        let timeAgo;
+                        if (diffMins < 1) {
+                            timeAgo = t('Just now');
+                        } else if (diffMins < 60) {
+                            timeAgo = `${diffMins} ${t(diffMins === 1 ? 'minute ago' : 'minutes ago')}`;
+                        } else {
+                            timeAgo = `${diffHours} ${t(diffHours === 1 ? 'hour ago' : 'hours ago')}`;
+                        }
+                        
+                        // Combine identical items
+                        const combinedItems = order.items.reduce((acc, item) => {
+                            const key = `${getDisplayName(item.name)}${item.customizations ? `-${item.customizations.join(',')}` : ''}`;
+                            if (!acc[key]) {
+                                acc[key] = {
+                                    ...item,
+                                    quantity: item.quantity
+                                };
+                            } else {
+                                acc[key].quantity += item.quantity;
+                            }
+                            return acc;
+                        }, {});
+                        
+                        orderLogItem.innerHTML = `
+                            <div class="order-log-header" data-order-id="${doc.id}">
+                                <div class="order-number">${t('Order')} #${order.orderNumber}</div>
+                                <div class="order-time">
+                                    ${timeAgo}
+                                    <button class="edit-order-btn" data-order-id="${doc.id}">✎</button>
+                                </div>
+                            </div>
+                            <div class="order-log-items">
+                                ${Object.values(combinedItems).map(item => `
+                                    <div class="order-log-item-row ${item.completed ? 'completed' : ''}" data-item-id="${item.id}">
+                                        <div class="order-log-item-quantity">x${item.quantity}</div>
+                                        <div class="order-log-item-name">${getDisplayName(item.name)}</div>
+                                        ${item.customizations ? `<div class="order-log-item-options">${item.customizations.join(', ')}</div>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="order-log-total">
+                                <div class="total-label">${t('Total Amount')}</div>
+                                <div class="total-amount">¥${order.total}</div>
+                            </div>
+                            <div class="order-log-payment">
+                                <div class="payment-status ${order.paymentStatus === 'paid' ? 'paid' : 'unpaid'}">
+                                    ${order.paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}
+                                </div>
+                                <div class="payment-details-right">
+                                    ${order.paymentStatus === 'paid' ? `
+                                        <span><span class="payment-detail-label">Cash Given:</span> <span class="payment-detail-value">¥${order.tenderedAmount}</span></span>
+                                        <span><span class="payment-detail-label">Change:</span> <span class="payment-detail-value">¥${order.change}</span></span>
+                                    ` : `
+                                        <button class="pay-now-btn" data-order-id="${doc.id}">${t('Pay Now')}</button>
+                                    `}
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Add click handler for the order header to toggle completion status
+                        const header = orderLogItem.querySelector('.order-log-header');
+                        header.addEventListener('click', async (e) => {
+                            // Don't toggle if clicking the edit button
+                            if (e.target.classList.contains('edit-order-btn')) {
+                                return;
+                            }
+                            
+                            try {
+                                const orderRef = window.firebaseServices.doc(window.firebaseDb, 'orders', doc.id);
+                                const newStatus = !order.completed;
+                                
+                                // Update all items to match the order status
+                                const updatedItems = order.items.map(item => ({
+                                    ...item,
+                                    completed: newStatus
+                                }));
+                                
+                                await window.firebaseServices.updateDoc(orderRef, {
+                                    completed: newStatus,
+                                    items: updatedItems
+                                });
+                                
+                                // Toggle the completed class for the entire order-log-item
+                                orderLogItem.classList.toggle('completed');
+                            } catch (error) {
+                                console.error('Error updating order completion status:', error);
+                                alert('Error updating order status. Please try again.');
+                            }
+                        });
+
+                        // Add click handlers for individual items
+                        orderLogItem.querySelectorAll('.order-log-item-row').forEach(row => {
+                            row.addEventListener('click', async (e) => {
+                                // Don't trigger if clicking on a button or link
+                                if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') {
+                                    return;
+                                }
+
+                                try {
+                                    const itemId = parseInt(row.dataset.itemId);
+                                    const orderRef = window.firebaseServices.doc(window.firebaseDb, 'orders', doc.id);
+                                    const orderDoc = await window.firebaseServices.getDoc(orderRef);
+                                    const order = orderDoc.data();
+                                    
+                                    // Toggle the completed status for this item
+                                    const updatedItems = order.items.map(item => {
+                                        if (item.id === itemId) {
+                                            return { ...item, completed: !item.completed };
+                                        }
+                                        return item;
+                                    });
+                                    
+                                    // Check if all items are completed
+                                    const allCompleted = updatedItems.every(item => item.completed);
+                                    
+                                    await window.firebaseServices.updateDoc(orderRef, {
+                                        items: updatedItems,
+                                        completed: allCompleted
+                                    });
+                                    
+                                    // Toggle the completed class for this item
+                                    row.classList.toggle('completed');
+                                    
+                                    // Update the header status based on all items
+                                    if (allCompleted) {
+                                        orderLogItem.classList.add('completed');
+                                    } else {
+                                        orderLogItem.classList.remove('completed');
+                                    }
+                                } catch (error) {
+                                    console.error('Error updating item completion status:', error);
+                                    alert('Error updating item status. Please try again.');
+                                }
+                            });
+                        });
+                        
+                        orderLogGrid.appendChild(orderLogItem);
+                    });
+                } catch (error) {
+                    console.error('Error displaying order log:', error);
+                    alert('Error loading orders. Please try again.');
+                }
             }
-            
-            // Start a new order
-            function startNewOrder() {
-                currentOrder = {
-                    items: [],
-                    subtotal: 0,
-                    total: 0,
-                    orderNumber: generateOrderNumber()
-                };
-                
-                // Update order number display
-                document.querySelector('.order-title').textContent = `Current Order #${currentOrder.orderNumber}`;
-                
-                // Clear order items container
-                document.querySelector('.order-items').innerHTML = '';
-                
-                // Update order summary
-                updateOrderSummary();
+
+            // Process pay now for existing order
+            async function processPayNow(orderId) {
+                try {
+                    const orderRef = window.firebaseServices.doc(window.firebaseDb, 'orders', orderId);
+                    const orderDoc = await window.firebaseServices.getDoc(orderRef);
+                    
+                    if (!orderDoc.exists()) {
+                        alert('Order not found');
+                        return;
+                    }
+                    
+                    // Set the current order to the found order
+                    currentOrder = { ...orderDoc.data() };
+                    
+                    // Show payment modal
+                    updatePaymentModal();
+                    document.getElementById('paymentModal').style.display = 'flex';
+                    
+                    // Update process button to handle pay now
+                    const processBtn = document.querySelector('.process-btn');
+                    processBtn.onclick = null; // Remove previous event listeners
+                    processBtn.onclick = async () => {
+                        const tenderedAmount = parseInt(document.getElementById('tenderedAmount').textContent);
+                        const totalAmount = parseInt(document.getElementById('totalAmount').textContent);
+                        
+                        if (tenderedAmount < totalAmount) {
+                            alert('Insufficient payment amount');
+                            return;
+                        }
+                        
+                        try {
+                            // Update the order in Firestore
+                            await window.firebaseServices.updateDoc(orderRef, {
+                                paymentMethod: 'Cash',
+                                tenderedAmount: tenderedAmount,
+                                change: tenderedAmount - totalAmount,
+                                paymentStatus: 'paid'
+                            });
+                            
+                            // Close modal
+                            document.getElementById('paymentModal').style.display = 'none';
+                            
+                            // Refresh order log if we're in the Order Log category
+                            if (activeCategory === 'Order Log') {
+                                const container = document.querySelector('.order-log-container');
+                                if (container) {
+                                    await displayOrderLog(container);
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error updating order:', error);
+                            alert('Error updating order. Please try again.');
+                        }
+                    };
+                } catch (error) {
+                    console.error('Error processing pay now:', error);
+                    alert('Error loading order. Please try again.');
+                }
             }
-            
+
             // Process payment
-            function processPayment() {
+            async function processPayment() {
                 const tenderedAmount = parseInt(document.getElementById('tenderedAmount').textContent);
                 const totalAmount = parseInt(document.getElementById('totalAmount').textContent);
                 
@@ -2018,65 +2678,184 @@
                     return;
                 }
                 
-                // Save the order for potential receipt printing or order history
-                const completedOrder = { 
-                    ...currentOrder, 
-                    paymentMethod: 'Cash',
-                    tenderedAmount: tenderedAmount,
-                    change: tenderedAmount - totalAmount,
-                    timestamp: new Date() 
-                };
-                
-                // Store in localStorage as a simple order history
-                let orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
-                orderHistory.push(completedOrder);
-                localStorage.setItem('orderHistory', JSON.stringify(orderHistory));
-                
-                // Close the payment modal
-                document.getElementById('paymentModal').style.display = 'none';
-                
-                // Create overlay
-                const overlay = document.createElement('div');
-                overlay.style.position = 'fixed';
-                overlay.style.top = '0';
-                overlay.style.left = '0';
-                overlay.style.width = '100%';
-                overlay.style.height = '100%';
-                overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-                overlay.style.zIndex = '999';
-                overlay.style.cursor = 'pointer';
-                
-                // Show success message
-                const successMessage = document.createElement('div');
-                successMessage.style.position = 'fixed';
-                successMessage.style.top = '50%';
-                successMessage.style.left = '50%';
-                successMessage.style.transform = 'translate(-50%, -50%)';
-                successMessage.style.backgroundColor = '#4CAF50';
-                successMessage.style.color = 'white';
-                successMessage.style.padding = '40px';
-                successMessage.style.borderRadius = '15px';
-                successMessage.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
-                successMessage.style.zIndex = '1000';
-                successMessage.style.textAlign = 'center';
-                successMessage.style.minWidth = '300px';
-                successMessage.innerHTML = `
-                    <div style="font-size: 32px; font-weight: bold; margin-bottom: 10px;">Change: ¥${tenderedAmount - totalAmount}</div>
-                    <div style="font-size: 16px; opacity: 0.8;">Order #${currentOrder.orderNumber}</div>
-                `;
-                
-                document.body.appendChild(overlay);
-                document.body.appendChild(successMessage);
-                
-                // Add click event to remove the message and start new order
-                const dismissPopup = () => {
-                    document.body.removeChild(overlay);
-                    document.body.removeChild(successMessage);
-                    startNewOrder();
-                };
-                
-                overlay.addEventListener('click', dismissPopup);
-                successMessage.addEventListener('click', dismissPopup);
+                try {
+                    // Save the order to Firestore
+                    const completedOrder = { 
+                        ...currentOrder, 
+                        paymentMethod: 'Cash',
+                        tenderedAmount: tenderedAmount,
+                        change: tenderedAmount - totalAmount,
+                        timestamp: window.firebaseServices.Timestamp.now(),
+                        paymentStatus: 'paid'
+                    };
+                    
+                    await window.firebaseServices.addDoc(
+                        window.firebaseServices.collection(window.firebaseDb, 'orders'),
+                        completedOrder
+                    );
+                    
+                    // Clear the current order
+                    await clearCurrentOrder();
+                    
+                    // Close the payment modal
+                    document.getElementById('paymentModal').style.display = 'none';
+                    
+                    // Create overlay
+                    const overlay = document.createElement('div');
+                    overlay.style.position = 'fixed';
+                    overlay.style.top = '0';
+                    overlay.style.left = '0';
+                    overlay.style.width = '100%';
+                    overlay.style.height = '100%';
+                    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                    overlay.style.zIndex = '999';
+                    overlay.style.cursor = 'pointer';
+                    
+                    // Show success message
+                    const successMessage = document.createElement('div');
+                    successMessage.style.position = 'fixed';
+                    successMessage.style.top = '50%';
+                    successMessage.style.left = '50%';
+                    successMessage.style.transform = 'translate(-50%, -50%)';
+                    successMessage.style.backgroundColor = '#4CAF50';
+                    successMessage.style.color = 'white';
+                    successMessage.style.padding = '40px';
+                    successMessage.style.borderRadius = '15px';
+                    successMessage.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+                    successMessage.style.zIndex = '1000';
+                    successMessage.style.textAlign = 'center';
+                    successMessage.style.minWidth = '300px';
+                    successMessage.innerHTML = `
+                        <div style="font-size: 32px; font-weight: bold; margin-bottom: 10px;">Change: ¥${tenderedAmount - totalAmount}</div>
+                        <div style="font-size: 16px; opacity: 0.8;">Order #${currentOrder.orderNumber}</div>
+                    `;
+                    
+                    document.body.appendChild(overlay);
+                    document.body.appendChild(successMessage);
+                    
+                    // Add click event to remove the message and start new order
+                    const dismissPopup = () => {
+                        document.body.removeChild(overlay);
+                        document.body.removeChild(successMessage);
+                        startNewOrder().catch(error => {
+                            console.error('Error starting new order:', error);
+                            alert('Error starting new order. Please try again.');
+                        });
+                    };
+                    
+                    overlay.addEventListener('click', dismissPopup);
+                    successMessage.addEventListener('click', dismissPopup);
+                } catch (error) {
+                    console.error('Error processing payment:', error);
+                    alert('Error processing payment. Please try again.');
+                }
+            }
+
+            // Process pay later
+            async function processPayLater() {
+                try {
+                    // Check if we're in the order log view
+                    if (activeCategory === 'Order Log') {
+                        // If we're in order log, just close the modal
+                        document.getElementById('paymentModal').style.display = 'none';
+                        return;
+                    }
+
+                    // Save the order to Firestore
+                    const payLaterOrder = { 
+                        ...currentOrder, 
+                        paymentMethod: 'Pay Later',
+                        tenderedAmount: 0,
+                        change: 0,
+                        timestamp: window.firebaseServices.Timestamp.now(),
+                        paymentStatus: 'unpaid'
+                    };
+                    
+                    await window.firebaseServices.addDoc(
+                        window.firebaseServices.collection(window.firebaseDb, 'orders'),
+                        payLaterOrder
+                    );
+                    
+                    // Clear the current order
+                    await clearCurrentOrder();
+                    
+                    // Close the payment modal
+                    document.getElementById('paymentModal').style.display = 'none';
+                    
+                    // Create overlay
+                    const overlay = document.createElement('div');
+                    overlay.style.position = 'fixed';
+                    overlay.style.top = '0';
+                    overlay.style.left = '0';
+                    overlay.style.width = '100%';
+                    overlay.style.height = '100%';
+                    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                    overlay.style.zIndex = '999';
+                    overlay.style.cursor = 'pointer';
+                    
+                    // Show success message
+                    const successMessage = document.createElement('div');
+                    successMessage.style.position = 'fixed';
+                    successMessage.style.top = '50%';
+                    successMessage.style.left = '50%';
+                    successMessage.style.transform = 'translate(-50%, -50%)';
+                    successMessage.style.backgroundColor = '#ff9800';
+                    successMessage.style.color = 'white';
+                    successMessage.style.padding = '40px';
+                    successMessage.style.borderRadius = '15px';
+                    successMessage.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+                    successMessage.style.zIndex = '1000';
+                    successMessage.style.textAlign = 'center';
+                    successMessage.style.minWidth = '300px';
+                    successMessage.innerHTML = `
+                        <div style="font-size: 32px; font-weight: bold; margin-bottom: 10px;">Order Saved</div>
+                        <div style="font-size: 16px; opacity: 0.8;">Order #${currentOrder.orderNumber}</div>
+                    `;
+                    
+                    document.body.appendChild(overlay);
+                    document.body.appendChild(successMessage);
+                    
+                    // Add click event to remove the message and start new order
+                    const dismissPopup = () => {
+                        document.body.removeChild(overlay);
+                        document.body.removeChild(successMessage);
+                        startNewOrder().catch(error => {
+                            console.error('Error starting new order:', error);
+                            alert('Error starting new order. Please try again.');
+                        });
+                    };
+                    
+                    overlay.addEventListener('click', dismissPopup);
+                    successMessage.addEventListener('click', dismissPopup);
+                } catch (error) {
+                    console.error('Error processing pay later:', error);
+                    alert('Error saving order. Please try again.');
+                }
+            }
+
+            // Start a new order
+            async function startNewOrder() {
+                try {
+                    const orderNumber = await generateOrderNumber();
+                    currentOrder = {
+                        items: [],
+                        subtotal: 0,
+                        total: 0,
+                        orderNumber: orderNumber
+                    };
+                    
+                    // Update order number display
+                    document.querySelector('.order-title').textContent = `Current Order #${currentOrder.orderNumber}`;
+                    
+                    // Clear order items container
+                    document.querySelector('.order-items').innerHTML = '';
+                    
+                    // Update order summary
+                    updateOrderSummary();
+                } catch (error) {
+                    console.error('Error starting new order:', error);
+                    alert('Error starting new order. Please try again.');
+                }
             }
             
             // Update payment modal when opened
@@ -2102,13 +2881,17 @@
                     const value = this.textContent;
                     const totalAmount = parseInt(document.getElementById('totalAmount').textContent);
                     
-                    if (value === 'C') {
+                    if (this.id === 'payLaterBtn') {
+                        // Process pay later
+                        processPayLater();
+                        return;
+                    } else if (value === 'C') {
                         // Clear the entered amount
                         amountEntered = '';
                     } else if (value === '⌫') {
                         // Backspace functionality
                         amountEntered = amountEntered.slice(0, -1);
-                    } else if (value === 'Cash') {
+                    } else if (this.id === 'cashBtn') {
                         // Set exact amount
                         amountEntered = totalAmount.toString();
                     } else {
@@ -2139,7 +2922,7 @@
                     paymentModal.style.display = 'flex';
                 }
             });
-            
+
             // Payment modal controls
             const cancelBtn = document.querySelector('.cancel-btn');
             const processBtn = document.querySelector('.process-btn');
@@ -2148,7 +2931,19 @@
                 paymentModal.style.display = 'none';
             });
             
-            processBtn.addEventListener('click', processPayment);
+            // Remove addEventListener for processPayment and use only onclick assignment
+            processBtn.onclick = processPayment;
+
+            // Add event delegation for Pay Now buttons in order log
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('pay-now-btn')) {
+                    const orderId = e.target.dataset.orderId;
+                    processPayNow(orderId);
+                } else if (e.target.classList.contains('edit-order-btn')) {
+                    const orderId = e.target.dataset.orderId;
+                    openEditOrderModal(orderId);
+                }
+            });
             
             // Update time
             function updateTime() {
@@ -2171,8 +2966,8 @@
                     categoryTabs.forEach(t => t.classList.remove('active'));
                     this.classList.add('active');
                     
-                    // Update active category and load items
-                    activeCategory = this.textContent;
+                    // Use data-category attribute for switching
+                    activeCategory = this.dataset.category;
                     loadMenuItems(activeCategory);
                 });
             });
@@ -2258,7 +3053,475 @@
                     milkButtonsContainer.remove();
                 }
             }
+
+            // Edit Order Modal Functions
+            async function openEditOrderModal(orderId) {
+                try {
+                    const orderRef = window.firebaseServices.doc(window.firebaseDb, 'orders', orderId);
+                    const orderDoc = await window.firebaseServices.getDoc(orderRef);
+                    
+                    if (!orderDoc.exists()) {
+                        alert('Order not found');
+                        return;
+                    }
+
+                    const order = orderDoc.data();
+
+                    // Set order number in modal
+                    document.getElementById('editOrderNumber').textContent = order.orderNumber;
+
+                    // Combine identical items (same name and same customizations)
+                    function combineOrderItems(items) {
+                        const map = {};
+                        items.forEach(item => {
+                            const customKey = item.customizations ? item.customizations.join('|') : '';
+                            const key = `${item.name}__${customKey}`;
+                            if (!map[key]) {
+                                map[key] = { ...item };
+                            } else {
+                                map[key].quantity += item.quantity;
+                            }
+                        });
+                        return Object.values(map);
+                    }
+
+                    // Populate order items
+                    const editOrderItems = document.getElementById('editOrderItems');
+                    editOrderItems.innerHTML = '';
+
+                    combineOrderItems(order.items).forEach(item => {
+                        const itemEl = document.createElement('div');
+                        itemEl.className = 'edit-order-item';
+                        itemEl.innerHTML = `
+                            <div class="edit-order-item-info">
+                                <div>${getDisplayName(item.name)}</div>
+                                ${item.customizations ? `<div style="color: #666; font-size: 14px;">${item.customizations.join(', ')}</div>` : ''}
+                                <div style="color: var(--primary); font-weight: bold;">¥${item.price * item.quantity}</div>
+                            </div>
+                            <div class="item-quantity">
+                                <button class="quantity-btn minus" data-item-id="${item.id}">-</button>
+                                <span class="quantity-value">${item.quantity}</span>
+                                <button class="quantity-btn plus" data-item-id="${item.id}">+</button>
+                            </div>
+                        `;
+                        editOrderItems.appendChild(itemEl);
+                    });
+
+                    // Add "Add Item" button
+                    const addItemButton = document.createElement('button');
+                    addItemButton.className = 'add-item-btn';
+                    addItemButton.textContent = 'Add Item';
+                    addItemButton.style.marginTop = '20px';
+                    addItemButton.style.width = '100%';
+                    editOrderItems.appendChild(addItemButton);
+
+                    // Create add item modal if it doesn't exist
+                    let addItemModal = document.getElementById('addItemModal');
+                    if (!addItemModal) {
+                        addItemModal = document.createElement('div');
+                        addItemModal.id = 'addItemModal';
+                        addItemModal.className = 'add-item-modal';
+                        addItemModal.innerHTML = `
+                            <div class="add-item-content">
+                                <h2>Add Item to Order</h2>
+                                <div class="add-item-list"></div>
+                                <div class="add-item-actions">
+                                    <button class="cancel-add-item-btn">Cancel</button>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(addItemModal);
+                    }
+
+                    // Show modal
+                    document.getElementById('editOrderModal').style.display = 'flex';
+
+                    // Add event listeners for modal buttons
+                    const modal = document.getElementById('editOrderModal');
+                    const cancelBtn = modal.querySelector('.cancel-edit-btn');
+                    const deleteBtn = modal.querySelector('.delete-order-btn');
+                    const saveBtn = modal.querySelector('.save-order-btn');
+
+                    cancelBtn.onclick = () => {
+                        modal.style.display = 'none';
+                    };
+
+                    deleteBtn.onclick = async () => {
+                        try {
+                            await window.firebaseServices.deleteDoc(orderRef);
+                            modal.style.display = 'none';
+                            if (activeCategory === 'Order Log') {
+                                const container = document.querySelector('.order-log-container');
+                                if (container) {
+                                    await displayOrderLog(container);
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error deleting order:', error);
+                            alert('Error deleting order. Please try again.');
+                        }
+                    };
+
+                    saveBtn.onclick = async () => {
+                        try {
+                            // Here you would implement the save functionality
+                            // For now, just close the modal
+                            modal.style.display = 'none';
+                        } catch (error) {
+                            console.error('Error saving order:', error);
+                            alert('Error saving order. Please try again.');
+                        }
+                    };
+
+                    // Add event delegation for quantity buttons
+                    editOrderItems.addEventListener('click', async function(e) {
+                        const itemId = parseInt(e.target.dataset.itemId);
+                        if (!itemId) return;
+
+                        if (e.target.classList.contains('minus')) {
+                            try {
+                                const item = order.items.find(i => i.id === itemId);
+                                if (item && item.quantity > 1) {
+                                    item.quantity -= 1;
+                                } else {
+                                    // Remove item if quantity would be 0
+                                    order.items = order.items.filter(i => i.id !== itemId);
+                                }
+                                
+                                const updatedTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                                
+                                await window.firebaseServices.updateDoc(orderRef, {
+                                    items: order.items,
+                                    total: updatedTotal
+                                });
+                                
+                                // Refresh the modal
+                                await openEditOrderModal(orderId);
+
+                                // Refresh the order log if we're in the Order Log category
+                                if (activeCategory === 'Order Log') {
+                                    const container = document.querySelector('.order-log-container');
+                                    if (container) {
+                                        await displayOrderLog(container);
+                                    }
+                                }
+                            } catch (error) {
+                                console.error('Error updating item quantity:', error);
+                                alert('Error updating item quantity. Please try again.');
+                            }
+                        } else if (e.target.classList.contains('plus')) {
+                            try {
+                                const item = order.items.find(i => i.id === itemId);
+                                if (item) {
+                                    item.quantity += 1;
+                                    
+                                    const updatedTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                                    
+                                    await window.firebaseServices.updateDoc(orderRef, {
+                                        items: order.items,
+                                        total: updatedTotal
+                                    });
+                                    
+                                    // Refresh the modal
+                                    await openEditOrderModal(orderId);
+
+                                    // Refresh the order log if we're in the Order Log category
+                                    if (activeCategory === 'Order Log') {
+                                        const container = document.querySelector('.order-log-container');
+                                        if (container) {
+                                            await displayOrderLog(container);
+                                        }
+                                    }
+                                }
+                            } catch (error) {
+                                console.error('Error updating item quantity:', error);
+                                alert('Error updating item quantity. Please try again.');
+                            }
+                        }
+                    });
+
+                    // Add event listener for Add Item button
+                    addItemButton.onclick = () => {
+                        const addItemModal = document.getElementById('addItemModal');
+                        const addItemList = addItemModal.querySelector('.add-item-list');
+                        
+                        // Clear previous items
+                        addItemList.innerHTML = '';
+                        
+                        // Add all menu items
+                        const allItems = [
+                            ...menuData['Drinks'].filter(item => !item.type && !item.isBlank && !item.isCustom),
+                            ...menuData['Food'].filter(item => !item.type)
+                        ];
+                        
+                        allItems.forEach(item => {
+                            const itemOption = document.createElement('div');
+                            itemOption.className = 'add-item-option';
+                            itemOption.innerHTML = `
+                                <div class="item-name">${getDisplayName(item.name)}</div>
+                                <div class="item-price">¥${item.price}</div>
+                            `;
+                            
+                            itemOption.onclick = async () => {
+                                try {
+                                    // Add the item to the order with completed: false
+                                    const updatedItems = [...order.items, {
+                                        ...item,
+                                        quantity: 1,
+                                        id: Date.now(),
+                                        completed: false
+                                    }];
+                                    
+                                    // Update the order in Firebase
+                                    await window.firebaseServices.updateDoc(orderRef, {
+                                        items: updatedItems,
+                                        total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+                                        completed: false // Set order as incomplete when adding new items
+                                    });
+                                    
+                                    // Close the add item modal
+                                    addItemModal.style.display = 'none';
+                                    
+                                    // Refresh the edit modal
+                                    await openEditOrderModal(orderId);
+
+                                    // Refresh the order log if we're in the Order Log category
+                                    if (activeCategory === 'Order Log') {
+                                        const container = document.querySelector('.order-log-container');
+                                        if (container) {
+                                            await displayOrderLog(container);
+                                        }
+                                    }
+                                } catch (error) {
+                                    console.error('Error adding item:', error);
+                                    alert('Error adding item. Please try again.');
+                                }
+                            };
+                            
+                            addItemList.appendChild(itemOption);
+                        });
+                        
+                        // Show the add item modal
+                        addItemModal.style.display = 'flex';
+                        
+                        // Add event listener for cancel button
+                        const cancelBtn = addItemModal.querySelector('.cancel-add-item-btn');
+                        cancelBtn.onclick = () => {
+                            addItemModal.style.display = 'none';
+                        };
+                    };
+                } catch (error) {
+                    console.error('Error opening edit modal:', error);
+                    alert('Error loading order. Please try again.');
+                }
+            }
         });
+
+        // Language support
+        let currentLang = localStorage.getItem('posLang') || 'en';
+        const translations = {
+            en: {
+                Drinks: 'Drinks', Food: 'Food', 'Order Log': 'Order Log', Settings: 'Settings',
+                'Total Amount': 'Total Amount', Paid: 'Paid', Unpaid: 'Unpaid', 'Cash Given:': 'Cash Given:', 'Change:': 'Change:', Checkout: 'Checkout',
+                'Current Order': 'Current Order', 'Add Custom Item': 'Add Custom Item', 'Cancel': 'Cancel', 'Add Item': 'Add Item', 'Order Saved': 'Order Saved',
+                'Complete Payment': 'Complete Payment', 'Pay Now': 'Pay Now', 'Pay Later': 'Pay Later', 'Subtotal': 'Subtotal', 'Total': 'Total',
+                'New Order': 'New Order', 'Export Today': "Export Today's Orders", 'Reset Orders': 'Reset Order History', 'Show Revenue': 'Show Revenue',
+                'Float Management': 'Float Management', 'Order Management': 'Order Management', 'Set Float': 'Set Float', 'Revenue': 'Revenue',
+                'Starting Float:': 'Starting Float:', 'Total Sales:': 'Total Sales:', 'Current Float:': 'Current Float:', 'Revenue:': 'Revenue:',
+                'Edit Order': 'Edit Order', 'Delete Order': 'Delete Order', 'Save Changes': 'Save Changes', 'Add Item to Order': 'Add Item to Order',
+                'No Orders Today': 'No Orders Today', 'No orders have been placed today.': 'No orders have been placed today.',
+                'Payment': 'Payment', 'Tendered Amount:': 'Tendered Amount:', 'Change:': 'Change:', 'Other...': 'Other...',
+                'Order': 'Order',
+                'minutes ago': 'minutes ago',
+                'minute ago': 'minute ago',
+                'hours ago': 'hours ago',
+                'hour ago': 'hour ago',
+                'Just now': 'Just now',
+                'Edit': 'Edit',
+                'Add Item': 'Add Item',
+                'Cancel': 'Cancel',
+                'Delete Order': 'Delete Order',
+                'Save Changes': 'Save Changes',
+                'Cash': 'Cash'
+            },
+            ja: {
+                Drinks: 'ドリンク', Food: 'フード', 'Order Log': '注文履歴', Settings: '設定',
+                'Total Amount': '合計金額', Paid: '支払い済み', Unpaid: '未払い', 'Cash Given:': 'お預かり:', 'Change:': 'お釣り:', Checkout: '会計',
+                'Current Order': '現在の注文', 'Add Custom Item': 'カスタム商品追加', 'Cancel': 'キャンセル', 'Add Item': '商品追加', 'Order Saved': '注文保存済み',
+                'Complete Payment': '支払い完了', 'Pay Now': '今すぐ支払う', 'Pay Later': '後で支払う', 'Subtotal': '小計', 'Total': '合計',
+                'New Order': '新しい注文', 'Export Today': '本日の注文をエクスポート', 'Reset Orders': '注文履歴をリセット', 'Show Revenue': '売上表示',
+                'Float Management': '釣銭管理', 'Order Management': '注文管理', 'Set Float': '釣銭設定', 'Revenue': '売上',
+                'Starting Float:': '開始釣銭:', 'Total Sales:': '売上合計:', 'Current Float:': '現在の釣銭:', 'Revenue:': '売上:',
+                'Edit Order': '注文編集', 'Delete Order': '注文削除', 'Save Changes': '変更を保存', 'Add Item to Order': '注文に商品追加',
+                'No Orders Today': '本日の注文はありません', 'No orders have been placed today.': '本日注文はありません。',
+                'Payment': '支払い', 'Tendered Amount:': 'お預かり:', 'Change:': 'お釣り:', 'Other...': 'その他...',
+                'Order': '注文',
+                'minutes ago': '分前',
+                'minute ago': '分前',
+                'hours ago': '時間前',
+                'hour ago': '時間前',
+                'Just now': 'たった今',
+                'Edit': '編集',
+                'Add Item': '商品追加',
+                'Cancel': 'キャンセル',
+                'Delete Order': '注文削除',
+                'Save Changes': '変更を保存',
+                'Cash': '現金'
+            }
+        };
+        function t(key) {
+            return translations[currentLang][key] || key;
+        }
+
+        function updateLanguageUI() {
+            // Category tabs
+            const tabs = document.querySelectorAll('.category-tab');
+            tabs[0].textContent = t('Drinks');
+            tabs[1].textContent = t('Food');
+            tabs[2].textContent = t('Order Log');
+            tabs[3].textContent = t('Settings');
+            tabs[4].textContent = t('Analysis');
+            // Header button
+            document.getElementById('langToggleBtn').textContent = currentLang === 'en' ? '日本語' : 'English';
+            // Order title
+            const orderTitle = document.querySelector('.order-title');
+            if (orderTitle) {
+                const num = orderTitle.textContent.match(/#\d+/);
+                orderTitle.textContent = `${t('Current Order')} ${num ? num[0] : ''}`;
+            }
+            // Checkout button
+            const checkoutBtn = document.querySelector('.checkout-btn');
+            if (checkoutBtn) checkoutBtn.textContent = t('Checkout');
+            // Subtotal/Total
+            const summaryRows = document.querySelectorAll('.summary-row div:first-child');
+            if (summaryRows[0]) summaryRows[0].textContent = t('Subtotal');
+            const totalRow = document.querySelector('.total-row div:first-child');
+            if (totalRow) totalRow.textContent = t('Total');
+            // Payment modal
+            const paymentModal = document.getElementById('paymentModal');
+            if (paymentModal) {
+                const h2 = paymentModal.querySelector('h2');
+                if (h2) h2.textContent = t('Payment');
+                const tendered = paymentModal.querySelector('.amount-tendered div:first-child');
+                if (tendered) tendered.textContent = t('Tendered Amount:');
+                const change = paymentModal.querySelector('.change-amount div:first-child');
+                if (change) change.textContent = t('Change:');
+                
+                // Payment modal buttons
+                const payLaterBtn = document.getElementById('payLaterBtn');
+                if (payLaterBtn) payLaterBtn.textContent = t('Pay Later');
+                const cashBtn = document.getElementById('cashBtn');
+                if (cashBtn) cashBtn.textContent = t('Cash');
+                const cancelPaymentBtn = document.getElementById('cancelPaymentBtn');
+                if (cancelPaymentBtn) cancelPaymentBtn.textContent = t('Cancel');
+                const completePaymentBtn = document.getElementById('completePaymentBtn');
+                if (completePaymentBtn) completePaymentBtn.textContent = t('Complete Payment');
+            }
+            // Re-render menu items for the active category
+            attachLangToggleHandler();
+        }
+
+        function attachLangToggleHandler() {
+            const langBtn = document.getElementById('langToggleBtn');
+            if (langBtn) {
+                langBtn.onclick = function() {
+                    // Store current category before reload
+                    localStorage.setItem('lastActiveCategory', activeCategory);
+                    // Update language
+                    currentLang = currentLang === 'en' ? 'ja' : 'en';
+                    localStorage.setItem('posLang', currentLang);
+                    // Reload page
+                    location.reload();
+                };
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // ...existing code...
+            
+            // Restore last active category if it exists
+            const lastCategory = localStorage.getItem('lastActiveCategory');
+            if (lastCategory) {
+                // Find and click the corresponding category tab
+                const categoryTab = document.querySelector(`.category-tab[data-category="${lastCategory}"]`);
+                if (categoryTab) {
+                    categoryTab.click();
+                }
+                // Clear the stored category
+                localStorage.removeItem('lastActiveCategory');
+            }
+            
+            updateLanguageUI();
+            attachLangToggleHandler();
+            
+            // Load the current order after initializing
+            loadCurrentOrder();
+        });
+
+        // Add these functions after the existing Firebase initialization code
+        async function saveCurrentOrder() {
+            try {
+                const currentOrderRef = window.firebaseServices.doc(window.firebaseDb, 'currentOrder', 'active');
+                await window.firebaseServices.updateDoc(currentOrderRef, {
+                    items: currentOrder.items,
+                    subtotal: currentOrder.subtotal,
+                    total: currentOrder.total,
+                    orderNumber: currentOrder.orderNumber,
+                    lastUpdated: window.firebaseServices.Timestamp.now()
+                });
+            } catch (error) {
+                // If document doesn't exist, create it
+                if (error.code === 'not-found') {
+                    const currentOrderRef = window.firebaseServices.doc(window.firebaseDb, 'currentOrder', 'active');
+                    await window.firebaseServices.setDoc(currentOrderRef, {
+                        items: currentOrder.items,
+                        subtotal: currentOrder.subtotal,
+                        total: currentOrder.total,
+                        orderNumber: currentOrder.orderNumber,
+                        lastUpdated: window.firebaseServices.Timestamp.now()
+                    });
+                } else {
+                    console.error('Error saving current order:', error);
+                }
+            }
+        }
+
+        async function loadCurrentOrder() {
+            try {
+                const currentOrderRef = window.firebaseServices.doc(window.firebaseDb, 'currentOrder', 'active');
+                const doc = await window.firebaseServices.getDoc(currentOrderRef);
+                
+                if (doc.exists()) {
+                    const data = doc.data();
+                    currentOrder = {
+                        items: data.items || [],
+                        subtotal: data.subtotal || 0,
+                        total: data.total || 0,
+                        orderNumber: data.orderNumber || 0
+                    };
+                    
+                    // Update UI
+                    document.querySelector('.order-title').textContent = `${t('Current Order')} #${currentOrder.orderNumber}`;
+                    renderOrderItems();
+                    updateOrderSummary();
+                }
+            } catch (error) {
+                console.error('Error loading current order:', error);
+            }
+        }
+
+        async function clearCurrentOrder() {
+            try {
+                const currentOrderRef = window.firebaseServices.doc(window.firebaseDb, 'currentOrder', 'active');
+                await window.firebaseServices.deleteDoc(currentOrderRef);
+            } catch (error) {
+                console.error('Error clearing current order:', error);
+            }
+        }
+
+        // Add this function for menu item translation
+
     </script>
+    <script type="module" src="analysis.js"></script>
 </body>
 </html>
