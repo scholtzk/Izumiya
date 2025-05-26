@@ -1,4 +1,4 @@
-// analysis.js
+// aanalysis.js
 // This module renders the Analysis tab for the POS system.
 // It expects window.firebaseServices and window.firebaseDb to be available.
 
