@@ -44,185 +44,317 @@ function getLastNDates(n) {
 window.renderAnalysisTab = function renderAnalysisTab() {
     const container = document.querySelector('.analysis-container');
     if (!container) return;
-    container.innerHTML = `<div style="padding:20px;max-width:1200px;margin:0 auto;">
-        <h2>Analysis</h2>
-        <div style="margin-bottom:20px;">
-            <label for="analysis-date">Select Day: </label>
-            <input type="date" id="analysis-date" value="${formatDate(new Date())}">
+    const t = (window.t || ((k) => k));
+
+    container.innerHTML = `
+        <div style="padding:20px;max-width:1200px;margin:0 auto;">
+            <h2>${t('Analysis')}</h2>
+            
+            <!-- Time Period Selection -->
+            <div style="margin-bottom:20px;display:flex;gap:10px;align-items:center;">
+                <select id="analysis-period" style="padding:8px;border-radius:4px;border:1px solid #ddd;">
+                    <option value="today">${t('Today')}</option>
+                    <option value="week">${t('This Week')}</option>
+                    <option value="month">${t('This Month')}</option>
+                    <option value="year">${t('This Year')}</option>
+                    <option value="custom">${t('Custom Range')}</option>
+                </select>
+                <div id="custom-date-range" style="display:none;gap:10px;align-items:center;">
+                    <input type="date" id="start-date" style="padding:8px;border-radius:4px;border:1px solid #ddd;">
+                    <span>${t('to')}</span>
+                    <input type="date" id="end-date" style="padding:8px;border-radius:4px;border:1px solid #ddd;">
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:30px;">
+                <div class="stat-card" style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <h3 style="margin:0 0 10px 0;color:#666;">${t('Total Sales')}</h3>
+                    <div id="total-sales" style="font-size:24px;font-weight:bold;color:#6F4E37;">¥0</div>
+                </div>
+                <div class="stat-card" style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <h3 style="margin:0 0 10px 0;color:#666;">${t('Orders')}</h3>
+                    <div id="total-orders" style="font-size:24px;font-weight:bold;color:#6F4E37;">0</div>
+                </div>
+                <div class="stat-card" style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <h3 style="margin:0 0 10px 0;color:#666;">${t('Average Order')}</h3>
+                    <div id="avg-order" style="font-size:24px;font-weight:bold;color:#6F4E37;">¥0</div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px;margin-bottom:30px;">
+                <!-- Sales Trend -->
+                <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <h3 style="margin:0 0 20px 0;">${t('Sales Trend')}</h3>
+                    <canvas id="sales-trend-chart"></canvas>
+                </div>
+                
+                <!-- Top Items -->
+                <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <h3 style="margin:0 0 20px 0;">${t('Top Selling Items')}</h3>
+                    <canvas id="top-items-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Stock Management -->
+            <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:30px;">
+                <h3 style="margin:0 0 20px 0;">${t('Stock Management')}</h3>
+                <div id="stock-alerts" style="margin-bottom:20px;"></div>
+                <div id="reorder-suggestions"></div>
+            </div>
+
+            <!-- Peak Hours Analysis -->
+            <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                <h3 style="margin:0 0 20px 0;">${t('Peak Hours')}</h3>
+                <canvas id="peak-hours-chart"></canvas>
+            </div>
         </div>
-        <div id="top-items-section"></div>
-        <div id="order-frequency-section" style="margin-top:40px;"></div>
-        <div id="revenue-section" style="margin-top:40px;"></div>
-    </div>`;
+    `;
 
-    // Load metrics for today by default
-    const dateInput = container.querySelector('#analysis-date');
-    dateInput.addEventListener('change', () => {
-        renderAllMetrics(new Date(dateInput.value));
-    });
-    renderAllMetrics(new Date(dateInput.value));
-};
+    // Initialize charts and load data
+    initializeCharts();
+    loadAnalysisData('today');
 
-function renderAllMetrics(selectedDate) {
-    renderTopItems(selectedDate);
-    renderOrderFrequency(selectedDate);
-    renderRevenuePerDay();
-}
-
-// Fetch all orders for a given day
-async function fetchOrdersForDay(date) {
-    const { start, end } = getDayRange(date);
-    const ordersRef = window.firebaseServices.collection(window.firebaseDb, 'orders');
-    const q = window.firebaseServices.query(
-        ordersRef,
-        window.firebaseServices.orderBy('timestamp', 'asc')
-    );
-    const snapshot = await window.firebaseServices.getDocs(q);
-    return snapshot.docs
-        .map(doc => doc.data())
-        .filter(order => {
-            if (!order.timestamp) return false;
-            const ts = order.timestamp.toDate();
-            return ts >= start && ts <= end;
-        });
-}
-
-// Fetch all orders for a date range (for revenue chart)
-async function fetchOrdersForRange(startDate, endDate) {
-    const ordersRef = window.firebaseServices.collection(window.firebaseDb, 'orders');
-    const q = window.firebaseServices.query(
-        ordersRef,
-        window.firebaseServices.orderBy('timestamp', 'asc')
-    );
-    const snapshot = await window.firebaseServices.getDocs(q);
-    return snapshot.docs
-        .map(doc => doc.data())
-        .filter(order => {
-            if (!order.timestamp) return false;
-            const ts = order.timestamp.toDate();
-            return ts >= startDate && ts <= endDate;
-        });
-}
-
-// Top-selling items table
-async function renderTopItems(date) {
-    const section = document.getElementById('top-items-section');
-    section.innerHTML = '<h3>Top-Selling Items</h3><div>Loading...</div>';
-    const orders = await fetchOrdersForDay(date);
-    const itemMap = {};
-    orders.forEach(order => {
-        (order.items || []).forEach(item => {
-            const key = item.name; // Always use English name for backend
-            if (!itemMap[key]) {
-                itemMap[key] = { name: item.name, quantity: 0 };
-            }
-            itemMap[key].quantity += item.quantity;
-        });
-    });
-    const items = Object.values(itemMap).sort((a, b) => b.quantity - a.quantity);
-    if (items.length === 0) {
-        section.innerHTML = '<h3>Top-Selling Items</h3><div>No sales for this day.</div>';
-        return;
-    }
-    section.innerHTML = `<h3>Top-Selling Items</h3>
-        <table style="width:100%;border-collapse:collapse;">
-            <thead><tr><th style="text-align:left;">Item</th><th style="text-align:right;">Quantity Sold</th></tr></thead>
-            <tbody>
-                ${items.map(item => `<tr><td>${getDisplayName(item.name)}</td><td style="text-align:right;">${item.quantity}</td></tr>`).join('')}
-            </tbody>
-        </table>`;
-}
-
-// Order frequency by 30 min (8am-5pm)
-async function renderOrderFrequency(date) {
-    const section = document.getElementById('order-frequency-section');
-    section.innerHTML = '<h3>Order Frequency (8:00–17:00)</h3><div>Loading...</div>';
-    const orders = await fetchOrdersForDay(date);
-    // Create 30-min slots from 8:00 to 17:00
-    const slots = [];
-    for (let h = 8; h < 17; h++) {
-        slots.push({ label: `${h}:00`, count: 0 });
-        slots.push({ label: `${h}:30`, count: 0 });
-    }
-    // Assign orders to slots
-    orders.forEach(order => {
-        if (!order.timestamp) return;
-        const ts = order.timestamp.toDate();
-        const hour = ts.getHours();
-        const min = ts.getMinutes();
-        if (hour < 8 || hour >= 17) return;
-        const slotIdx = (hour - 8) * 2 + (min >= 30 ? 1 : 0);
-        if (slots[slotIdx]) slots[slotIdx].count++;
-    });
-    // Render chart
-    section.innerHTML = `<h3>Order Frequency (8:00–17:00)</h3><canvas id="order-frequency-chart" height="80"></canvas>`;
-    loadChartJs(() => {
-        const ctx = document.getElementById('order-frequency-chart').getContext('2d');
-        if (window.orderFrequencyChart) window.orderFrequencyChart.destroy();
-        window.orderFrequencyChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: slots.map(s => s.label),
-                datasets: [{
-                    label: 'Orders',
-                    data: slots.map(s => s.count),
-                    backgroundColor: '#6F4E37'
-                }]
-            },
-            options: {
-                scales: {
-                    y: { beginAtZero: true, precision: 0 }
-                }
-            }
-        });
-    });
-}
-
-// Revenue per day (last 7 days)
-async function renderRevenuePerDay() {
-    const section = document.getElementById('revenue-section');
-    section.innerHTML = '<h3>Revenue Per Day (Last 7 Days)</h3><div>Loading...</div>';
-    const dates = getLastNDates(7);
-    const start = new Date(dates[0]);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(dates[dates.length - 1]);
-    end.setHours(23, 59, 59, 999);
-    const orders = await fetchOrdersForRange(start, end);
-    // Aggregate revenue per day
-    const revenueMap = {};
-    dates.forEach(d => {
-        revenueMap[formatDate(d)] = 0;
-    });
-    orders.forEach(order => {
-        if (!order.timestamp) return;
-        const ts = order.timestamp.toDate();
-        const day = formatDate(ts);
-        if (revenueMap[day] !== undefined) {
-            revenueMap[day] += order.total || 0;
+    // Add event listeners
+    document.getElementById('analysis-period').addEventListener('change', (e) => {
+        const period = e.target.value;
+        if (period === 'custom') {
+            document.getElementById('custom-date-range').style.display = 'flex';
+        } else {
+            document.getElementById('custom-date-range').style.display = 'none';
+            loadAnalysisData(period);
         }
     });
-    // Render chart
-    section.innerHTML = `<h3>Revenue Per Day (Last 7 Days)</h3><canvas id="revenue-chart" height="80"></canvas>`;
-    loadChartJs(() => {
-        const ctx = document.getElementById('revenue-chart').getContext('2d');
-        if (window.revenueChart) window.revenueChart.destroy();
-        window.revenueChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: dates.map(d => formatDate(d)),
-                datasets: [{
-                    label: 'Revenue (¥)',
-                    data: dates.map(d => revenueMap[formatDate(d)]),
-                    backgroundColor: '#A67C52'
-                }]
-            },
-            options: {
-                scales: {
-                    y: { beginAtZero: true }
-                }
-            }
+
+    // Custom date range handlers
+    document.getElementById('start-date').addEventListener('change', loadCustomDateRange);
+    document.getElementById('end-date').addEventListener('change', loadCustomDateRange);
+};
+
+// Initialize charts
+function initializeCharts() {
+    // Sales Trend Chart
+    const salesTrendCtx = document.getElementById('sales-trend-chart').getContext('2d');
+    window.salesTrendChart = new Chart(salesTrendCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Sales',
+                data: [],
+                borderColor: '#6F4E37',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Top Items Chart
+    const topItemsCtx = document.getElementById('top-items-chart').getContext('2d');
+    window.topItemsChart = new Chart(topItemsCtx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Quantity Sold',
+                data: [],
+                backgroundColor: '#A67C52'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Peak Hours Chart
+    const peakHoursCtx = document.getElementById('peak-hours-chart').getContext('2d');
+    window.peakHoursChart = new Chart(peakHoursCtx, {
+        type: 'bar',
+        data: {
+            labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+            datasets: [{
+                label: 'Orders',
+                data: Array(24).fill(0),
+                backgroundColor: '#D4A76A'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+}
+
+// Load analysis data
+async function loadAnalysisData(period) {
+    const { start, end } = getPeriodDates(period);
+    const orders = await fetchOrders(start, end);
+    
+    // Update quick stats
+    updateQuickStats(orders);
+    
+    // Update charts
+    updateSalesTrendChart(orders);
+    updateTopItemsChart(orders);
+    updatePeakHoursChart(orders);
+    
+    // Update stock management
+    updateStockManagement(orders);
+}
+
+// Fetch orders from Firebase
+async function fetchOrders(start, end) {
+    try {
+        const ordersRef = collection(window.firebaseDb, 'orders');
+        const q = query(
+            ordersRef,
+            where('timestamp', '>=', Timestamp.fromDate(start)),
+            where('timestamp', '<=', Timestamp.fromDate(end)),
+            orderBy('timestamp', 'asc')
+        );
+        
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => doc.data());
+    } catch (error) {
+        console.error('Error fetching orders:', error);
+        return [];
+    }
+}
+
+// Update quick stats
+function updateQuickStats(orders) {
+    const totalSales = orders.reduce((sum, order) => sum + order.total, 0);
+    const totalOrders = orders.length;
+    const avgOrder = totalOrders > 0 ? totalSales / totalOrders : 0;
+
+    document.getElementById('total-sales').textContent = formatCurrency(totalSales);
+    document.getElementById('total-orders').textContent = totalOrders;
+    document.getElementById('avg-order').textContent = formatCurrency(avgOrder);
+}
+
+// Update sales trend chart
+function updateSalesTrendChart(orders) {
+    const salesByDate = {};
+    orders.forEach(order => {
+        const date = formatDate(order.timestamp.toDate());
+        salesByDate[date] = (salesByDate[date] || 0) + order.total;
+    });
+
+    window.salesTrendChart.data.labels = Object.keys(salesByDate);
+    window.salesTrendChart.data.datasets[0].data = Object.values(salesByDate);
+    window.salesTrendChart.update();
+}
+
+// Update top items chart
+function updateTopItemsChart(orders) {
+    const itemCounts = {};
+    orders.forEach(order => {
+        order.items.forEach(item => {
+            const key = item.name;
+            itemCounts[key] = (itemCounts[key] || 0) + item.quantity;
         });
     });
+
+    const sortedItems = Object.entries(itemCounts)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 10);
+
+    window.topItemsChart.data.labels = sortedItems.map(([name]) => name);
+    window.topItemsChart.data.datasets[0].data = sortedItems.map(([,count]) => count);
+    window.topItemsChart.update();
+}
+
+// Update peak hours chart
+function updatePeakHoursChart(orders) {
+    const hourlyOrders = Array(24).fill(0);
+    orders.forEach(order => {
+        const hour = order.timestamp.toDate().getHours();
+        hourlyOrders[hour]++;
+    });
+
+    window.peakHoursChart.data.datasets[0].data = hourlyOrders;
+    window.peakHoursChart.update();
+}
+
+// Update stock management
+function updateStockManagement(orders) {
+    // Calculate item usage
+    const itemUsage = {};
+    orders.forEach(order => {
+        order.items.forEach(item => {
+            const key = item.name;
+            itemUsage[key] = (itemUsage[key] || 0) + item.quantity;
+        });
+    });
+
+    // Generate stock alerts and reorder suggestions
+    const stockAlerts = document.getElementById('stock-alerts');
+    const reorderSuggestions = document.getElementById('reorder-suggestions');
+
+    // Example stock levels (you would need to implement actual stock tracking)
+    const stockLevels = {
+        'Espresso': 50,
+        'Cappuccino': 30,
+        'Latte': 25,
+        // Add more items as needed
+    };
+
+    // Generate alerts
+    const alerts = [];
+    Object.entries(stockLevels).forEach(([item, level]) => {
+        const usage = itemUsage[item] || 0;
+        if (level < usage * 0.2) { // Alert if stock is less than 20% of usage
+            alerts.push(`${item}: ${t('Low Stock')} (${level} remaining)`);
+        }
+    });
+
+    stockAlerts.innerHTML = alerts.length > 0 
+        ? `<div style="color:#dc3545;margin-bottom:10px;">${alerts.join('<br>')}</div>`
+        : `<div style="color:#28a745;">${t('All stock levels are good')}</div>`;
+
+    // Generate reorder suggestions
+    const suggestions = Object.entries(itemUsage).map(([item, usage]) => {
+        const currentStock = stockLevels[item] || 0;
+        const suggestedOrder = Math.ceil(usage * 0.3); // Suggest ordering 30% of usage
+        return {
+            item,
+            suggestedOrder,
+            currentStock
+        };
+    });
+
+    reorderSuggestions.innerHTML = suggestions
+        .filter(s => s.suggestedOrder > 0)
+        .map(s => `
+            <div style="margin-bottom:10px;">
+                <strong>${s.item}:</strong> ${t('Suggested Order')}: ${s.suggestedOrder} 
+                (${t('Current Stock')}: ${s.currentStock})
+            </div>
+        `).join('');
+}
+
+// Load custom date range
+function loadCustomDateRange() {
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value;
+    
+    if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        
+        const orders = fetchOrders(start, end);
+        updateQuickStats(orders);
+        updateSalesTrendChart(orders);
+        updateTopItemsChart(orders);
+        updatePeakHoursChart(orders);
+        updateStockManagement(orders);
+    }
 }
 
 // Helper: getDisplayName (uses global currentLang/menuData)
