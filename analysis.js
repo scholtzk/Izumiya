@@ -2,6 +2,15 @@
 // This module renders the Analysis tab for the POS system.
 // It expects window.firebaseServices and window.firebaseDb to be available.
 
+import { 
+    collection, 
+    query, 
+    where, 
+    getDocs, 
+    orderBy, 
+    Timestamp 
+} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+
 // Chart.js CDN loader
 function loadChartJs(callback) {
     if (window.Chart) {
@@ -10,13 +19,27 @@ function loadChartJs(callback) {
     }
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-    script.onload = callback;
+    script.onload = () => {
+        // Load annotation plugin after Chart.js
+        const annotationScript = document.createElement('script');
+        annotationScript.src = 'https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation';
+        annotationScript.onload = callback;
+        document.head.appendChild(annotationScript);
+    };
     document.head.appendChild(script);
+}
+
+// Utility: Format currency
+function formatCurrency(amount) {
+    return `¥${amount.toLocaleString()}`;
 }
 
 // Utility: Format date as YYYY-MM-DD
 function formatDate(date) {
-    return date.toISOString().slice(0, 10);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 // Utility: Get start/end of day
@@ -82,39 +105,56 @@ window.renderAnalysisTab = function renderAnalysisTab() {
                 </div>
             </div>
 
-            <!-- Charts Section -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px;margin-bottom:30px;">
-                <!-- Sales Trend -->
-                <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-                    <h3 style="margin:0 0 20px 0;">${t('Sales Trend')}</h3>
+            <!-- Sales Trend -->
+            <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:30px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                    <h3 style="margin:0;">${t('Sales Trend')}</h3>
+                    <select id="sales-trend-period" style="padding:8px;border-radius:4px;border:1px solid #ddd;">
+                        <option value="week">${t('This Week')}</option>
+                        <option value="month">${t('This Month')}</option>
+                        <option value="year">${t('This Year')}</option>
+                    </select>
+                </div>
+                <div style="height:400px;margin-bottom:20px;">
                     <canvas id="sales-trend-chart"></canvas>
                 </div>
-                
-                <!-- Top Items -->
-                <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-                    <h3 style="margin:0 0 20px 0;">${t('Top Selling Items')}</h3>
-                    <canvas id="top-items-chart"></canvas>
-                </div>
-            </div>
-
-            <!-- Stock Management -->
-            <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:30px;">
-                <h3 style="margin:0 0 20px 0;">${t('Stock Management')}</h3>
-                <div id="stock-alerts" style="margin-bottom:20px;"></div>
-                <div id="reorder-suggestions"></div>
             </div>
 
             <!-- Peak Hours Analysis -->
-            <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-                <h3 style="margin:0 0 20px 0;">${t('Peak Hours')}</h3>
-                <canvas id="peak-hours-chart"></canvas>
+            <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:30px;">
+                <h3 style="margin:0 0 20px 0;">${t('Peak Hours (8:00-17:00)')}</h3>
+                <div style="height:250px;">
+                    <canvas id="peak-hours-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Usage Analysis -->
+            <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:30px;">
+                <h3 style="margin:0 0 20px 0;">${t('Usage Analysis (Past 7 Days)')}</h3>
+                <div id="usage-analysis"></div>
             </div>
         </div>
     `;
 
-    // Initialize charts and load data
-    initializeCharts();
-    loadAnalysisData('today');
+    // Load Chart.js and initialize charts
+    loadChartJs(() => {
+        initializeCharts();
+        loadAnalysisData('today');
+        loadSalesTrendData('week');
+        loadUsageAnalysis();
+        
+        // Load peak hours data
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setHours(0, 0, 0, 0);
+        today.setHours(23, 59, 59, 999);
+        
+        fetchOrders(yesterday, today).then(orders => {
+            console.log('Peak hours orders:', orders.length);
+            updatePeakHoursChart(orders);
+        });
+    });
 
     // Add event listeners
     document.getElementById('analysis-period').addEventListener('change', (e) => {
@@ -127,65 +167,143 @@ window.renderAnalysisTab = function renderAnalysisTab() {
         }
     });
 
+    // Sales trend period change handler
+    document.getElementById('sales-trend-period').addEventListener('change', (e) => {
+        loadSalesTrendData(e.target.value);
+    });
+
     // Custom date range handlers
     document.getElementById('start-date').addEventListener('change', loadCustomDateRange);
     document.getElementById('end-date').addEventListener('change', loadCustomDateRange);
 };
+
+// Helper: Get period dates based on selection
+function getPeriodDates(period) {
+    const now = new Date();
+    const start = new Date(now);
+    const end = new Date(now);
+
+    switch(period) {
+        case 'today':
+            start.setHours(0, 0, 0, 0);
+            break;
+        case 'week':
+            start.setDate(now.getDate() - 7);
+            break;
+        case 'month':
+            start.setMonth(now.getMonth() - 1);
+            break;
+        case 'year':
+            start.setFullYear(now.getFullYear() - 1);
+            break;
+    }
+    return { start, end };
+}
 
 // Initialize charts
 function initializeCharts() {
     // Sales Trend Chart
     const salesTrendCtx = document.getElementById('sales-trend-chart').getContext('2d');
     window.salesTrendChart = new Chart(salesTrendCtx, {
-        type: 'line',
+        type: 'bar',
         data: {
             labels: [],
             datasets: [{
                 label: 'Sales',
                 data: [],
+                backgroundColor: '#6F4E37',
                 borderColor: '#6F4E37',
-                tension: 0.1
+                borderWidth: 1
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-
-    // Top Items Chart
-    const topItemsCtx = document.getElementById('top-items-chart').getContext('2d');
-    window.topItemsChart = new Chart(topItemsCtx, {
-        type: 'bar',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Quantity Sold',
-                data: [],
-                backgroundColor: '#A67C52'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `¥${context.raw.toLocaleString()}`;
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {}
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '¥' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
         }
     });
 
     // Peak Hours Chart
     const peakHoursCtx = document.getElementById('peak-hours-chart').getContext('2d');
     window.peakHoursChart = new Chart(peakHoursCtx, {
-        type: 'bar',
+        type: 'line',
         data: {
-            labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+            labels: Array.from({length: 19}, (_, i) => {
+                const hour = Math.floor((i + 16) / 2);
+                const minute = (i + 16) % 2 === 0 ? '00' : '30';
+                return `${hour}:${minute}`;
+            }),
             datasets: [{
-                label: 'Orders',
-                data: Array(24).fill(0),
-                backgroundColor: '#D4A76A'
+                label: 'Today',
+                data: Array(19).fill(0),
+                borderColor: '#6F4E37',
+                backgroundColor: 'rgba(111, 78, 55, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Yesterday',
+                data: Array(19).fill(0),
+                borderColor: '#A67C52',
+                backgroundColor: 'rgba(166, 124, 82, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.raw} orders`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            },
+            animation: {
+                duration: 0
+            },
+            hover: {
+                animationDuration: 0
+            }
         }
     });
 }
@@ -195,21 +313,14 @@ async function loadAnalysisData(period) {
     const { start, end } = getPeriodDates(period);
     const orders = await fetchOrders(start, end);
     
-    // Update quick stats
+    // Update quick stats only
     updateQuickStats(orders);
-    
-    // Update charts
-    updateSalesTrendChart(orders);
-    updateTopItemsChart(orders);
-    updatePeakHoursChart(orders);
-    
-    // Update stock management
-    updateStockManagement(orders);
 }
 
 // Fetch orders from Firebase
 async function fetchOrders(start, end) {
     try {
+        console.log('Fetching orders from:', start.toISOString(), 'to:', end.toISOString());
         const ordersRef = collection(window.firebaseDb, 'orders');
         const q = query(
             ordersRef,
@@ -219,7 +330,9 @@ async function fetchOrders(start, end) {
         );
         
         const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map(doc => doc.data());
+        const orders = querySnapshot.docs.map(doc => doc.data());
+        console.log('Fetched orders:', orders.length);
+        return orders;
     } catch (error) {
         console.error('Error fetching orders:', error);
         return [];
@@ -250,92 +363,162 @@ function updateSalesTrendChart(orders) {
     window.salesTrendChart.update();
 }
 
-// Update top items chart
-function updateTopItemsChart(orders) {
-    const itemCounts = {};
-    orders.forEach(order => {
-        order.items.forEach(item => {
-            const key = item.name;
-            itemCounts[key] = (itemCounts[key] || 0) + item.quantity;
-        });
-    });
-
-    const sortedItems = Object.entries(itemCounts)
-        .sort(([,a], [,b]) => b - a)
-        .slice(0, 10);
-
-    window.topItemsChart.data.labels = sortedItems.map(([name]) => name);
-    window.topItemsChart.data.datasets[0].data = sortedItems.map(([,count]) => count);
-    window.topItemsChart.update();
-}
-
 // Update peak hours chart
 function updatePeakHoursChart(orders) {
-    const hourlyOrders = Array(24).fill(0);
+    // Get today's and yesterday's dates
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Initialize hourly data with zeros
+    const todayData = new Array(19).fill(0);
+    const yesterdayData = new Array(19).fill(0);
+
+    // Reset chart data
+    window.peakHoursChart.data.datasets[0].data = todayData;
+    window.peakHoursChart.data.datasets[1].data = yesterdayData;
+
+    // Process orders
     orders.forEach(order => {
-        const hour = order.timestamp.toDate().getHours();
-        hourlyOrders[hour]++;
-    });
-
-    window.peakHoursChart.data.datasets[0].data = hourlyOrders;
-    window.peakHoursChart.update();
-}
-
-// Update stock management
-function updateStockManagement(orders) {
-    // Calculate item usage
-    const itemUsage = {};
-    orders.forEach(order => {
-        order.items.forEach(item => {
-            const key = item.name;
-            itemUsage[key] = (itemUsage[key] || 0) + item.quantity;
-        });
-    });
-
-    // Generate stock alerts and reorder suggestions
-    const stockAlerts = document.getElementById('stock-alerts');
-    const reorderSuggestions = document.getElementById('reorder-suggestions');
-
-    // Example stock levels (you would need to implement actual stock tracking)
-    const stockLevels = {
-        'Espresso': 50,
-        'Cappuccino': 30,
-        'Latte': 25,
-        // Add more items as needed
-    };
-
-    // Generate alerts
-    const alerts = [];
-    Object.entries(stockLevels).forEach(([item, level]) => {
-        const usage = itemUsage[item] || 0;
-        if (level < usage * 0.2) { // Alert if stock is less than 20% of usage
-            alerts.push(`${item}: ${t('Low Stock')} (${level} remaining)`);
+        const orderDate = order.timestamp.toDate();
+        const hour = orderDate.getHours();
+        const minute = orderDate.getMinutes();
+        
+        // Only process orders between 8:00 and 17:00
+        if (hour >= 8 && hour < 17) {
+            const index = (hour - 8) * 2 + (minute >= 30 ? 1 : 0);
+            if (index >= 0 && index < 19) {
+                const orderDateStr = orderDate.toDateString();
+                if (orderDateStr === today.toDateString()) {
+                    todayData[index]++;
+                } else if (orderDateStr === yesterday.toDateString()) {
+                    yesterdayData[index]++;
+                }
+            }
         }
     });
 
-    stockAlerts.innerHTML = alerts.length > 0 
-        ? `<div style="color:#dc3545;margin-bottom:10px;">${alerts.join('<br>')}</div>`
-        : `<div style="color:#28a745;">${t('All stock levels are good')}</div>`;
+    // Update chart with new data
+    window.peakHoursChart.data.datasets[0].data = todayData;
+    window.peakHoursChart.data.datasets[1].data = yesterdayData;
+    window.peakHoursChart.update();
+}
 
-    // Generate reorder suggestions
-    const suggestions = Object.entries(itemUsage).map(([item, usage]) => {
-        const currentStock = stockLevels[item] || 0;
-        const suggestedOrder = Math.ceil(usage * 0.3); // Suggest ordering 30% of usage
-        return {
-            item,
-            suggestedOrder,
-            currentStock
-        };
+// Load usage analysis for past 7 days
+async function loadUsageAnalysis() {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 6); // Past 7 days including today
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+
+    console.log('Loading usage analysis from:', start.toISOString(), 'to:', end.toISOString());
+    const orders = await fetchOrders(start, end);
+    console.log('Orders for usage analysis:', orders.length);
+
+    const usageAnalysis = document.getElementById('usage-analysis');
+    const t = (window.t || ((k) => k));
+
+    // Get all dates in the range
+    const dates = [];
+    const currentDate = new Date(start);
+    while (currentDate <= end) {
+        dates.push(new Date(currentDate));
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Calculate usage by date and item
+    const usageByDate = {};
+    dates.forEach(date => {
+        usageByDate[formatDate(date)] = {};
     });
 
-    reorderSuggestions.innerHTML = suggestions
-        .filter(s => s.suggestedOrder > 0)
-        .map(s => `
-            <div style="margin-bottom:10px;">
-                <strong>${s.item}:</strong> ${t('Suggested Order')}: ${s.suggestedOrder} 
-                (${t('Current Stock')}: ${s.currentStock})
-            </div>
-        `).join('');
+    // Initialize with zeros for all items
+    const allItems = new Set();
+    orders.forEach(order => {
+        if (order.items) {
+            order.items.forEach(item => {
+                if (item && item.name) {
+                    allItems.add(item.name);
+                }
+            });
+        }
+    });
+
+    // Initialize all dates with zeros for all items
+    dates.forEach(date => {
+        const dateStr = formatDate(date);
+        allItems.forEach(item => {
+            usageByDate[dateStr][item] = 0;
+        });
+    });
+
+    // Fill in actual usage
+    orders.forEach(order => {
+        if (order.items) {
+            const orderDate = order.timestamp.toDate();
+            const dateStr = formatDate(orderDate);
+            console.log('Processing order for date:', dateStr, 'with items:', order.items.length);
+            order.items.forEach(item => {
+                if (item && item.name && usageByDate[dateStr]) {
+                    usageByDate[dateStr][item.name] = (usageByDate[dateStr][item.name] || 0) + (item.quantity || 0);
+                }
+            });
+        }
+    });
+
+    // Calculate averages and totals
+    const itemTotals = {};
+    const itemAverages = {};
+
+    allItems.forEach(item => {
+        itemTotals[item] = 0;
+        dates.forEach(date => {
+            const dateStr = formatDate(date);
+            itemTotals[item] += usageByDate[dateStr][item] || 0;
+        });
+        itemAverages[item] = itemTotals[item] / dates.length;
+    });
+
+    // Sort items by total usage
+    const sortedItems = Array.from(allItems)
+        .sort((a, b) => itemTotals[b] - itemTotals[a]);
+
+    // Generate HTML
+    usageAnalysis.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;">
+            ${sortedItems.map(item => `
+                <div style="background:#f8f9fa;padding:15px;border-radius:6px;border-left:4px solid #A67C52;">
+                    <div style="font-weight:bold;margin-bottom:10px;">${getDisplayName(item)}</div>
+                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+                        <div>
+                            <div style="color:#666;font-size:0.9em;">${t('Total Usage')}</div>
+                            <div style="font-weight:bold;color:#6F4E37;">${itemTotals[item]}</div>
+                        </div>
+                        <div>
+                            <div style="color:#666;font-size:0.9em;">${t('Average per Day')}</div>
+                            <div style="font-weight:bold;color:#6F4E37;">${itemAverages[item].toFixed(1)}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;font-size:0.9em;color:#666;">
+                        ${t('Daily Breakdown')}:
+                        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:5px;">
+                            ${dates.map(date => {
+                                const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
+                                const usage = usageByDate[formatDate(date)][item] || 0;
+                                return `
+                                    <div style="text-align:center;padding:5px;background:${usage > 0 ? '#e9ecef' : '#f8f9fa'};border-radius:4px;">
+                                        <div style="font-size:0.8em;">${dayOfWeek}</div>
+                                        <div style="font-weight:bold;">${usage}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
 }
 
 // Load custom date range
@@ -350,10 +533,6 @@ function loadCustomDateRange() {
         
         const orders = fetchOrders(start, end);
         updateQuickStats(orders);
-        updateSalesTrendChart(orders);
-        updateTopItemsChart(orders);
-        updatePeakHoursChart(orders);
-        updateStockManagement(orders);
     }
 }
 
@@ -369,4 +548,94 @@ function getDisplayName(englishName) {
         }
     }
     return englishName;
+}
+
+// Update sales trend chart
+async function loadSalesTrendData(period) {
+    const { start, end } = getPeriodDates(period);
+    const orders = await fetchOrders(start, end);
+    
+    // Get previous period for comparison
+    const prevStart = new Date(start);
+    const prevEnd = new Date(end);
+    const periodDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    prevStart.setDate(prevStart.getDate() - periodDays);
+    prevEnd.setDate(prevEnd.getDate() - periodDays);
+    const prevOrders = await fetchOrders(prevStart, prevEnd);
+    
+    // Get all dates in the range
+    const dates = [];
+    const currentDate = new Date(start);
+    while (currentDate <= end) {
+        dates.push(new Date(currentDate));
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Initialize sales data with zeros
+    const salesByDate = {};
+    const prevSalesByDate = {};
+    dates.forEach(date => {
+        const dateStr = formatDate(date);
+        salesByDate[dateStr] = 0;
+        prevSalesByDate[dateStr] = 0;
+    });
+
+    // Fill in current period sales
+    orders.forEach(order => {
+        const date = formatDate(order.timestamp.toDate());
+        if (salesByDate[date] !== undefined) {
+            salesByDate[date] += order.total;
+        }
+    });
+
+    // Fill in previous period sales
+    prevOrders.forEach(order => {
+        const date = formatDate(order.timestamp.toDate());
+        if (prevSalesByDate[date] !== undefined) {
+            prevSalesByDate[date] += order.total;
+        }
+    });
+
+    // Calculate percentage changes
+    const percentageChanges = {};
+    Object.keys(salesByDate).forEach(date => {
+        const current = salesByDate[date];
+        const previous = prevSalesByDate[date];
+        if (previous === 0) {
+            percentageChanges[date] = current > 0 ? 100 : 0;
+        } else {
+            percentageChanges[date] = ((current - previous) / previous) * 100;
+        }
+    });
+
+    // Format labels with date and day of week
+    const labels = dates.map(date => {
+        const dateStr = formatDate(date);
+        const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
+        return [dateStr, dayOfWeek];
+    });
+
+    // Update chart
+    window.salesTrendChart.data.labels = labels;
+    window.salesTrendChart.data.datasets[0].data = Object.values(salesByDate);
+    
+    // Add percentage changes as annotations
+    const annotations = {};
+    Object.entries(percentageChanges).forEach(([date, change], index) => {
+        annotations[`label${index}`] = {
+            type: 'label',
+            xValue: index,
+            yValue: salesByDate[date],
+            content: `${change > 0 ? '+' : ''}${change.toFixed(1)}%`,
+            color: change >= 0 ? '#28a745' : '#dc3545',
+            font: {
+                size: 12,
+                weight: 'bold'
+            },
+            yAdjust: -20
+        };
+    });
+    
+    window.salesTrendChart.options.plugins.annotation.annotations = annotations;
+    window.salesTrendChart.update();
 } 
