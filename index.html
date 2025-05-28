@@ -1247,8 +1247,8 @@
         .add-item-content {
             background-color: white;
             border-radius: 10px;
-            width: 90%;
-            max-width: 500px;
+            width: 95%;
+            max-width: 1200px;
             padding: 20px;
             max-height: 90vh;
             overflow-y: auto;
@@ -1256,9 +1256,19 @@
 
         .add-item-list {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
             margin-top: 20px;
+        }
+
+        .add-item-category {
+            grid-column: 1 / -1;
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 20px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 2px solid var(--primary);
         }
 
         .add-item-option {
@@ -1334,6 +1344,20 @@
         }
         .analysis-container.active {
             display: block;
+        }
+        /* Add styles for discount modal */
+        #discountModal {
+            z-index: 1002; /* Higher than add item modal */
+        }
+
+        .discount-modal-content {
+            background-color: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            padding: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -1469,6 +1493,37 @@
         </div>
     </div>
 
+    <!-- Add Discount Modal -->
+    <div class="modal" id="discountModal">
+        <div class="modal-content">
+            <h2>Local Discount</h2>
+            
+            <div class="payment-details">
+                <div class="total-amount">Discount Amount: -¥<span id="discountAmount">0</span></div>
+            </div>
+            
+            <div class="numpad">
+                <button class="numpad-btn">1</button>
+                <button class="numpad-btn">2</button>
+                <button class="numpad-btn">3</button>
+                <button class="numpad-btn">4</button>
+                <button class="numpad-btn">5</button>
+                <button class="numpad-btn">6</button>
+                <button class="numpad-btn">7</button>
+                <button class="numpad-btn">8</button>
+                <button class="numpad-btn">9</button>
+                <button class="numpad-btn">0</button>
+                <button class="numpad-btn">00</button>
+                <button class="numpad-btn backspace-btn">⌫</button>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="action-btn cancel-btn" id="cancelDiscountBtn">Cancel</button>
+                <button class="action-btn process-btn" id="applyDiscountBtn">Apply Discount</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Global variables and functions
         let activeCategory = 'Drinks';
@@ -1501,9 +1556,9 @@
                     { type: 'divider' },
                     { name: 'Soy Milk', name_ja: 'ソイミルク', isMilkAddon: true },
                     { name: 'Oat Milk', name_ja: 'オーツミルク', isMilkAddon: true },
+                    { name: 'Takeaway', name_ja: 'テイクアウェイ', isMilkAddon: true },
                     { name: '', price: 0, isBlank: true },
-                    { name: '', price: 0, isBlank: true },
-                    { name: 'Other...', name_ja: 'その他...', price: 0, isCustom: true }
+                    { name: 'Local Discount', name_ja: 'ローカル割引', price: 0, isDiscount: true, hidePrice: true }
                 ],
                 'Food': [
                     { name: 'Toast', name_ja: 'トースト', price: 440, hasJam: true, section: 1 },
@@ -1521,7 +1576,10 @@
                     { name: 'Nachos', name_ja: 'ナチョス', price: 1200, section: 3 },
                     { type: 'divider' },
                     { name: 'Ice Cream', name_ja: 'アイスクリーム', price: 450, hasFlavor: true, section: 3 },
-                    { name: 'Cake', name_ja: 'ケーキ', price: 680, hasFlavor: true, section: 3 }
+                    { name: 'Cake', name_ja: 'ケーキ', price: 680, hasFlavor: true, section: 3 },
+                    { name: 'Matcha Special', name_ja: '抹茶スペシャル', price: 950, section: 3 },
+                    { name: 'Takeaway', name_ja: 'テイクアウェイ', isMilkAddon: true },
+                    { name: 'Other...', name_ja: 'その他...', price: 0, isCustom: true, hidePrice: true }
                 ],
                 'Order Log': [],
                 'Settings': []
@@ -1572,18 +1630,31 @@
                         const selectedItemId = parseInt(selectedOrderItem.dataset.id);
                         const drinkItem = currentOrder.items.find(i => i.id === selectedItemId);
                         if (drinkItem) {
-                            // Toggle milk type
-                            drinkItem.customizations = drinkItem.customizations || [];
-                            const existingMilkIndex = drinkItem.customizations.findIndex(c => c === item.name);
-                            if (existingMilkIndex !== -1) {
-                                // Remove the milk type if it's already there
-                                drinkItem.customizations.splice(existingMilkIndex, 1);
+                            // Handle takeaway separately from milk
+                            if (item.name === 'Takeaway') {
+                                drinkItem.customizations = drinkItem.customizations || [];
+                                const existingTakeaway = drinkItem.customizations.find(c => c === 'Takeaway');
+                                if (existingTakeaway) {
+                                    // Remove takeaway if it's already there
+                                    drinkItem.customizations = drinkItem.customizations.filter(c => c !== 'Takeaway');
+                                } else {
+                                    // Add takeaway
+                                    drinkItem.customizations.push('Takeaway');
+                                }
                             } else {
-                                // Remove any existing milk customizations first
-                                drinkItem.customizations = drinkItem.customizations.filter(c => 
-                                    !c.includes('Milk'));
-                                // Add the new milk type
-                                drinkItem.customizations.push(item.name);
+                                // Handle milk type
+                                drinkItem.customizations = drinkItem.customizations || [];
+                                const existingMilkIndex = drinkItem.customizations.findIndex(c => c === item.name);
+                                if (existingMilkIndex !== -1) {
+                                    // Remove the milk type if it's already there
+                                    drinkItem.customizations.splice(existingMilkIndex, 1);
+                                } else {
+                                    // Remove any existing milk customizations first
+                                    drinkItem.customizations = drinkItem.customizations.filter(c => 
+                                        !c.includes('Milk'));
+                                    // Add the new milk type
+                                    drinkItem.customizations.push(item.name);
+                                }
                             }
                             // Reset selected milk addon
                             selectedMilkAddon = null;
@@ -1610,11 +1681,15 @@
             // If there's a selected milk addon, add it as a customization
             if (selectedMilkAddon) {
                 orderItem.customizations = orderItem.customizations || [];
-                // Remove any existing milk customizations first
-                orderItem.customizations = orderItem.customizations.filter(c => 
-                    !c.includes('Milk'));
-                // Add the new milk type
-                orderItem.customizations.push(selectedMilkAddon.name);
+                if (selectedMilkAddon.name === 'Takeaway') {
+                    orderItem.customizations.push('Takeaway');
+                } else {
+                    // Remove any existing milk customizations first
+                    orderItem.customizations = orderItem.customizations.filter(c => 
+                        !c.includes('Milk'));
+                    // Add the new milk type
+                    orderItem.customizations.push(selectedMilkAddon.name);
+                }
                 // Reset selected milk addon
                 selectedMilkAddon = null;
                 // Remove highlight from milk addon in menu
@@ -1651,14 +1726,14 @@
                 orderItemEl.innerHTML = `
                     <div class="item-info">
                         <div class="item-title">${getDisplayName(item.name)}</div>
-                        ${customizationsText ? `<div class="item-options">${customizationsText}</div>` : ''}
+                        ${customizationsText && !item.name.includes('Discount') ? `<div class="item-options">${customizationsText}</div>` : ''}
                     </div>
                     <div class="item-quantity">
                         <button class="quantity-btn minus">-</button>
                         <span class="quantity-value">${item.quantity}</span>
                         <button class="quantity-btn plus">+</button>
                     </div>
-                    <div class="item-total">¥${itemTotal}</div>
+                    <div class="item-total">${item.name.includes('Discount') ? '-' : ''}¥${Math.abs(itemTotal)}</div>
                 `;
                 
                 // Add event listeners to quantity buttons
@@ -2084,12 +2159,14 @@
                         }
                         itemCard.innerHTML = `
                             <div class="item-name" data-name="${getDisplayName(item.name)}">${displayName}</div>
-                            ${!item.isMilkAddon ? `<div class="item-price">¥${item.price}</div>` : ''}
+                            ${!item.isMilkAddon && !item.hidePrice ? `<div class="item-price">¥${item.price}</div>` : ''}
                         `;
                         
                         itemCard.addEventListener('click', () => {
                             if (item.isCustom) {
                                 showCustomItemModal();
+                            } else if (item.isDiscount) {
+                                showDiscountModal();
                             } else if (item.hasJam) {
                                 showJamOptions(item, itemCard);
                             } else if (item.hasExtraShot) {
@@ -3233,58 +3310,153 @@
                         // Clear previous items
                         addItemList.innerHTML = '';
                         
-                        // Add all menu items
-                        const allItems = [
-                            ...menuData['Drinks'].filter(item => !item.type && !item.isBlank && !item.isCustom),
-                            ...menuData['Food'].filter(item => !item.type)
-                        ];
+                        // Add drinks category
+                        const drinksCategory = document.createElement('div');
+                        drinksCategory.className = 'add-item-category';
+                        drinksCategory.textContent = t('Drinks');
+                        addItemList.appendChild(drinksCategory);
                         
-                        allItems.forEach(item => {
-                            const itemOption = document.createElement('div');
-                            itemOption.className = 'add-item-option';
-                            itemOption.innerHTML = `
-                                <div class="item-name">${getDisplayName(item.name)}</div>
-                                <div class="item-price">¥${item.price}</div>
-                            `;
-                            
-                            itemOption.onclick = async () => {
-                                try {
-                                    // Add the item to the order with completed: false
-                                    const updatedItems = [...order.items, {
-                                        ...item,
-                                        quantity: 1,
-                                        id: Date.now(),
-                                        completed: false
-                                    }];
-                                    
-                                    // Update the order in Firebase
-                                    await window.firebaseServices.updateDoc(orderRef, {
-                                        items: updatedItems,
-                                        total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-                                        completed: false // Set order as incomplete when adding new items
-                                    });
-                                    
-                                    // Close the add item modal
-                                    addItemModal.style.display = 'none';
-                                    
-                                    // Refresh the edit modal
-                                    await openEditOrderModal(orderId);
-
-                                    // Refresh the order log if we're in the Order Log category
-                                    if (activeCategory === 'Order Log') {
-                                        const container = document.querySelector('.order-log-container');
-                                        if (container) {
-                                            await displayOrderLog(container);
+                        // Add drink items
+                        menuData['Drinks']
+                            .filter(item => !item.type && !item.isBlank && !item.isCustom && !item.isMilkAddon)
+                            .forEach(item => {
+                                const itemOption = document.createElement('div');
+                                itemOption.className = 'add-item-option';
+                                itemOption.innerHTML = `
+                                    <div class="item-name">${getDisplayName(item.name)}</div>
+                                    <div class="item-price">¥${item.price}</div>
+                                `;
+                                
+                                itemOption.onclick = async () => {
+                                    try {
+                                        const updatedItems = [...order.items, {
+                                            ...item,
+                                            quantity: 1,
+                                            id: Date.now(),
+                                            completed: false
+                                        }];
+                                        
+                                        await window.firebaseServices.updateDoc(orderRef, {
+                                            items: updatedItems,
+                                            total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+                                            completed: false
+                                        });
+                                        
+                                        addItemModal.style.display = 'none';
+                                        await openEditOrderModal(orderId);
+                                        
+                                        if (activeCategory === 'Order Log') {
+                                            const container = document.querySelector('.order-log-container');
+                                            if (container) {
+                                                await displayOrderLog(container);
+                                            }
                                         }
+                                    } catch (error) {
+                                        console.error('Error adding item:', error);
+                                        alert('Error adding item. Please try again.');
                                     }
-                                } catch (error) {
-                                    console.error('Error adding item:', error);
-                                    alert('Error adding item. Please try again.');
+                                };
+                                
+                                addItemList.appendChild(itemOption);
+                            });
+                        
+                        // Add food category
+                        const foodCategory = document.createElement('div');
+                        foodCategory.className = 'add-item-category';
+                        foodCategory.textContent = t('Food');
+                        addItemList.appendChild(foodCategory);
+                        
+                        // Add food items
+                        menuData['Food']
+                            .filter(item => !item.type)
+                            .forEach(item => {
+                                const itemOption = document.createElement('div');
+                                itemOption.className = 'add-item-option';
+                                itemOption.innerHTML = `
+                                    <div class="item-name">${getDisplayName(item.name)}</div>
+                                    <div class="item-price">¥${item.price}</div>
+                                `;
+                                
+                                itemOption.onclick = async () => {
+                                    try {
+                                        const updatedItems = [...order.items, {
+                                            ...item,
+                                            quantity: 1,
+                                            id: Date.now(),
+                                            completed: false
+                                        }];
+                                        
+                                        await window.firebaseServices.updateDoc(orderRef, {
+                                            items: updatedItems,
+                                            total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+                                            completed: false
+                                        });
+                                        
+                                        addItemModal.style.display = 'none';
+                                        await openEditOrderModal(orderId);
+                                        
+                                        if (activeCategory === 'Order Log') {
+                                            const container = document.querySelector('.order-log-container');
+                                            if (container) {
+                                                await displayOrderLog(container);
+                                            }
+                                        }
+                                    } catch (error) {
+                                        console.error('Error adding item:', error);
+                                        alert('Error adding item. Please try again.');
+                                    }
+                                };
+                                
+                                addItemList.appendChild(itemOption);
+                            });
+
+                        // Add discount option
+                        const discountCategory = document.createElement('div');
+                        discountCategory.className = 'add-item-category';
+                        discountCategory.textContent = t('Discount');
+                        addItemList.appendChild(discountCategory);
+
+                        const discountOption = document.createElement('div');
+                        discountOption.className = 'add-item-option';
+                        discountOption.innerHTML = `
+                            <div class="item-name">${t('Local Discount')} (-¥100)</div>
+                        `;
+                        
+                        discountOption.onclick = async () => {
+                            try {
+                                const discountItem = {
+                                    name: 'Local Discount',
+                                    price: -100,
+                                    quantity: 1,
+                                    id: Date.now(),
+                                    customizations: ['Discount']
+                                };
+                                
+                                const updatedItems = [...order.items, discountItem];
+                                
+                                await window.firebaseServices.updateDoc(orderRef, {
+                                    items: updatedItems,
+                                    total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+                                    completed: false
+                                });
+                                
+                                // Close add item modal
+                                addItemModal.style.display = 'none';
+                                await openEditOrderModal(orderId);
+                                
+                                if (activeCategory === 'Order Log') {
+                                    const container = document.querySelector('.order-log-container');
+                                    if (container) {
+                                        await displayOrderLog(container);
+                                    }
                                 }
-                            };
-                            
-                            addItemList.appendChild(itemOption);
-                        });
+                            } catch (error) {
+                                console.error('Error adding discount:', error);
+                                alert('Error adding discount. Please try again.');
+                            }
+                        };
+                        
+                        addItemList.appendChild(discountOption);
                         
                         // Show the add item modal
                         addItemModal.style.display = 'flex';
@@ -3512,6 +3684,125 @@
 
         // Add this function for menu item translation
 
+        // Add this after the existing numpad functionality
+        // Discount Modal Functionality
+        const discountModal = document.getElementById('discountModal');
+        let discountAmount = '';
+
+        // Show discount modal
+        function showDiscountModal() {
+            const discountModal = document.getElementById('discountModal');
+            if (!discountModal) {
+                console.error('Discount modal not found');
+                return;
+            }
+            
+            // Reset discount amount
+            discountAmount = '';
+            document.getElementById('discountAmount').textContent = '0';
+            
+            // Show the modal
+            discountModal.style.display = 'flex';
+            
+            // Remove any existing event listeners
+            const numpadBtns = discountModal.querySelectorAll('.numpad-btn');
+            numpadBtns.forEach(btn => {
+                btn.replaceWith(btn.cloneNode(true));
+            });
+            
+            // Add fresh event listeners
+            discountModal.querySelectorAll('.numpad-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const value = this.textContent;
+                    
+                    if (value === '⌫') {
+                        // Backspace functionality
+                        discountAmount = discountAmount.slice(0, -1);
+                    } else {
+                        // Add digit
+                        discountAmount += value;
+                    }
+                    
+                    // Update the discount amount display
+                    const amount = discountAmount ? parseInt(discountAmount) : 0;
+                    document.getElementById('discountAmount').textContent = amount;
+                    
+                    // Enable/disable apply button based on amount
+                    document.querySelector('#applyDiscountBtn').disabled = amount <= 0;
+                });
+            });
+            
+            // Reset apply button state
+            document.querySelector('#applyDiscountBtn').disabled = true;
+        }
+
+        // Add event listeners for discount modal
+        document.getElementById('cancelDiscountBtn').addEventListener('click', () => {
+            discountModal.style.display = 'none';
+        });
+
+        document.getElementById('applyDiscountBtn').addEventListener('click', () => {
+            const amount = parseInt(discountAmount);
+            if (amount > 0) {
+                // Add discount as a negative item
+                const discountItem = {
+                    name: 'Local Discount',
+                    price: -amount,
+                    quantity: 1,
+                    id: Date.now(),
+                    customizations: ['Discount']
+                };
+                addItemToOrder(discountItem);
+                discountModal.style.display = 'none';
+            }
+        });
+
+        // Modify the loadMenuItems function to handle the discount button
+        function loadMenuItems(category) {
+            // ... existing code ...
+            menuData[category].forEach(item => {
+                if (item.type === 'divider') {
+                    // ... existing divider code ...
+                } else if (item.isBlank) {
+                    // ... existing blank code ...
+                } else {
+                    const displayName = currentLang === 'ja' && item.name_ja ? item.name_ja : item.name;
+                    const itemCard = document.createElement('div');
+                    itemCard.className = 'item-card';
+                    if (item.isMilkAddon) {
+                        itemCard.setAttribute('data-milk-addon', 'true');
+                    }
+                    itemCard.innerHTML = `
+                        <div class="item-name" data-name="${getDisplayName(item.name)}">${displayName}</div>
+                        ${!item.isMilkAddon && !item.hidePrice ? `<div class="item-price">¥${item.price}</div>` : ''}
+                    `;
+                    
+                    itemCard.addEventListener('click', () => {
+                        if (item.isCustom) {
+                            showCustomItemModal();
+                        } else if (item.isDiscount) {
+                            showDiscountModal();
+                        } else if (item.hasJam) {
+                            showJamOptions(item, itemCard);
+                        } else if (item.hasExtraShot) {
+                            showExtraShotOptions(item, itemCard);
+                        } else if (item.hasFlavor) {
+                            if (item.name === 'Cake') {
+                                showCakeOptions(item, itemCard);
+                            } else if (item.name === 'Ice Cream') {
+                                showIceCreamOptions(item, itemCard);
+                            }
+                        } else if (item.name === 'Caprese Sandwich') {
+                            showProscuittoOptions(item, itemCard);
+                        } else {
+                            addItemToOrder(item);
+                        }
+                    });
+                    
+                    itemsGrid.appendChild(itemCard);
+                }
+            });
+        }
     </script>
     <script type="module" src="analysis.js"></script>
 </body>
