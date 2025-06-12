@@ -16,7 +16,7 @@
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
-        import { getFirestore, collection, addDoc, getDocs, query, orderBy, updateDoc, doc, deleteDoc, getDoc, Timestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, updateDoc, doc, deleteDoc, getDoc, Timestamp, setDoc, where } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -39,17 +39,21 @@
         window.firebaseDb = db;
         window.firebaseServices = {
             collection,
-            addDoc,
-            getDocs,
-            query,
-            orderBy,
-            updateDoc,
             doc,
+            addDoc,
+            setDoc,
+            updateDoc,
             deleteDoc,
             getDoc,
-            Timestamp,
-            setDoc
+            getDocs,
+            query,
+            where,
+            orderBy,
+            Timestamp
         };
+
+        // Dispatch firebaseReady event
+        window.dispatchEvent(new Event('firebaseReady'));
     </script>
     <style>
         :root {
@@ -1359,6 +1363,54 @@
             max-height: 90vh;
             overflow-y: auto;
         }
+
+        .sign-in-form {
+            max-width: 300px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--dark);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .sign-in-button {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .sign-in-button:hover {
+            background-color: var(--secondary);
+        }
+
+        .status-message {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -1378,13 +1430,16 @@
                 <button class="category-tab" data-category="Food">Food</button>
                 <button class="category-tab" data-category="Order Log">Order Log</button>
                 <button class="category-tab" data-category="Analysis">Analysis</button>
+                <button class="category-tab" data-category="Stocktake">Stocktake</button>
                 <button class="category-tab" data-category="Settings">Settings</button>
+                <button class="category-tab" data-category="employee">Employee Sign-in</button>
             </div>
             
             <div class="items-grid">
                 <!-- Items will be loaded dynamically via JavaScript -->
             </div>
             <div class="analysis-container" style="display:none;"></div>
+            <div class="stocktake-container" style="display:none;"></div>
         </div>
         
         <!-- Right Panel - Order Details -->
@@ -1524,6 +1579,21 @@
         </div>
     </div>
 
+    <!-- Add this before the closing body tag -->
+    <div id="employeeSignInPanel" class="panel" style="display: none;">
+        <div class="panel-content">
+            <h2>Employee Sign-in</h2>
+            <form id="employeeSignInForm" class="sign-in-form">
+                <div class="form-group">
+                    <label for="employeePin">Enter 4-digit PIN:</label>
+                    <input type="password" id="employeePin" maxlength="4" pattern="\d{4}" required>
+                </div>
+                <button type="submit" class="sign-in-button">Sign In</button>
+                <div id="signInStatus" class="status-message"></div>
+            </form>
+        </div>
+    </div>
+
     <script>
         // Global variables and functions
         let activeCategory = 'Drinks';
@@ -1551,8 +1621,9 @@
                     { type: 'divider' },
                     { name: 'Apple Juice', name_ja: 'りんごジュース', price: 550, hasMilk: false },
                     { name: 'Orange Juice', name_ja: 'オレンジジュース', price: 550, hasMilk: false },
-                    { name: 'Soft Drink', name_ja: 'ソフトドリンク', price: 550, hasMilk: false },
+                    { name: 'Soft Drink', name_ja: 'ソフトドリンク', price: 550, hasMilk: false, hasSoftDrink: true },
                     { name: 'Beer', name_ja: 'ビール', price: 580, hasMilk: false },
+                    { name: 'Water', name_ja: '水', price: 380, hasMilk: false },
                     { type: 'divider' },
                     { name: 'Soy Milk', name_ja: 'ソイミルク', isMilkAddon: true },
                     { name: 'Oat Milk', name_ja: 'オーツミルク', isMilkAddon: true },
@@ -1562,7 +1633,7 @@
                 ],
                 'Food': [
                     { name: 'Toast', name_ja: 'トースト', price: 440, hasJam: true, section: 1 },
-                    { name: 'Museli Yogurt', name_ja: 'ミューズリーヨーグルト', price: 980, section: 1 },
+                    { name: 'Granola Yogurt', name_ja: 'グラノーラリーヨーグルト', price: 980, section: 1 },
                     { name: 'Breakfast', name_ja: '朝食セット', price: 1200, section: 1 },
                     { type: 'divider' },
                     { name: 'Croissant', name_ja: 'クロワッサン', price: 400, section: 2 },
@@ -1582,7 +1653,9 @@
                     { name: 'Other...', name_ja: 'その他...', price: 0, isCustom: true, hidePrice: true }
                 ],
                 'Order Log': [],
-                'Settings': []
+                'Analysis': [],
+                'Settings': [],
+                'Stocktake': [] // Add new stocktake category
             };
 
             // Add this function for menu item translation (must be after menuData)
@@ -1924,12 +1997,16 @@
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
                     // Delete only today's orders
-                    const deletePromises = querySnapshot.docs.map(doc => {
+                    const deletePromises = querySnapshot.docs.map(async doc => {
                         const orderData = doc.data();
                         if (orderData.timestamp) {
                             const orderDate = orderData.timestamp.toDate();
                             orderDate.setHours(0, 0, 0, 0);
                             if (orderDate.getTime() === today.getTime()) {
+                                // Restore stock for water items before deleting
+                                if (window.stocktakeSystem && window.stocktakeSystem.restoreStockFromOrder) {
+                                    await window.stocktakeSystem.restoreStockFromOrder(orderData);
+                                }
                                 return window.firebaseServices.deleteDoc(doc.ref);
                             }
                         }
@@ -2059,6 +2136,12 @@
         // Call initializeOrder when the document is loaded
         document.addEventListener('DOMContentLoaded', function() {
             initializeOrder();
+            
+            // Initialize stocktake system
+            if (window.stocktakeSystem) {
+                window.stocktakeSystem.loadStocktake();
+            }
+            
             // ============ DATA STRUCTURE ============
             // Menu categories and items
  
@@ -2082,7 +2165,10 @@
                 const itemsGrid = document.querySelector('.items-grid');
                 const orderLogContainer = document.querySelector('.order-log-container');
                 const settingsContainer = document.querySelector('.settings-container');
+                const stocktakeContainer = document.querySelector('.stocktake-container');
+                const analysisContainer = document.querySelector('.analysis-container');
                 const orderPanel = document.querySelector('.order-panel');
+                const signInContainer = document.querySelector('.sign-in-container');
                 
                 // Remove existing containers if they exist
                 if (orderLogContainer) {
@@ -2091,13 +2177,17 @@
                 if (settingsContainer) {
                     settingsContainer.remove();
                 }
+                if (stocktakeContainer) {
+                    stocktakeContainer.remove();
+                }
                 
                 itemsGrid.innerHTML = '';
                 
                 if (category === 'Order Log') {
                     itemsGrid.style.display = 'none';
                     orderPanel.style.display = 'none';
-                    document.querySelector('.analysis-container').style.display = 'none';
+                    analysisContainer.style.display = 'none';
+                    signInContainer.style.display = 'none';
                     const newOrderLogContainer = document.createElement('div');
                     newOrderLogContainer.className = 'order-log-container active';
                     document.querySelector('.menu-panel').appendChild(newOrderLogContainer);
@@ -2108,7 +2198,8 @@
                 if (category === 'Settings') {
                     itemsGrid.style.display = 'none';
                     orderPanel.style.display = 'none';
-                    document.querySelector('.analysis-container').style.display = 'none';
+                    analysisContainer.style.display = 'none';
+                    signInContainer.style.display = 'none';
                     const newSettingsContainer = document.createElement('div');
                     newSettingsContainer.className = 'settings-container active';
                     document.querySelector('.menu-panel').appendChild(newSettingsContainer);
@@ -2119,74 +2210,104 @@
                 if (category === 'Analysis') {
                     itemsGrid.style.display = 'none';
                     orderPanel.style.display = 'none';
-                    document.querySelector('.analysis-container').style.display = 'block';
-                    // Remove any existing order-log or settings containers
-                    const orderLogContainer = document.querySelector('.order-log-container');
-                    if (orderLogContainer) orderLogContainer.remove();
-                    const settingsContainer = document.querySelector('.settings-container');
-                    if (settingsContainer) settingsContainer.remove();
-                    if (window.renderAnalysisTab) window.renderAnalysisTab();
+                    analysisContainer.style.display = 'block';
+                    signInContainer.style.display = 'none';
+                    if (window.renderAnalysisTab) {
+                        window.renderAnalysisTab();
+                    }
                     return;
-                } else {
-                    document.querySelector('.analysis-container').style.display = 'none';
-                    // Remove any existing order-log or settings containers
-                    const orderLogContainer = document.querySelector('.order-log-container');
-                    if (orderLogContainer) orderLogContainer.remove();
-                    const settingsContainer = document.querySelector('.settings-container');
-                    if (settingsContainer) settingsContainer.remove();
+                }
+
+                if (category === 'Stocktake') {
+                    itemsGrid.style.display = 'none';
+                    orderPanel.style.display = 'none';
+                    analysisContainer.style.display = 'none';
+                    signInContainer.style.display = 'none';
+                    // Remove any existing stocktake container
+                    const existingStocktakeContainer = document.querySelector('.stocktake-container');
+                    if (existingStocktakeContainer) {
+                        existingStocktakeContainer.remove();
+                    }
+                    
+                    const newStocktakeContainer = document.createElement('div');
+                    newStocktakeContainer.className = 'stocktake-container active';
+                    document.querySelector('.menu-panel').appendChild(newStocktakeContainer);
+                    
+                    if (window.stocktakeSystem) {
+                        window.stocktakeSystem.renderStocktake(newStocktakeContainer);
+                    }
+                    return;
+                }
+
+                if (category === 'employee') {
+                    itemsGrid.style.display = 'none';
+                    orderPanel.style.display = 'none';
+                    analysisContainer.style.display = 'none';
+                    // const signInContainer = document.querySelector('.sign-in-container');
+                    if (signInContainer) {
+                        signInContainer.style.display = 'flex';
+                    }
+                    return;
                 }
                 
                 itemsGrid.style.display = 'grid';
                 orderPanel.style.display = 'flex';
+                analysisContainer.style.display = 'none';
+                signInContainer.style.display = 'none';
 
-                menuData[category].forEach(item => {
-                    if (item.type === 'divider') {
-                        const divider = document.createElement('div');
-                        divider.className = 'category-divider';
-                        itemsGrid.appendChild(divider);
-                    } else if (item.isBlank) {
-                        // Create an empty div for blank spaces
-                        const blankSpace = document.createElement('div');
-                        blankSpace.className = 'item-card';
-                        blankSpace.style.visibility = 'hidden';
-                        itemsGrid.appendChild(blankSpace);
-                    } else {
-                        const displayName = currentLang === 'ja' && item.name_ja ? item.name_ja : item.name;
-                        const itemCard = document.createElement('div');
-                        itemCard.className = 'item-card';
-                        if (item.isMilkAddon) {
-                            itemCard.setAttribute('data-milk-addon', 'true');
-                        }
-                        itemCard.innerHTML = `
-                            <div class="item-name" data-name="${getDisplayName(item.name)}">${displayName}</div>
-                            ${!item.isMilkAddon && !item.hidePrice ? `<div class="item-price">¥${item.price}</div>` : ''}
-                        `;
-                        
-                        itemCard.addEventListener('click', () => {
-                            if (item.isCustom) {
-                                showCustomItemModal();
-                            } else if (item.isDiscount) {
-                                showDiscountModal();
-                            } else if (item.hasJam) {
-                                showJamOptions(item, itemCard);
-                            } else if (item.hasExtraShot) {
-                                showExtraShotOptions(item, itemCard);
-                            } else if (item.hasFlavor) {
-                                if (item.name === 'Cake') {
-                                    showCakeOptions(item, itemCard);
-                                } else if (item.name === 'Ice Cream') {
-                                    showIceCreamOptions(item, itemCard);
-                                }
-                            } else if (item.name === 'Caprese Sandwich') {
-                                showProscuittoOptions(item, itemCard);
-                            } else {
-                                addItemToOrder(item);
+                // Only proceed with menu items if the category exists in menuData
+                if (menuData[category]) {
+                    menuData[category].forEach(item => {
+                        if (item.type === 'divider') {
+                            const divider = document.createElement('div');
+                            divider.className = 'category-divider';
+                            itemsGrid.appendChild(divider);
+                        } else if (item.isBlank) {
+                            // Create an empty div for blank spaces
+                            const blankSpace = document.createElement('div');
+                            blankSpace.className = 'item-card';
+                            blankSpace.style.visibility = 'hidden';
+                            itemsGrid.appendChild(blankSpace);
+                        } else {
+                            const displayName = currentLang === 'ja' && item.name_ja ? item.name_ja : item.name;
+                            const itemCard = document.createElement('div');
+                            itemCard.className = 'item-card';
+                            if (item.isMilkAddon) {
+                                itemCard.setAttribute('data-milk-addon', 'true');
                             }
-                        });
-                        
-                        itemsGrid.appendChild(itemCard);
-                    }
-                });
+                            itemCard.innerHTML = `
+                                <div class="item-name" data-name="${getDisplayName(item.name)}">${displayName}</div>
+                                ${!item.isMilkAddon && !item.hidePrice ? `<div class="item-price">¥${item.price}</div>` : ''}
+                            `;
+                            
+                            itemCard.addEventListener('click', () => {
+                                if (item.isCustom) {
+                                    showCustomItemModal();
+                                } else if (item.isDiscount) {
+                                    showDiscountModal();
+                                } else if (item.hasJam) {
+                                    showJamOptions(item, itemCard);
+                                } else if (item.hasExtraShot) {
+                                    showExtraShotOptions(item, itemCard);
+                                } else if (item.hasFlavor) {
+                                    if (item.name === 'Cake') {
+                                        showCakeOptions(item, itemCard);
+                                    } else if (item.name === 'Ice Cream') {
+                                        showIceCreamOptions(item, itemCard);
+                                    }
+                                } else if (item.name === 'Caprese Sandwich') {
+                                    showProscuittoOptions(item, itemCard);
+                                } else if (item.hasSoftDrink) {
+                                    showSoftDrinkOptions(item, itemCard);
+                                } else {
+                                    addItemToOrder(item);
+                                }
+                            });
+                            
+                            itemsGrid.appendChild(itemCard);
+                        }
+                    });
+                }
             }
             
             // Show jam options
@@ -2197,7 +2318,7 @@
                 jamOptionsDiv.style.left = itemCard.offsetLeft + 'px';
                 jamOptionsDiv.style.top = (itemCard.offsetTop + itemCard.offsetHeight) + 'px';
                 
-                const jamOptions = ['Strawberry', 'Raspberry', 'Marmelade'];
+                const jamOptions = ['Strawberry', 'Blueberry', 'Marmelade'];
                 
                 jamOptions.forEach(jam => {
                     const option = document.createElement('div');
@@ -2276,8 +2397,8 @@
                 
                 const closeOptions = (e) => {
                     if (!optionsDiv.contains(e.target) && e.target !== itemCard) {
-                        if (optionsDiv.parentNode) {
-                            optionsDiv.parentNode.removeChild(optionsDiv);
+                        if (optionsDiv.parentNode === document.body) {
+                            document.body.removeChild(optionsDiv);
                         }
                         document.removeEventListener('click', closeOptions);
                     }
@@ -2407,9 +2528,55 @@
                 
                 const closeOptions = (e) => {
                     if (!optionsDiv.contains(e.target) && e.target !== itemCard) {
-                        if (optionsDiv.parentNode) {
-                            optionsDiv.parentNode.removeChild(optionsDiv);
+                        if (optionsDiv.parentNode === document.body) {
+                            document.body.removeChild(optionsDiv);
                         }
+                        document.removeEventListener('click', closeOptions);
+                    }
+                };
+                
+                setTimeout(() => {
+                    document.addEventListener('click', closeOptions);
+                }, 0);
+            }
+            
+            // Show soft drink options
+            function showSoftDrinkOptions(item, itemCard) {
+                const optionsDiv = document.createElement('div');
+                optionsDiv.className = 'milk-options';
+                optionsDiv.style.display = 'block';
+                optionsDiv.style.left = itemCard.offsetLeft + 'px';
+                optionsDiv.style.top = (itemCard.offsetTop + itemCard.offsetHeight) + 'px';
+                
+                const softDrinkOptions = [
+                    { name: 'Coke', name_ja: 'コーラ' },
+                    { name: 'Ramune', name_ja: 'ラムネ' },
+                    { name: 'Oolong Tea', name_ja: '烏龍茶' },
+                    { name: 'Ginger Ale', name_ja: 'ジンジャーエール' },
+                    { name: 'Sparkling Water', name_ja: '炭酸水' }
+                ];
+                
+                softDrinkOptions.forEach(drink => {
+                    const option = document.createElement('div');
+                    option.className = 'milk-option';
+                    option.textContent = currentLang === 'ja' ? drink.name_ja : drink.name;
+                    option.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const customizedItem = {
+                            ...item,
+                            customizations: [currentLang === 'ja' ? drink.name_ja : drink.name]
+                        };
+                        addItemToOrder(customizedItem);
+                        document.body.removeChild(optionsDiv);
+                    });
+                    optionsDiv.appendChild(option);
+                });
+                
+                document.body.appendChild(optionsDiv);
+                
+                const closeOptions = (e) => {
+                    if (!optionsDiv.contains(e.target) && e.target !== itemCard) {
+                        document.body.removeChild(optionsDiv);
                         document.removeEventListener('click', closeOptions);
                     }
                 };
@@ -2647,7 +2814,7 @@
                     
                     // Update process button to handle pay now
                     const processBtn = document.querySelector('.process-btn');
-                    processBtn.onclick = null; // Remove previous event listeners
+                   // processBtn.onclick = null; // Remove previous event listeners
                     processBtn.onclick = async () => {
                         const tenderedAmount = parseInt(document.getElementById('tenderedAmount').textContent);
                         
@@ -2987,15 +3154,19 @@
 
             // Payment modal controls
             const cancelBtn = document.querySelector('.cancel-btn');
-            const processBtn = document.querySelector('.process-btn');
+            const processBtn = document.getElementById('completePaymentBtn');
             
             cancelBtn.addEventListener('click', function() {
+                console.log('Cancel button clicked');
                 paymentModal.style.display = 'none';
             });
             
-            // Remove addEventListener for processPayment and use only onclick assignment
-            processBtn.onclick = processPayment;
-
+            // Set up the process button click handler
+            processBtn.addEventListener('click', async function() {
+                console.log('Complete Payment button clicked');
+                await processPayment();
+            });
+           
             // Add event delegation for Pay Now buttons in order log
             document.addEventListener('click', function(e) {
                 if (e.target.classList.contains('pay-now-btn')) {
@@ -3037,6 +3208,11 @@
             // Initialize the time display and update it every minute
             updateTime();
             setInterval(updateTime, 60000); // Update every minute
+
+            // Add click event listener to logo for page refresh
+            document.querySelector('.logo').addEventListener('click', () => {
+                location.reload();
+            });
 
             // Add event listeners for custom item modal
             document.getElementById('cancelCustomItem').addEventListener('click', closeCustomItemModal);
@@ -3210,7 +3386,17 @@
 
                     deleteBtn.onclick = async () => {
                         try {
+                            // Get the order data before deleting
+                            const orderData = orderDoc.data();
+                            
+                            // Delete the order
                             await window.firebaseServices.deleteDoc(orderRef);
+                            
+                            // Restore stock for water items
+                            if (window.stocktakeSystem && window.stocktakeSystem.restoreStockFromOrder) {
+                                await window.stocktakeSystem.restoreStockFromOrder(orderData);
+                            }
+                            
                             modal.style.display = 'none';
                             if (activeCategory === 'Order Log') {
                                 const container = document.querySelector('.order-log-container');
@@ -3226,9 +3412,36 @@
 
                     saveBtn.onclick = async () => {
                         try {
-                            // Here you would implement the save functionality
-                            // For now, just close the modal
+                            const updatedTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                            
+                            // Get the original order data for stock comparison
+                            const originalOrderData = orderDoc.data();
+                            
+                            // Update the order in Firebase
+                            await window.firebaseServices.updateDoc(orderRef, {
+                                items: order.items,
+                                total: updatedTotal,
+                                completed: false
+                            });
+                            
+                            // Update stock based on the changes
+                            if (window.stocktakeSystem && window.stocktakeSystem.updateStockFromOrderChanges) {
+                                await window.stocktakeSystem.updateStockFromOrderChanges(originalOrderData, {
+                                    items: order.items,
+                                    total: updatedTotal,
+                                    completed: false
+                                });
+                            }
+                            
                             modal.style.display = 'none';
+                            
+                            // Refresh the order log if we're in the Order Log category
+                            if (activeCategory === 'Order Log') {
+                                const container = document.querySelector('.order-log-container');
+                                if (container) {
+                                    await displayOrderLog(container);
+                                }
+                            }
                         } catch (error) {
                             console.error('Error saving order:', error);
                             alert('Error saving order. Please try again.');
@@ -3241,63 +3454,58 @@
                         if (!itemId) return;
 
                         if (e.target.classList.contains('minus')) {
-                            try {
-                                const item = order.items.find(i => i.id === itemId);
-                                if (item && item.quantity > 1) {
-                                    item.quantity -= 1;
-                                } else {
-                                    // Remove item if quantity would be 0
-                                    order.items = order.items.filter(i => i.id !== itemId);
+                            const item = order.items.find(i => i.id === itemId);
+                            if (item && item.quantity > 1) {
+                                item.quantity -= 1;
+                            } else {
+                                // Remove item if quantity would be 0
+                                order.items = order.items.filter(i => i.id !== itemId);
+                            }
+                            
+                            // Update the modal display
+                            const updatedTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                            
+                            // Update the items display
+                            const itemEl = e.target.closest('.edit-order-item');
+                            if (itemEl) {
+                                const quantityEl = itemEl.querySelector('.quantity-value');
+                                if (quantityEl) {
+                                    quantityEl.textContent = item ? item.quantity : '0';
                                 }
-                                
-                                const updatedTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                                
-                                await window.firebaseServices.updateDoc(orderRef, {
-                                    items: order.items,
-                                    total: updatedTotal
-                                });
-                                
-                                // Refresh the modal
+                            }
+                            
+                            // Update total display
+                            const totalElement = document.querySelector('.edit-order-total');
+                            if (totalElement) {
+                                totalElement.textContent = `Total: ¥${updatedTotal}`;
+                            }
+                            
+                            // If item was removed, refresh the modal
+                            if (!item) {
                                 await openEditOrderModal(orderId);
-
-                                // Refresh the order log if we're in the Order Log category
-                                if (activeCategory === 'Order Log') {
-                                    const container = document.querySelector('.order-log-container');
-                                    if (container) {
-                                        await displayOrderLog(container);
-                                    }
-                                }
-                            } catch (error) {
-                                console.error('Error updating item quantity:', error);
-                                alert('Error updating item quantity. Please try again.');
                             }
                         } else if (e.target.classList.contains('plus')) {
-                            try {
-                                const item = order.items.find(i => i.id === itemId);
-                                if (item) {
-                                    item.quantity += 1;
-                                    
-                                    const updatedTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                                    
-                                    await window.firebaseServices.updateDoc(orderRef, {
-                                        items: order.items,
-                                        total: updatedTotal
-                                    });
-                                    
-                                    // Refresh the modal
-                                    await openEditOrderModal(orderId);
-
-                                    // Refresh the order log if we're in the Order Log category
-                                    if (activeCategory === 'Order Log') {
-                                        const container = document.querySelector('.order-log-container');
-                                        if (container) {
-                                            await displayOrderLog(container);
-                                        }
+                            const item = order.items.find(i => i.id === itemId);
+                            if (item) {
+                                item.quantity += 1;
+                                
+                                // Update the modal display
+                                const updatedTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                                
+                                // Update the items display
+                                const itemEl = e.target.closest('.edit-order-item');
+                                if (itemEl) {
+                                    const quantityEl = itemEl.querySelector('.quantity-value');
+                                    if (quantityEl) {
+                                        quantityEl.textContent = item.quantity;
                                     }
                                 }
-                            } catch (error) {
-                                console.error('Error updating item quantity:', error);
-                                alert('Error updating item quantity. Please try again.');
+                                
+                                // Update total display
+                                const totalElement = document.querySelector('.edit-order-total');
+                                if (totalElement) {
+                                    totalElement.textContent = `Total: ¥${updatedTotal}`;
+                                }
                             }
                         }
                     });
@@ -3327,33 +3535,45 @@
                                     <div class="item-price">¥${item.price}</div>
                                 `;
                                 
-                                itemOption.onclick = async () => {
-                                    try {
-                                        const updatedItems = [...order.items, {
-                                            ...item,
-                                            quantity: 1,
-                                            id: Date.now(),
-                                            completed: false
-                                        }];
-                                        
-                                        await window.firebaseServices.updateDoc(orderRef, {
-                                            items: updatedItems,
-                                            total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-                                            completed: false
-                                        });
-                                        
-                                        addItemModal.style.display = 'none';
-                                        await openEditOrderModal(orderId);
-                                        
-                                        if (activeCategory === 'Order Log') {
-                                            const container = document.querySelector('.order-log-container');
-                                            if (container) {
-                                                await displayOrderLog(container);
-                                            }
-                                        }
-                                    } catch (error) {
-                                        console.error('Error adding item:', error);
-                                        alert('Error adding item. Please try again.');
+                                itemOption.onclick = () => {
+                                    // Add item to local order object
+                                    const newItem = {
+                                        ...item,
+                                        quantity: 1,
+                                        id: Date.now(),
+                                        completed: false
+                                    };
+                                    order.items.push(newItem);
+                                    
+                                    // Close add item modal
+                                    addItemModal.style.display = 'none';
+                                    
+                                    // Update the edit modal display
+                                    const editOrderItems = document.getElementById('editOrderItems');
+                                    const itemEl = document.createElement('div');
+                                    itemEl.className = 'edit-order-item';
+                                    itemEl.innerHTML = `
+                                        <div class="edit-order-item-info">
+                                            <div>${getDisplayName(newItem.name)}</div>
+                                            ${newItem.customizations ? `<div style="color: #666; font-size: 14px;">${newItem.customizations.join(', ')}</div>` : ''}
+                                            <div style="color: var(--primary); font-weight: bold;">¥${newItem.price * newItem.quantity}</div>
+                                        </div>
+                                        <div class="item-quantity">
+                                            <button class="quantity-btn minus" data-item-id="${newItem.id}">-</button>
+                                            <span class="quantity-value">${newItem.quantity}</span>
+                                            <button class="quantity-btn plus" data-item-id="${newItem.id}">+</button>
+                                        </div>
+                                    `;
+                                    
+                                    // Insert before the Add Item button
+                                    const addItemBtn = editOrderItems.querySelector('.add-item-btn');
+                                    editOrderItems.insertBefore(itemEl, addItemBtn);
+                                    
+                                    // Update total
+                                    const updatedTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                                    const totalElement = document.querySelector('.edit-order-total');
+                                    if (totalElement) {
+                                        totalElement.textContent = `Total: ¥${updatedTotal}`;
                                     }
                                 };
                                 
@@ -3377,33 +3597,45 @@
                                     <div class="item-price">¥${item.price}</div>
                                 `;
                                 
-                                itemOption.onclick = async () => {
-                                    try {
-                                        const updatedItems = [...order.items, {
-                                            ...item,
-                                            quantity: 1,
-                                            id: Date.now(),
-                                            completed: false
-                                        }];
-                                        
-                                        await window.firebaseServices.updateDoc(orderRef, {
-                                            items: updatedItems,
-                                            total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-                                            completed: false
-                                        });
-                                        
-                                        addItemModal.style.display = 'none';
-                                        await openEditOrderModal(orderId);
-                                        
-                                        if (activeCategory === 'Order Log') {
-                                            const container = document.querySelector('.order-log-container');
-                                            if (container) {
-                                                await displayOrderLog(container);
-                                            }
-                                        }
-                                    } catch (error) {
-                                        console.error('Error adding item:', error);
-                                        alert('Error adding item. Please try again.');
+                                itemOption.onclick = () => {
+                                    // Add item to local order object
+                                    const newItem = {
+                                        ...item,
+                                        quantity: 1,
+                                        id: Date.now(),
+                                        completed: false
+                                    };
+                                    order.items.push(newItem);
+                                    
+                                    // Close add item modal
+                                    addItemModal.style.display = 'none';
+                                    
+                                    // Update the edit modal display
+                                    const editOrderItems = document.getElementById('editOrderItems');
+                                    const itemEl = document.createElement('div');
+                                    itemEl.className = 'edit-order-item';
+                                    itemEl.innerHTML = `
+                                        <div class="edit-order-item-info">
+                                            <div>${getDisplayName(newItem.name)}</div>
+                                            ${newItem.customizations ? `<div style="color: #666; font-size: 14px;">${newItem.customizations.join(', ')}</div>` : ''}
+                                            <div style="color: var(--primary); font-weight: bold;">¥${newItem.price * newItem.quantity}</div>
+                                        </div>
+                                        <div class="item-quantity">
+                                            <button class="quantity-btn minus" data-item-id="${newItem.id}">-</button>
+                                            <span class="quantity-value">${newItem.quantity}</span>
+                                            <button class="quantity-btn plus" data-item-id="${newItem.id}">+</button>
+                                        </div>
+                                    `;
+                                    
+                                    // Insert before the Add Item button
+                                    const addItemBtn = editOrderItems.querySelector('.add-item-btn');
+                                    editOrderItems.insertBefore(itemEl, addItemBtn);
+                                    
+                                    // Update total
+                                    const updatedTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                                    const totalElement = document.querySelector('.edit-order-total');
+                                    if (totalElement) {
+                                        totalElement.textContent = `Total: ¥${updatedTotal}`;
                                     }
                                 };
                                 
@@ -3422,37 +3654,46 @@
                             <div class="item-name">${t('Local Discount')} (-¥100)</div>
                         `;
                         
-                        discountOption.onclick = async () => {
-                            try {
-                                const discountItem = {
-                                    name: 'Local Discount',
-                                    price: -100,
-                                    quantity: 1,
-                                    id: Date.now(),
-                                    customizations: ['Discount']
-                                };
-                                
-                                const updatedItems = [...order.items, discountItem];
-                                
-                                await window.firebaseServices.updateDoc(orderRef, {
-                                    items: updatedItems,
-                                    total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-                                    completed: false
-                                });
-                                
-                                // Close add item modal
-                                addItemModal.style.display = 'none';
-                                await openEditOrderModal(orderId);
-                                
-                                if (activeCategory === 'Order Log') {
-                                    const container = document.querySelector('.order-log-container');
-                                    if (container) {
-                                        await displayOrderLog(container);
-                                    }
-                                }
-                            } catch (error) {
-                                console.error('Error adding discount:', error);
-                                alert('Error adding discount. Please try again.');
+                        discountOption.onclick = () => {
+                            // Add discount to local order object
+                            const discountItem = {
+                                name: 'Local Discount',
+                                price: -100,
+                                quantity: 1,
+                                id: Date.now(),
+                                customizations: ['Discount']
+                            };
+                            order.items.push(discountItem);
+                            
+                            // Close add item modal
+                            addItemModal.style.display = 'none';
+                            
+                            // Update the edit modal display
+                            const editOrderItems = document.getElementById('editOrderItems');
+                            const itemEl = document.createElement('div');
+                            itemEl.className = 'edit-order-item';
+                            itemEl.innerHTML = `
+                                <div class="edit-order-item-info">
+                                    <div>${getDisplayName(discountItem.name)}</div>
+                                    ${discountItem.customizations ? `<div style="color: #666; font-size: 14px;">${discountItem.customizations.join(', ')}</div>` : ''}
+                                    <div style="color: var(--primary); font-weight: bold;">¥${discountItem.price * discountItem.quantity}</div>
+                                </div>
+                                <div class="item-quantity">
+                                    <button class="quantity-btn minus" data-item-id="${discountItem.id}">-</button>
+                                    <span class="quantity-value">${discountItem.quantity}</span>
+                                    <button class="quantity-btn plus" data-item-id="${discountItem.id}">+</button>
+                                </div>
+                            `;
+                            
+                            // Insert before the Add Item button
+                            const addItemBtn = editOrderItems.querySelector('.add-item-btn');
+                            editOrderItems.insertBefore(itemEl, addItemBtn);
+                            
+                            // Update total
+                            const updatedTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                            const totalElement = document.querySelector('.edit-order-total');
+                            if (totalElement) {
+                                totalElement.textContent = `Total: ¥${updatedTotal}`;
                             }
                         };
                         
@@ -3489,6 +3730,8 @@
                 'No Orders Today': 'No Orders Today', 'No orders have been placed today.': 'No orders have been placed today.',
                 'Payment': 'Payment', 'Tendered Amount:': 'Tendered Amount:', 'Change:': 'Change:', 'Other...': 'Other...',
                 'Order': 'Order',
+                'Analysis': 'Analysis',
+                'Stocktake': 'Stocktake',
                 'minutes ago': 'minutes ago',
                 'minute ago': 'minute ago',
                 'hours ago': 'hours ago',
@@ -3514,6 +3757,7 @@
                 'Payment': '支払い', 'Tendered Amount:': 'お預かり:', 'Change:': 'お釣り:', 'Other...': 'その他...',
                 'Order': '注文',
                 'Analysis': '分析',
+                'Stocktake': '在庫管理',
                 'minutes ago': '分前',
                 'minute ago': '分前',
                 'hours ago': '時間前',
@@ -3538,7 +3782,8 @@
             tabs[1].textContent = t('Food');
             tabs[2].textContent = t('Order Log');
             tabs[3].textContent = t('Analysis');
-            tabs[4].textContent = t('Settings');
+            tabs[4].textContent = t('Stocktake');
+            tabs[5].textContent = t('Settings');
             // Header button
             document.getElementById('langToggleBtn').textContent = currentLang === 'en' ? '日本語' : 'English';
             // Order title
@@ -3619,6 +3864,16 @@
             
             // Load the current order after initializing
             loadCurrentOrder();
+            
+            // Initialize stocktake system
+            if (window.stocktakeSystem) {
+                window.stocktakeSystem.loadStocktake();
+            }
+            
+            // Initialize analysis system
+            if (window.renderAnalysisTab) {
+                window.renderAnalysisTab();
+            }
         });
 
         // Add these functions after the existing Firebase initialization code
@@ -3794,6 +4049,8 @@
                             }
                         } else if (item.name === 'Caprese Sandwich') {
                             showProscuittoOptions(item, itemCard);
+                        } else if (item.hasSoftDrink) {
+                            showSoftDrinkOptions(item, itemCard);
                         } else {
                             addItemToOrder(item);
                         }
@@ -3805,5 +4062,7 @@
         }
     </script>
     <script type="module" src="analysis.js"></script>
+    <script type="module" src="stocktake.js"></script>
+    <script src="employee-signin.js"></script>
 </body>
 </html>
