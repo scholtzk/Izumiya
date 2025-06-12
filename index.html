@@ -184,11 +184,12 @@
             cursor: pointer;
             transition: transform 0.2s;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            min-height: 44px;
+            height: 100px; /* Increased height for better two-line text fit */
             min-width: 44px;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            align-items: center;
             user-select: none;
             -webkit-user-select: none;
         }
@@ -211,6 +212,13 @@
             font-size: 15px;
             font-weight: bold;
             margin-bottom: 8px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-height: 42px; /* Increased to better fit two lines */
         }
         
         .item-price {
@@ -1431,8 +1439,7 @@
                 <button class="category-tab" data-category="Order Log">Order Log</button>
                 <button class="category-tab" data-category="Analysis">Analysis</button>
                 <button class="category-tab" data-category="Stocktake">Stocktake</button>
-                <button class="category-tab" data-category="Settings">Settings</button>
-                <button class="category-tab" data-category="employee">Employee Sign-in</button>
+                <button class="category-tab" data-category="employee">Sign-in</button>
             </div>
             
             <div class="items-grid">
@@ -1654,7 +1661,6 @@
                 ],
                 'Order Log': [],
                 'Analysis': [],
-                'Settings': [],
                 'Stocktake': [] // Add new stocktake category
             };
 
@@ -2089,23 +2095,6 @@
                 console.error('Error exporting orders:', error);
                 alert('Error exporting orders. Please try again.');
             }
-        }
-
-        // Display settings panel
-        function displaySettings(container) {
-            container.innerHTML = `
-                <div class="settings-panel">
-                    <div class="settings-section">
-                        <div class="settings-title">Order Management</div>
-                        <button class="settings-button" id="exportOrdersBtn">Export Today's Orders</button>
-                        <button class="settings-button danger" id="resetOrdersBtn">Reset Today's Orders</button>
-                    </div>
-                </div>
-            `;
-
-            // Add event listeners
-            document.getElementById('exportOrdersBtn').addEventListener('click', exportTodayOrders);
-            document.getElementById('resetOrdersBtn').addEventListener('click', resetOrderHistory);
         }
 
         // Initialize current order with the next order number
@@ -3719,56 +3708,20 @@
         let currentLang = localStorage.getItem('posLang') || 'en';
         const translations = {
             en: {
-                Drinks: 'Drinks', Food: 'Food', 'Order Log': 'Order Log', Settings: 'Settings',
-                'Total Amount': 'Total Amount', Paid: 'Paid', Unpaid: 'Unpaid', 'Cash Given:': 'Cash Given:', 'Change:': 'Change:', Checkout: 'Checkout',
-                'Current Order': 'Current Order', 'Add Custom Item': 'Add Custom Item', 'Cancel': 'Cancel', 'Add Item': 'Add Item', 'Order Saved': 'Order Saved',
-                'Complete Payment': 'Complete Payment', 'Pay Now': 'Pay Now', 'Pay Later': 'Pay Later', 'Subtotal': 'Subtotal', 'Total': 'Total',
-                'New Order': 'New Order', 'Export Today': "Export Today's Orders", 'Reset Orders': 'Reset Order History', 'Show Revenue': 'Show Revenue',
-                'Float Management': 'Float Management', 'Order Management': 'Order Management', 'Set Float': 'Set Float', 'Revenue': 'Revenue',
-                'Starting Float:': 'Starting Float:', 'Total Sales:': 'Total Sales:', 'Current Float:': 'Current Float:', 'Revenue:': 'Revenue:',
-                'Edit Order': 'Edit Order', 'Delete Order': 'Delete Order', 'Save Changes': 'Save Changes', 'Add Item to Order': 'Add Item to Order',
-                'No Orders Today': 'No Orders Today', 'No orders have been placed today.': 'No orders have been placed today.',
-                'Payment': 'Payment', 'Tendered Amount:': 'Tendered Amount:', 'Change:': 'Change:', 'Other...': 'Other...',
-                'Order': 'Order',
-                'Analysis': 'Analysis',
-                'Stocktake': 'Stocktake',
-                'minutes ago': 'minutes ago',
-                'minute ago': 'minute ago',
-                'hours ago': 'hours ago',
-                'hour ago': 'hour ago',
-                'Just now': 'Just now',
-                'Edit': 'Edit',
-                'Add Item': 'Add Item',
-                'Cancel': 'Cancel',
-                'Delete Order': 'Delete Order',
-                'Save Changes': 'Save Changes',
-                'Cash': 'Cash'
+                Drinks: 'Drinks',
+                Food: 'Food',
+                'Order Log': 'Order Log',
+                Analysis: 'Analysis',
+                Stocktake: 'Stocktake',
+                'Sign-in': 'Sign-in'
             },
             ja: {
-                Drinks: 'ドリンク', Food: 'フード', 'Order Log': '注文履歴', Settings: '設定',
-                'Total Amount': '合計金額', Paid: '支払い済み', Unpaid: '未払い', 'Cash Given:': 'お預かり:', 'Change:': 'お釣り:', Checkout: '会計',
-                'Current Order': '現在の注文', 'Add Custom Item': 'カスタム商品追加', 'Cancel': 'キャンセル', 'Add Item': '商品追加', 'Order Saved': '注文保存済み',
-                'Complete Payment': '支払い完了', 'Pay Now': '今すぐ支払う', 'Pay Later': '後で支払う', 'Subtotal': '小計', 'Total': '合計',
-                'New Order': '新しい注文', 'Export Today': '本日の注文をエクスポート', 'Reset Orders': '注文履歴をリセット', 'Show Revenue': '売上表示',
-                'Float Management': '釣銭管理', 'Order Management': '注文管理', 'Set Float': '釣銭設定', 'Revenue': '売上',
-                'Starting Float:': '開始釣銭:', 'Total Sales:': '売上合計:', 'Current Float:': '現在の釣銭:', 'Revenue:': '売上:',
-                'Edit Order': '注文編集', 'Delete Order': '注文削除', 'Save Changes': '変更を保存', 'Add Item to Order': '注文に商品追加',
-                'No Orders Today': '本日の注文はありません', 'No orders have been placed today.': '本日注文はありません。',
-                'Payment': '支払い', 'Tendered Amount:': 'お預かり:', 'Change:': 'お釣り:', 'Other...': 'その他...',
-                'Order': '注文',
-                'Analysis': '分析',
-                'Stocktake': '在庫管理',
-                'minutes ago': '分前',
-                'minute ago': '分前',
-                'hours ago': '時間前',
-                'hour ago': '時間前',
-                'Just now': 'たった今',
-                'Edit': '編集',
-                'Add Item': '商品追加',
-                'Cancel': 'キャンセル',
-                'Delete Order': '注文削除',
-                'Save Changes': '変更を保存',
-                'Cash': '現金'
+                Drinks: 'ドリンク',
+                Food: 'フード',
+                'Order Log': '注文履歴',
+                Analysis: '分析',
+                Stocktake: '在庫',
+                'Sign-in': 'サインイン'
             }
         };
         function t(key) {
@@ -3783,7 +3736,7 @@
             tabs[2].textContent = t('Order Log');
             tabs[3].textContent = t('Analysis');
             tabs[4].textContent = t('Stocktake');
-            tabs[5].textContent = t('Settings');
+            tabs[5].textContent = t('Sign-in');
             // Header button
             document.getElementById('langToggleBtn').textContent = currentLang === 'en' ? '日本語' : 'English';
             // Order title
