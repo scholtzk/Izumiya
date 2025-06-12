@@ -1,4 +1,4 @@
-// aanalysis.js
+// analysis.js
 // This module renders the Analysis tab for the POS system.
 // It expects window.firebaseServices and window.firebaseDb to be available.
 
@@ -8,7 +8,9 @@ import {
     where, 
     getDocs, 
     orderBy, 
-    Timestamp 
+    Timestamp,
+    setDoc,
+    doc
 } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
 // Chart.js CDN loader
@@ -96,12 +98,12 @@ window.renderAnalysisTab = function renderAnalysisTab() {
                     <div id="total-sales" style="font-size:24px;font-weight:bold;color:#6F4E37;">¥0</div>
                 </div>
                 <div class="stat-card" style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-                    <h3 style="margin:0 0 10px 0;color:#666;">${t('Orders')}</h3>
-                    <div id="total-orders" style="font-size:24px;font-weight:bold;color:#6F4E37;">0</div>
+                    <h3 style="margin:0 0 10px 0;color:#666;">${t('Estimated Profit')}</h3>
+                    <div id="total-orders" style="font-size:24px;font-weight:bold;color:#6F4E37;">¥0</div>
                 </div>
                 <div class="stat-card" style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-                    <h3 style="margin:0 0 10px 0;color:#666;">${t('Average Order')}</h3>
-                    <div id="avg-order" style="font-size:24px;font-weight:bold;color:#6F4E37;">¥0</div>
+                    <h3 style="margin:0 0 10px 0;color:#666;">${t('Orders')}</h3>
+                    <div id="avg-order" style="font-size:24px;font-weight:bold;color:#6F4E37;">0</div>
                 </div>
             </div>
 
@@ -151,7 +153,6 @@ window.renderAnalysisTab = function renderAnalysisTab() {
         today.setHours(23, 59, 59, 999);
         
         fetchOrders(yesterday, today).then(orders => {
-            console.log('Peak hours orders:', orders.length);
             updatePeakHoursChart(orders);
         });
     });
@@ -266,7 +267,7 @@ function initializeCharts() {
                 tension: 0.4,
                 fill: true
             }, {
-                label: 'Yesterday',
+                label: '7 Day Average',
                 data: Array(19).fill(0),
                 borderColor: '#A67C52',
                 backgroundColor: 'rgba(166, 124, 82, 0.1)',
@@ -312,15 +313,62 @@ function initializeCharts() {
 async function loadAnalysisData(period) {
     const { start, end } = getPeriodDates(period);
     const orders = await fetchOrders(start, end);
+    const itemCosts = await fetchItemCosts();
     
-    // Update quick stats only
-    updateQuickStats(orders);
+    // Calculate total sales and costs
+    let totalSales = 0;
+    let totalCosts = 0;
+    let totalDiscounts = 0;
+    
+    orders.forEach(order => {
+        totalSales += order.total;
+        totalDiscounts += order.discount || 0;
+        
+        // Calculate costs for each item in the order
+        if (order.items) {
+            order.items.forEach(item => {
+                if (item && item.name) {
+                    let itemName = item.name;
+                    let quantity = item.quantity || 0;
+                    
+                    // Handle customizations
+                    if (item.name === 'Soft Drink' && item.customizations && item.customizations.length > 0) {
+                        item.customizations.forEach(customization => {
+                            const cost = itemCosts[customization] || 0;
+                            totalCosts += cost * quantity;
+                        });
+                    } else if (item.customizations && item.customizations.length > 0) {
+                        item.customizations.forEach(customization => {
+                            if (customization.includes('Ice Cream') || customization.includes('Cake')) {
+                                const cost = itemCosts[customization] || 0;
+                                totalCosts += cost * quantity;
+                            } else {
+                                const cost = itemCosts[itemName] || 0;
+                                totalCosts += cost * quantity;
+                            }
+                        });
+                    } else {
+                        const cost = itemCosts[itemName] || 0;
+                        totalCosts += cost * quantity;
+                    }
+                }
+            });
+        }
+    });
+
+    const totalOrders = orders.length;
+    const estimatedProfit = totalSales - totalCosts - totalDiscounts;
+
+    document.getElementById('total-sales').textContent = formatCurrency(totalSales);
+    document.getElementById('total-orders').textContent = formatCurrency(estimatedProfit);
+    document.getElementById('avg-order').textContent = totalOrders;
+    document.getElementById('total-orders').parentElement.querySelector('h3').textContent = t('Estimated Profit');
+    document.getElementById('avg-order').parentElement.querySelector('h3').textContent = t('Orders');
 }
 
 // Fetch orders from Firebase
 async function fetchOrders(start, end) {
     try {
-        console.log('Fetching orders from:', start.toISOString(), 'to:', end.toISOString());
         const ordersRef = collection(window.firebaseDb, 'orders');
         const q = query(
             ordersRef,
@@ -331,23 +379,11 @@ async function fetchOrders(start, end) {
         
         const querySnapshot = await getDocs(q);
         const orders = querySnapshot.docs.map(doc => doc.data());
-        console.log('Fetched orders:', orders.length);
         return orders;
     } catch (error) {
         console.error('Error fetching orders:', error);
         return [];
     }
-}
-
-// Update quick stats
-function updateQuickStats(orders) {
-    const totalSales = orders.reduce((sum, order) => sum + order.total, 0);
-    const totalOrders = orders.length;
-    const avgOrder = totalOrders > 0 ? totalSales / totalOrders : 0;
-
-    document.getElementById('total-sales').textContent = formatCurrency(totalSales);
-    document.getElementById('total-orders').textContent = totalOrders;
-    document.getElementById('avg-order').textContent = formatCurrency(avgOrder);
 }
 
 // Update sales trend chart
@@ -364,43 +400,77 @@ function updateSalesTrendChart(orders) {
 }
 
 // Update peak hours chart
-function updatePeakHoursChart(orders) {
-    // Get today's and yesterday's dates
+async function updatePeakHoursChart(orders) {
     const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    const start = new Date(today);
+    start.setDate(start.getDate() - 7); // Get past 7 days
+    start.setHours(0, 0, 0, 0);
+    today.setHours(23, 59, 59, 999);
 
-    // Initialize hourly data with zeros
-    const todayData = new Array(19).fill(0);
-    const yesterdayData = new Array(19).fill(0);
+    // Get orders for past 7 days
+    const pastOrders = await fetchOrders(start, today);
+    
+    // Initialize hourly data arrays with 30-minute intervals (8:00-17:00)
+    const todayData = new Array(19).fill(0); // 19 slots for 8:00-17:00 in 30-min intervals
+    const pastWeekData = new Array(19).fill(0); // Same for past week average
+    const pastWeekDays = 7; // Number of days to average
 
-    // Reset chart data
-    window.peakHoursChart.data.datasets[0].data = todayData;
-    window.peakHoursChart.data.datasets[1].data = yesterdayData;
+    // Get today's date at midnight for comparison
+    const todayMidnight = new Date();
+    todayMidnight.setHours(0, 0, 0, 0);
 
-    // Process orders
+    // Process today's orders
     orders.forEach(order => {
-        const orderDate = order.timestamp.toDate();
-        const hour = orderDate.getHours();
-        const minute = orderDate.getMinutes();
-        
-        // Only process orders between 8:00 and 17:00
-        if (hour >= 8 && hour < 17) {
-            const index = (hour - 8) * 2 + (minute >= 30 ? 1 : 0);
-            if (index >= 0 && index < 19) {
-                const orderDateStr = orderDate.toDateString();
-                if (orderDateStr === today.toDateString()) {
+        const orderTime = order.timestamp.toDate();
+        // Only process orders from today
+        if (orderTime >= todayMidnight) {
+            const hour = orderTime.getHours();
+            const minute = orderTime.getMinutes();
+            
+            // Only process orders between 8:00 and 17:00
+            if (hour >= 8 && hour < 17) {
+                const index = (hour - 8) * 2 + (minute >= 30 ? 1 : 0);
+                if (index >= 0 && index < 19) {
                     todayData[index]++;
-                } else if (orderDateStr === yesterday.toDateString()) {
-                    yesterdayData[index]++;
                 }
             }
         }
     });
 
-    // Update chart with new data
+    // Process past week's orders (excluding today)
+    pastOrders.forEach(order => {
+        const orderTime = order.timestamp.toDate();
+        // Skip today's orders for past week average
+        if (orderTime < todayMidnight) {
+            const hour = orderTime.getHours();
+            const minute = orderTime.getMinutes();
+            
+            // Only process orders between 8:00 and 17:00
+            if (hour >= 8 && hour < 17) {
+                const index = (hour - 8) * 2 + (minute >= 30 ? 1 : 0);
+                if (index >= 0 && index < 19) {
+                    pastWeekData[index]++;
+                }
+            }
+        }
+    });
+
+    // Calculate average for past week
+    for (let i = 0; i < pastWeekData.length; i++) {
+        pastWeekData[i] = Math.round((pastWeekData[i] / pastWeekDays) * 10) / 10;
+    }
+
+    // Update chart labels to show half-hour intervals
+    const labels = [];
+    for (let hour = 8; hour < 17; hour++) {
+        labels.push(`${hour}:00`);
+        labels.push(`${hour}:30`);
+    }
+
+    // Update chart with new data and labels
+    window.peakHoursChart.data.labels = labels;
     window.peakHoursChart.data.datasets[0].data = todayData;
-    window.peakHoursChart.data.datasets[1].data = yesterdayData;
+    window.peakHoursChart.data.datasets[1].data = pastWeekData;
     window.peakHoursChart.update();
 }
 
@@ -412,9 +482,8 @@ async function loadUsageAnalysis() {
     start.setHours(0, 0, 0, 0);
     end.setHours(23, 59, 59, 999);
 
-    console.log('Loading usage analysis from:', start.toISOString(), 'to:', end.toISOString());
     const orders = await fetchOrders(start, end);
-    console.log('Orders for usage analysis:', orders.length);
+    const itemCosts = await fetchItemCosts(); // Fetch existing costs
 
     const usageAnalysis = document.getElementById('usage-analysis');
     const t = (window.t || ((k) => k));
@@ -439,7 +508,21 @@ async function loadUsageAnalysis() {
         if (order.items) {
             order.items.forEach(item => {
                 if (item && item.name) {
-                    allItems.add(item.name);
+                    if (item.name === 'Soft Drink' && item.customizations && item.customizations.length > 0) {
+                        item.customizations.forEach(customization => {
+                            allItems.add(customization);
+                        });
+                    } else if (item.customizations && item.customizations.length > 0) {
+                        item.customizations.forEach(customization => {
+                            if (customization.includes('Ice Cream') || customization.includes('Cake')) {
+                                allItems.add(customization);
+                            } else {
+                                allItems.add(item.name);
+                            }
+                        });
+                    } else {
+                        allItems.add(item.name);
+                    }
                 }
             });
         }
@@ -458,10 +541,23 @@ async function loadUsageAnalysis() {
         if (order.items) {
             const orderDate = order.timestamp.toDate();
             const dateStr = formatDate(orderDate);
-            console.log('Processing order for date:', dateStr, 'with items:', order.items.length);
             order.items.forEach(item => {
                 if (item && item.name && usageByDate[dateStr]) {
-                    usageByDate[dateStr][item.name] = (usageByDate[dateStr][item.name] || 0) + (item.quantity || 0);
+                    if (item.name === 'Soft Drink' && item.customizations && item.customizations.length > 0) {
+                        item.customizations.forEach(customization => {
+                            usageByDate[dateStr][customization] = (usageByDate[dateStr][customization] || 0) + (item.quantity || 0);
+                        });
+                    } else if (item.customizations && item.customizations.length > 0) {
+                        item.customizations.forEach(customization => {
+                            if (customization.includes('Ice Cream') || customization.includes('Cake')) {
+                                usageByDate[dateStr][customization] = (usageByDate[dateStr][customization] || 0) + (item.quantity || 0);
+                            } else {
+                                usageByDate[dateStr][item.name] = (usageByDate[dateStr][item.name] || 0) + (item.quantity || 0);
+                            }
+                        });
+                    } else {
+                        usageByDate[dateStr][item.name] = (usageByDate[dateStr][item.name] || 0) + (item.quantity || 0);
+                    }
                 }
             });
         }
@@ -470,14 +566,26 @@ async function loadUsageAnalysis() {
     // Calculate averages and totals
     const itemTotals = {};
     const itemAverages = {};
+    const itemCostsData = {};
 
     allItems.forEach(item => {
         itemTotals[item] = 0;
+        // Calculate total including today
         dates.forEach(date => {
             const dateStr = formatDate(date);
             itemTotals[item] += usageByDate[dateStr][item] || 0;
         });
-        itemAverages[item] = itemTotals[item] / dates.length;
+        
+        // Calculate average excluding today
+        const pastDates = dates.slice(0, -1); // Exclude today
+        const pastTotal = pastDates.reduce((sum, date) => {
+            const dateStr = formatDate(date);
+            return sum + (usageByDate[dateStr][item] || 0);
+        }, 0);
+        itemAverages[item] = pastTotal / pastDates.length;
+
+        // Get cost data
+        itemCostsData[item] = itemCosts[item] || 0;
     });
 
     // Sort items by total usage
@@ -489,7 +597,13 @@ async function loadUsageAnalysis() {
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;">
             ${sortedItems.map(item => `
                 <div style="background:#f8f9fa;padding:15px;border-radius:6px;border-left:4px solid #A67C52;">
-                    <div style="font-weight:bold;margin-bottom:10px;">${getDisplayName(item)}</div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <div style="font-weight:bold;">${getDisplayName(item)}</div>
+                        <button onclick="editItemCost('${item}', ${itemCostsData[item]})" 
+                                style="background:#6F4E37;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;">
+                            ${t('Edit Cost')}
+                        </button>
+                    </div>
                     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
                         <div>
                             <div style="color:#666;font-size:0.9em;">${t('Total Usage')}</div>
@@ -499,6 +613,10 @@ async function loadUsageAnalysis() {
                             <div style="color:#666;font-size:0.9em;">${t('Average per Day')}</div>
                             <div style="font-weight:bold;color:#6F4E37;">${itemAverages[item].toFixed(1)}</div>
                         </div>
+                    </div>
+                    <div style="margin-top:10px;font-size:0.9em;color:#666;">
+                        ${t('Cost per Item')}:
+                        <div style="font-weight:bold;color:#6F4E37;">¥${itemCostsData[item].toLocaleString()}</div>
                     </div>
                     <div style="margin-top:10px;font-size:0.9em;color:#666;">
                         ${t('Daily Breakdown')}:
@@ -532,7 +650,7 @@ function loadCustomDateRange() {
         end.setHours(23, 59, 59, 999);
         
         const orders = fetchOrders(start, end);
-        updateQuickStats(orders);
+        loadAnalysisData(period);
     }
 }
 
@@ -590,21 +708,30 @@ async function loadSalesTrendData(period) {
 
     // Fill in previous period sales
     prevOrders.forEach(order => {
-        const date = formatDate(order.timestamp.toDate());
-        if (prevSalesByDate[date] !== undefined) {
-            prevSalesByDate[date] += order.total;
+        const orderDate = order.timestamp.toDate();
+        // Map the previous period date to the corresponding date in the current period
+        const currentPeriodDate = new Date(orderDate);
+        currentPeriodDate.setDate(currentPeriodDate.getDate() + periodDays);
+        const mappedDate = formatDate(currentPeriodDate);
+        
+        // Find the index of this date in our dates array
+        const dateIndex = dates.findIndex(d => formatDate(d) === mappedDate);
+        if (dateIndex !== -1) {
+            const targetDate = formatDate(dates[dateIndex]);
+            prevSalesByDate[targetDate] = (prevSalesByDate[targetDate] || 0) + order.total;
         }
     });
 
-    // Calculate percentage changes
+    // Calculate percentage changes for each day
     const percentageChanges = {};
-    Object.keys(salesByDate).forEach(date => {
-        const current = salesByDate[date];
-        const previous = prevSalesByDate[date];
-        if (previous === 0) {
-            percentageChanges[date] = current > 0 ? 100 : 0;
+    dates.forEach((date, index) => {
+        const dateStr = formatDate(date);
+        const current = salesByDate[dateStr];
+        const previous = prevSalesByDate[dateStr];
+        if (previous > 0) {
+            percentageChanges[dateStr] = ((current - previous) / previous) * 100;
         } else {
-            percentageChanges[date] = ((current - previous) / previous) * 100;
+            percentageChanges[dateStr] = null;
         }
     });
 
@@ -622,20 +749,71 @@ async function loadSalesTrendData(period) {
     // Add percentage changes as annotations
     const annotations = {};
     Object.entries(percentageChanges).forEach(([date, change], index) => {
-        annotations[`label${index}`] = {
-            type: 'label',
-            xValue: index,
-            yValue: salesByDate[date],
-            content: `${change > 0 ? '+' : ''}${change.toFixed(1)}%`,
-            color: change >= 0 ? '#28a745' : '#dc3545',
-            font: {
-                size: 12,
-                weight: 'bold'
-            },
-            yAdjust: -20
-        };
+        if (change !== null) {
+            annotations[`label${index}`] = {
+                type: 'label',
+                xValue: index,
+                yValue: salesByDate[date],
+                content: `${change > 0 ? '+' : ''}${change.toFixed(1)}%`,
+                color: change >= 0 ? '#28a745' : '#dc3545',
+                font: {
+                    size: 12,
+                    weight: 'bold'
+                },
+                yAdjust: -15
+            };
+        }
     });
     
     window.salesTrendChart.options.plugins.annotation.annotations = annotations;
     window.salesTrendChart.update();
-} 
+}
+
+// Add these new functions for cost management
+async function fetchItemCosts() {
+    try {
+        const costsRef = collection(window.firebaseDb, 'itemCosts');
+        const querySnapshot = await getDocs(costsRef);
+        const costs = {};
+        querySnapshot.forEach(doc => {
+            costs[doc.id] = doc.data().cost;
+        });
+        return costs;
+    } catch (error) {
+        console.error('Error fetching item costs:', error);
+        return {};
+    }
+}
+
+async function saveItemCost(itemName, cost) {
+    try {
+        const costsRef = collection(window.firebaseDb, 'itemCosts');
+        await setDoc(doc(costsRef, itemName), {
+            cost: parseFloat(cost),
+            updatedAt: Timestamp.now()
+        });
+        return true;
+    } catch (error) {
+        console.error('Error saving item cost:', error);
+        return false;
+    }
+}
+
+// Add this to your window object
+window.editItemCost = function(itemName, currentCost) {
+    const cost = prompt(`Enter cost for ${getDisplayName(itemName)}:`, currentCost);
+    if (cost !== null) {
+        const numCost = parseFloat(cost);
+        if (!isNaN(numCost) && numCost >= 0) {
+            saveItemCost(itemName, numCost).then(success => {
+                if (success) {
+                    loadUsageAnalysis(); // Refresh the display
+                } else {
+                    alert('Failed to save cost. Please try again.');
+                }
+            });
+        } else {
+            alert('Please enter a valid number.');
+        }
+    }
+}; 
