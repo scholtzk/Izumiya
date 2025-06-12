@@ -5,18 +5,26 @@ window.addEventListener('firebaseReady', function() {
     // Create container for the sign-in form
     const container = document.createElement('div');
     container.className = 'sign-in-container';
-    container.style.maxWidth = '1000px'; // Increased to accommodate side-by-side layout
+    container.style.maxWidth = '1200px';
     container.style.margin = '20px auto';
     container.style.padding = '20px';
     container.style.backgroundColor = 'white';
     container.style.borderRadius = '10px';
-    container.style.display = 'none'; // Hide by default
-    container.style.gap = '20px'; // Space between sign-in and log
+    container.style.display = 'none';
+    container.style.gap = '20px';
+    container.style.width = '100%';
+    container.style.height = '100%';
+    container.style.overflowY = 'auto';
+    container.style.display = 'flex';
+    container.style.justifyContent = 'center';
+    container.style.alignItems = 'flex-start';
 
     // Create left side container for sign-in form
     const signInFormContainer = document.createElement('div');
-    signInFormContainer.style.flex = '1';
+    signInFormContainer.style.flex = '0 0 auto';
     signInFormContainer.style.minWidth = '300px';
+    signInFormContainer.style.maxWidth = '500px';
+    signInFormContainer.style.marginRight = '40px';
 
     // Create title
     const title = document.createElement('h2');
@@ -27,12 +35,13 @@ window.addEventListener('firebaseReady', function() {
     // Create sign-in log container
     const signInLogContainer = document.createElement('div');
     signInLogContainer.className = 'sign-in-log-container';
-    signInLogContainer.style.flex = '1';
-    signInLogContainer.style.minWidth = '300px';
+    signInLogContainer.style.flex = '0 0 auto';
+    signInLogContainer.style.width = '350px'; // Fixed width
+    signInLogContainer.style.minWidth = '350px';
     signInLogContainer.style.padding = '15px';
     signInLogContainer.style.backgroundColor = 'var(--light)';
     signInLogContainer.style.borderRadius = '8px';
-    signInLogContainer.style.maxHeight = '600px'; // Increased height to match form
+    signInLogContainer.style.maxHeight = 'calc(100vh - 200px)';
     signInLogContainer.style.overflowY = 'auto';
 
     // Create title container
@@ -133,8 +142,9 @@ window.addEventListener('firebaseReady', function() {
     keypad.className = 'numpad';
     keypad.style.display = 'grid';
     keypad.style.gridTemplateColumns = 'repeat(3, 1fr)';
-    keypad.style.gap = '10px';
+    keypad.style.gap = '20px'; // Increased gap further
     keypad.style.margin = '20px 0';
+    keypad.style.maxWidth = '500px'; // Increased max width
 
     // Create number buttons
     const numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '✓'];
@@ -144,13 +154,15 @@ window.addEventListener('firebaseReady', function() {
         const button = document.createElement('button');
         button.className = 'numpad-btn';
         button.textContent = num;
-        button.style.padding = '15px';
+        button.style.padding = '25px'; // Increased padding
         button.style.border = '1px solid #e0e0e0';
-        button.style.borderRadius = '8px';
+        button.style.borderRadius = '12px'; // Increased border radius
         button.style.backgroundColor = 'white';
-        button.style.fontSize = '18px';
+        button.style.fontSize = '32px'; // Increased font size
         button.style.cursor = 'pointer';
         button.style.transition = 'background-color 0.2s';
+        button.style.height = '80px'; // Increased height
+        button.style.width = '100%'; // Ensure full width
         
         if (num === 'C') {
             button.classList.add('backspace-btn');
