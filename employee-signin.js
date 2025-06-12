@@ -15,12 +15,16 @@ window.addEventListener('firebaseReady', function() {
     container.style.width = '100%'; // Fill available width
     container.style.height = '100%'; // Fill available height
     container.style.overflowY = 'auto'; // Enable scrolling if content overflows
+    container.style.display = 'flex'; // Enable flex layout
+    container.style.justifyContent = 'center'; // Center the content
+    container.style.alignItems = 'flex-start'; // Align items to top
 
     // Create left side container for sign-in form
     const signInFormContainer = document.createElement('div');
-    signInFormContainer.style.flex = '1';
+    signInFormContainer.style.flex = '0 0 400px'; // Fixed width for the form
     signInFormContainer.style.minWidth = '300px';
     signInFormContainer.style.maxWidth = '400px'; // Limit form width for better readability
+    signInFormContainer.style.marginRight = '40px'; // Add space between form and log
 
     // Create title
     const title = document.createElement('h2');
@@ -31,7 +35,7 @@ window.addEventListener('firebaseReady', function() {
     // Create sign-in log container
     const signInLogContainer = document.createElement('div');
     signInLogContainer.className = 'sign-in-log-container';
-    signInLogContainer.style.flex = '1';
+    signInLogContainer.style.flex = '0 0 30%'; // Take up 30% of the space
     signInLogContainer.style.minWidth = '300px';
     signInLogContainer.style.padding = '15px';
     signInLogContainer.style.backgroundColor = 'var(--light)';
@@ -155,6 +159,10 @@ window.addEventListener('firebaseReady', function() {
         button.style.fontSize = '18px';
         button.style.cursor = 'pointer';
         button.style.transition = 'background-color 0.2s';
+        button.style.color = '#333'; // Set explicit text color
+        button.style.webkitAppearance = 'none'; // Prevent iOS styling
+        button.style.appearance = 'none'; // Prevent iOS styling
+        button.style.textDecoration = 'none'; // Prevent link styling
         
         if (num === 'C') {
             button.classList.add('backspace-btn');
@@ -327,19 +335,94 @@ window.addEventListener('firebaseReady', function() {
     displayTodaySignIns();
     setInterval(displayTodaySignIns, 60000); // Refresh every minute
 
-    // Function to close popup
-    function closePopup() {
-        const popup = document.querySelector('.employee-status-popup');
-        const overlay = document.querySelector('.employee-status-overlay');
-        if (popup) {
+    // Function to create a popup window
+    function createPopupWindow(title, content) {
+        // Create popup container
+        const popup = document.createElement('div');
+        popup.className = 'popup-window';
+        popup.style.position = 'fixed';
+        popup.style.top = '50%';
+        popup.style.left = '50%';
+        popup.style.transform = 'translate(-50%, -50%)';
+        popup.style.backgroundColor = 'white';
+        popup.style.padding = '20px';
+        popup.style.borderRadius = '10px';
+        popup.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        popup.style.zIndex = '1000';
+        popup.style.minWidth = '400px';
+        popup.style.maxWidth = '90vw';
+        popup.style.maxHeight = '90vh';
+        popup.style.overflowY = 'auto';
+
+        // Create header
+        const header = document.createElement('div');
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'center';
+        header.style.marginBottom = '20px';
+        header.style.paddingBottom = '10px';
+        header.style.borderBottom = '1px solid #e0e0e0';
+
+        // Add title
+        const titleElement = document.createElement('h2');
+        titleElement.textContent = title;
+        titleElement.style.margin = '0';
+        titleElement.style.color = 'var(--primary)';
+        header.appendChild(titleElement);
+
+        // Add close button
+        const closeButton = document.createElement('button');
+        closeButton.innerHTML = '×';
+        closeButton.style.background = 'none';
+        closeButton.style.border = 'none';
+        closeButton.style.fontSize = '24px';
+        closeButton.style.cursor = 'pointer';
+        closeButton.style.color = '#666';
+        closeButton.style.padding = '0 8px';
+        closeButton.style.lineHeight = '1';
+        closeButton.onclick = () => {
             document.body.removeChild(popup);
-        }
-        if (overlay) {
-            document.body.removeChild(overlay);
-        }
-        clearPin();
+        };
+        header.appendChild(closeButton);
+
+        // Add content
+        const contentContainer = document.createElement('div');
+        contentContainer.appendChild(content);
+
+        // Add footer with OK button
+        const footer = document.createElement('div');
+        footer.style.display = 'flex';
+        footer.style.justifyContent = 'flex-end';
+        footer.style.marginTop = '20px';
+        footer.style.paddingTop = '10px';
+        footer.style.borderTop = '1px solid #e0e0e0';
+
+        const okButton = document.createElement('button');
+        okButton.textContent = 'OK';
+        okButton.style.padding = '8px 20px';
+        okButton.style.backgroundColor = 'var(--primary)';
+        okButton.style.color = 'white';
+        okButton.style.border = 'none';
+        okButton.style.borderRadius = '5px';
+        okButton.style.cursor = 'pointer';
+        okButton.style.fontWeight = 'bold';
+        okButton.onclick = () => {
+            document.body.removeChild(popup);
+        };
+        footer.appendChild(okButton);
+
+        // Assemble popup
+        popup.appendChild(header);
+        popup.appendChild(contentContainer);
+        popup.appendChild(footer);
+
+        // Add to document
+        document.body.appendChild(popup);
+
+        return popup;
     }
 
+    // Update handleSignIn to use new popup style
     async function handleSignIn() {
         const pin = document.getElementById('pinDisplay').textContent;
         if (pin.length === 0) return;
@@ -348,7 +431,12 @@ window.addEventListener('firebaseReady', function() {
             // Check if employee exists
             const employeeQuery = await getDocs(query(collection(db, 'employees'), where('pin', '==', pin)));
             if (employeeQuery.empty) {
-                alert('Invalid PIN');
+                const errorContent = document.createElement('div');
+                errorContent.textContent = 'Invalid PIN';
+                errorContent.style.textAlign = 'center';
+                errorContent.style.color = '#dc3545';
+                errorContent.style.padding = '20px';
+                createPopupWindow('Error', errorContent);
                 clearPin();
                 return;
             }
@@ -368,48 +456,9 @@ window.addEventListener('firebaseReady', function() {
                 where('date', '==', todayStr)
             ));
 
-            // Create overlay
-            const overlay = document.createElement('div');
-            overlay.className = 'employee-status-overlay';
-            overlay.style.position = 'fixed';
-            overlay.style.top = '0';
-            overlay.style.left = '0';
-            overlay.style.width = '100%';
-            overlay.style.height = '100%';
-            overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
-            overlay.style.zIndex = '999';
-            document.body.appendChild(overlay);
-
-            // Create popup container
-            const popup = document.createElement('div');
-            popup.className = 'employee-status-popup';
-            popup.style.position = 'fixed';
-            popup.style.top = '50%';
-            popup.style.left = '50%';
-            popup.style.transform = 'translate(-50%, -50%)';
-            popup.style.backgroundColor = 'white';
-            popup.style.padding = '20px';
-            popup.style.borderRadius = '10px';
-            popup.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
-            popup.style.zIndex = '1000';
-            popup.style.minWidth = '300px';
-
+            // Create popup content
             const popupContent = document.createElement('div');
             popupContent.style.textAlign = 'center';
-
-            // Add close button
-            const closeButton = document.createElement('button');
-            closeButton.innerHTML = '&times;';
-            closeButton.style.position = 'absolute';
-            closeButton.style.right = '10px';
-            closeButton.style.top = '10px';
-            closeButton.style.background = 'none';
-            closeButton.style.border = 'none';
-            closeButton.style.fontSize = '24px';
-            closeButton.style.cursor = 'pointer';
-            closeButton.style.color = '#666';
-            closeButton.onclick = closePopup;
-            popupContent.appendChild(closeButton);
 
             // Add employee name
             const nameHeader = document.createElement('h2');
@@ -444,19 +493,24 @@ window.addEventListener('firebaseReady', function() {
                     try {
                         const signInTime = Timestamp.now();
                         await addDoc(collection(db, 'employeeSignIns'), {
-                employeeId: employeeDoc.id,
-                employeeName: employeeData.name,
+                            employeeId: employeeDoc.id,
+                            employeeName: employeeData.name,
                             signInTime: signInTime,
                             date: todayStr,
                             breaks: []
                         });
 
                         // Close popup and refresh
-                        closePopup();
+                        document.body.removeChild(document.querySelector('.popup-window'));
                         displayTodaySignIns();
                     } catch (error) {
                         console.error('Error starting shift:', error);
-                        alert('Error starting shift. Please try again.');
+                        const errorContent = document.createElement('div');
+                        errorContent.textContent = 'Error starting shift. Please try again.';
+                        errorContent.style.textAlign = 'center';
+                        errorContent.style.color = '#dc3545';
+                        errorContent.style.padding = '20px';
+                        createPopupWindow('Error', errorContent);
                     }
                 });
 
@@ -538,11 +592,16 @@ window.addEventListener('firebaseReady', function() {
                                 }
 
                                 // Close popup and refresh
-                                closePopup();
+                                document.body.removeChild(document.querySelector('.popup-window'));
                                 displayTodaySignIns();
                             } catch (error) {
                                 console.error('Error handling break:', error);
-                                alert('Error handling break. Please try again.');
+                                const errorContent = document.createElement('div');
+                                errorContent.textContent = 'Error handling break. Please try again.';
+                                errorContent.style.textAlign = 'center';
+                                errorContent.style.color = '#dc3545';
+                                errorContent.style.padding = '20px';
+                                createPopupWindow('Error', errorContent);
                             }
                         });
 
@@ -571,11 +630,16 @@ window.addEventListener('firebaseReady', function() {
                                 });
 
                                 // Close popup and refresh
-                                closePopup();
-            displayTodaySignIns();
-        } catch (error) {
+                                document.body.removeChild(document.querySelector('.popup-window'));
+                                displayTodaySignIns();
+                            } catch (error) {
                                 console.error('Error starting break:', error);
-                                alert('Error starting break. Please try again.');
+                                const errorContent = document.createElement('div');
+                                errorContent.textContent = 'Error starting break. Please try again.';
+                                errorContent.style.textAlign = 'center';
+                                errorContent.style.color = '#dc3545';
+                                errorContent.style.padding = '20px';
+                                createPopupWindow('Error', errorContent);
                             }
                         });
 
@@ -603,11 +667,16 @@ window.addEventListener('firebaseReady', function() {
                             });
 
                             // Close popup and refresh
-                            closePopup();
+                            document.body.removeChild(document.querySelector('.popup-window'));
                             displayTodaySignIns();
                         } catch (error) {
                             console.error('Error ending shift:', error);
-                            alert('Error ending shift. Please try again.');
+                            const errorContent = document.createElement('div');
+                            errorContent.textContent = 'Error ending shift. Please try again.';
+                            errorContent.style.textAlign = 'center';
+                            errorContent.style.color = '#dc3545';
+                            errorContent.style.padding = '20px';
+                            createPopupWindow('Error', errorContent);
                         }
                     });
 
@@ -619,14 +688,16 @@ window.addEventListener('firebaseReady', function() {
                 }
             }
 
-            popup.appendChild(popupContent);
-            document.body.appendChild(popup);
-
-            // Clear PIN after successful sign-in
+            createPopupWindow('Employee Status', popupContent);
             clearPin();
         } catch (error) {
             console.error('Error processing sign-in:', error);
-            alert('Error processing sign-in. Please try again.');
+            const errorContent = document.createElement('div');
+            errorContent.textContent = 'Error processing sign-in. Please try again.';
+            errorContent.style.textAlign = 'center';
+            errorContent.style.color = '#dc3545';
+            errorContent.style.padding = '20px';
+            createPopupWindow('Error', errorContent);
             clearPin();
         }
     }
