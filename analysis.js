@@ -242,6 +242,10 @@ function initializeCharts() {
                         callback: function(value) {
                             return '¥' + value.toLocaleString();
                         }
+                    },
+                    suggestedMax: function(context) {
+                        const max = context.chart.data.datasets[0].data.reduce((a, b) => Math.max(a, b), 0);
+                        return max + 5000;
                     }
                 }
             }
@@ -709,12 +713,10 @@ async function loadSalesTrendData(period) {
     // Fill in previous period sales
     prevOrders.forEach(order => {
         const orderDate = order.timestamp.toDate();
-        // Map the previous period date to the corresponding date in the current period
         const currentPeriodDate = new Date(orderDate);
         currentPeriodDate.setDate(currentPeriodDate.getDate() + periodDays);
         const mappedDate = formatDate(currentPeriodDate);
         
-        // Find the index of this date in our dates array
         const dateIndex = dates.findIndex(d => formatDate(d) === mappedDate);
         if (dateIndex !== -1) {
             const targetDate = formatDate(dates[dateIndex]);
@@ -735,12 +737,23 @@ async function loadSalesTrendData(period) {
         }
     });
 
-    // Format labels with date and day of week
-    const labels = dates.map(date => {
-        const dateStr = formatDate(date);
-        const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
-        return [dateStr, dayOfWeek];
-    });
+    // Create labels based on period
+    let labels;
+    if (period === 'month') {
+        // For monthly view, use consistent format "Day DD"
+        labels = dates.map(date => {
+            const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
+            const day = date.getDate();
+            return `${dayOfWeek} ${day}`;
+        });
+    } else {
+        // For other periods (week, year), use original format
+        labels = dates.map(date => {
+            const dateStr = formatDate(date);
+            const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
+            return [dateStr, dayOfWeek];
+        });
+    }
 
     // Update chart
     window.salesTrendChart.data.labels = labels;
@@ -764,6 +777,26 @@ async function loadSalesTrendData(period) {
             };
         }
     });
+    
+    // Update chart options based on period
+    if (period === 'month') {
+        window.salesTrendChart.options.scales.x = {
+            ...window.salesTrendChart.options.scales.x,
+            ticks: {
+                maxRotation: 45,
+                minRotation: 45
+            }
+        };
+    } else {
+        // Reset to default options for other periods
+        window.salesTrendChart.options.scales.x = {
+            ...window.salesTrendChart.options.scales.x,
+            ticks: {
+                maxRotation: 0,
+                minRotation: 0
+            }
+        };
+    }
     
     window.salesTrendChart.options.plugins.annotation.annotations = annotations;
     window.salesTrendChart.update();
