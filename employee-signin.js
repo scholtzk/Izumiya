@@ -5,42 +5,34 @@ window.addEventListener('firebaseReady', function() {
     // Create container for the sign-in form
     const container = document.createElement('div');
     container.className = 'sign-in-container';
-    container.style.maxWidth = '1200px'; // Match analysis tab width
+    container.style.maxWidth = '1200px';
     container.style.margin = '20px auto';
     container.style.padding = '20px';
     container.style.backgroundColor = 'white';
     container.style.borderRadius = '10px';
-    container.style.display = 'none'; // Hide by default
-    container.style.gap = '20px'; // Space between sign-in and log
-    container.style.width = '100%'; // Fill available width
-    container.style.height = '100%'; // Fill available height
-    container.style.overflowY = 'auto'; // Enable scrolling if content overflows
-    container.style.display = 'flex'; // Enable flex layout
-    container.style.justifyContent = 'center'; // Center the content
-    container.style.alignItems = 'flex-start'; // Align items to top
+    container.style.display = 'flex';
+    container.style.gap = '40px';
+    container.style.width = '100%';
+    container.style.height = '100%';
+    container.style.overflowY = 'auto';
+    container.style.justifyContent = 'center';
+    container.style.alignItems = 'flex-start';
 
     // Create left side container for sign-in form
     const signInFormContainer = document.createElement('div');
-    signInFormContainer.style.flex = '0 0 400px'; // Fixed width for the form
+    signInFormContainer.style.flex = '0 0 400px';
     signInFormContainer.style.minWidth = '300px';
-    signInFormContainer.style.maxWidth = '400px'; // Limit form width for better readability
-    signInFormContainer.style.marginRight = '40px'; // Add space between form and log
-
-    // Create title
-    const title = document.createElement('h2');
-    title.textContent = 'Employee Sign-in';
-    title.style.marginBottom = '20px';
-    title.style.color = 'var(--primary)';
+    signInFormContainer.style.maxWidth = '400px';
 
     // Create sign-in log container
     const signInLogContainer = document.createElement('div');
     signInLogContainer.className = 'sign-in-log-container';
-    signInLogContainer.style.flex = '0 0 30%'; // Take up 30% of the space
+    signInLogContainer.style.flex = '0 0 400px';
     signInLogContainer.style.minWidth = '300px';
     signInLogContainer.style.padding = '15px';
     signInLogContainer.style.backgroundColor = 'var(--light)';
     signInLogContainer.style.borderRadius = '8px';
-    signInLogContainer.style.maxHeight = '600px'; // Increased height to match form
+    signInLogContainer.style.maxHeight = '600px';
     signInLogContainer.style.overflowY = 'auto';
 
     // Create title container
@@ -61,6 +53,7 @@ window.addEventListener('firebaseReady', function() {
     signInLogTitle.style.marginBottom = '0';
     signInLogTitle.style.color = 'var(--primary)';
 
+    // Create calendar icon
     const calendarIcon = document.createElement('div');
     calendarIcon.innerHTML = `
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -100,19 +93,196 @@ window.addEventListener('firebaseReady', function() {
     signInLogList.id = 'signInLogList';
     signInLogContainer.appendChild(signInLogList);
 
-    // Create setup button
-    const setupButton = document.createElement('button');
-    setupButton.textContent = 'Setup New Employee';
-    setupButton.className = 'action-btn';
-    setupButton.style.backgroundColor = 'var(--primary)';
-    setupButton.style.color = 'white';
-    setupButton.style.marginBottom = '20px';
-    setupButton.style.width = '100%';
-    setupButton.style.padding = '12px';
-    setupButton.style.border = 'none';
-    setupButton.style.borderRadius = '8px';
-    setupButton.style.cursor = 'pointer';
-    setupButton.style.fontWeight = 'bold';
+    // Create title
+    const title = document.createElement('h2');
+    title.textContent = 'Employee Sign-in';
+    title.style.marginBottom = '20px';
+    title.style.color = 'var(--primary)';
+    title.style.display = 'flex';
+    title.style.alignItems = 'center';
+    title.style.justifyContent = 'space-between';
+
+    // Create setup icon
+    const setupIcon = document.createElement('div');
+    setupIcon.innerHTML = `
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="10" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
+            <path d="M18 21C18 16.5817 14.4183 13 10 13C5.58172 13 2 16.5817 2 21" stroke="currentColor" stroke-width="2"/>
+            <path d="M20 6L20 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M18 4L22 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+    `;
+    setupIcon.style.cursor = 'pointer';
+    setupIcon.style.color = 'var(--primary)';
+    setupIcon.style.transition = 'transform 0.2s, color 0.2s';
+    setupIcon.style.padding = '8px';
+    setupIcon.style.borderRadius = '4px';
+    setupIcon.onmouseover = () => {
+        setupIcon.style.transform = 'scale(1.1)';
+        setupIcon.style.color = 'var(--primary-dark)';
+    };
+    setupIcon.onmouseout = () => {
+        setupIcon.style.transform = 'scale(1)';
+        setupIcon.style.color = 'var(--primary)';
+    };
+    setupIcon.onclick = () => {
+        // Show setup modal
+        const setupModal = document.createElement('div');
+        setupModal.className = 'modal';
+        setupModal.style.display = 'flex';
+        setupModal.style.position = 'fixed';
+        setupModal.style.top = '0';
+        setupModal.style.left = '0';
+        setupModal.style.width = '100%';
+        setupModal.style.height = '100%';
+        setupModal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        setupModal.style.zIndex = '1000';
+        setupModal.style.alignItems = 'center';
+        setupModal.style.justifyContent = 'center';
+
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+        modalContent.style.backgroundColor = 'white';
+        modalContent.style.borderRadius = '10px';
+        modalContent.style.width = '90%';
+        modalContent.style.maxWidth = '500px';
+        modalContent.style.padding = '20px';
+
+        const modalTitle = document.createElement('h2');
+        modalTitle.textContent = 'Setup New Employee';
+        modalTitle.style.marginBottom = '20px';
+        modalTitle.style.color = 'var(--primary)';
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.placeholder = 'Employee Name';
+        nameInput.style.width = '100%';
+        nameInput.style.padding = '10px';
+        nameInput.style.marginBottom = '15px';
+        nameInput.style.border = '1px solid #e0e0e0';
+        nameInput.style.borderRadius = '8px';
+        nameInput.style.fontSize = '16px';
+
+        const setupPinDisplayContainer = document.createElement('div');
+        setupPinDisplayContainer.className = 'payment-details';
+        setupPinDisplayContainer.style.background = 'var(--light)';
+        setupPinDisplayContainer.style.padding = '15px';
+        setupPinDisplayContainer.style.borderRadius = '8px';
+        setupPinDisplayContainer.style.margin = '20px 0';
+
+        const setupPinDisplay = document.createElement('div');
+        setupPinDisplay.id = 'setupPinDisplay';
+        setupPinDisplay.className = 'total-amount';
+        setupPinDisplay.style.fontSize = '24px';
+        setupPinDisplay.style.fontWeight = 'bold';
+        setupPinDisplay.style.color = 'var(--primary)';
+        setupPinDisplay.style.marginBottom = '15px';
+        setupPinDisplay.style.textAlign = 'center';
+        setupPinDisplay.style.letterSpacing = '5px';
+        setupPinDisplay.textContent = '----';
+
+        setupPinDisplayContainer.appendChild(setupPinDisplay);
+
+        const setupKeypad = document.createElement('div');
+        setupKeypad.className = 'numpad';
+        setupKeypad.style.display = 'grid';
+        setupKeypad.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        setupKeypad.style.gap = '10px';
+        setupKeypad.style.margin = '20px 0';
+
+        let setupPin = '';
+
+        numbers.forEach(num => {
+            const button = document.createElement('button');
+            button.className = 'numpad-btn';
+            button.textContent = num;
+            button.style.padding = '15px';
+            button.style.border = '1px solid #e0e0e0';
+            button.style.borderRadius = '8px';
+            button.style.backgroundColor = 'white';
+            button.style.fontSize = '18px';
+            button.style.cursor = 'pointer';
+            button.style.transition = 'background-color 0.2s';
+            
+            if (num === 'C') {
+                button.classList.add('backspace-btn');
+                button.style.backgroundColor = '#f8f9fa';
+                button.style.color = 'var(--dark)';
+            } else if (num === '✓') {
+                button.classList.add('process-btn');
+                button.style.backgroundColor = 'var(--primary)';
+                button.style.color = 'white';
+            }
+
+            button.addEventListener('mouseover', () => {
+                if (num !== 'C' && num !== '✓') {
+                    button.style.backgroundColor = 'var(--light)';
+                }
+            });
+
+            button.addEventListener('mouseout', () => {
+                if (num !== 'C' && num !== '✓') {
+                    button.style.backgroundColor = 'white';
+                }
+            });
+
+            button.addEventListener('click', () => {
+                if (num === 'C') {
+                    setupPin = '';
+                    setupPinDisplay.textContent = '----';
+                } else if (num === '✓') {
+                    if (setupPin.length === 4 && nameInput.value.trim()) {
+                        saveEmployee(nameInput.value.trim(), setupPin);
+                    }
+                } else if (setupPin.length < 4) {
+                    setupPin += num;
+                    setupPinDisplay.textContent = setupPin.padEnd(4, '-');
+                }
+            });
+
+            setupKeypad.appendChild(button);
+        });
+
+        const setupStatus = document.createElement('div');
+        setupStatus.id = 'setupStatus';
+        setupStatus.style.marginTop = '10px';
+        setupStatus.style.textAlign = 'center';
+        setupStatus.style.color = '#666';
+
+        const actionButtons = document.createElement('div');
+        actionButtons.className = 'action-buttons';
+        actionButtons.style.display = 'flex';
+        actionButtons.style.gap = '10px';
+        actionButtons.style.marginTop = '20px';
+
+        const cancelButton = document.createElement('button');
+        cancelButton.className = 'action-btn cancel-btn';
+        cancelButton.textContent = 'Cancel';
+        cancelButton.style.flex = '1';
+        cancelButton.style.padding = '12px';
+        cancelButton.style.borderRadius = '8px';
+        cancelButton.style.border = 'none';
+        cancelButton.style.backgroundColor = '#f0f0f0';
+        cancelButton.style.color = 'var(--dark)';
+        cancelButton.style.cursor = 'pointer';
+        cancelButton.style.fontWeight = 'bold';
+
+        cancelButton.addEventListener('click', () => {
+            document.body.removeChild(setupModal);
+        });
+
+        modalContent.appendChild(modalTitle);
+        modalContent.appendChild(nameInput);
+        modalContent.appendChild(setupPinDisplayContainer);
+        modalContent.appendChild(setupKeypad);
+        modalContent.appendChild(setupStatus);
+        modalContent.appendChild(actionButtons);
+        actionButtons.appendChild(cancelButton);
+        setupModal.appendChild(modalContent);
+        document.body.appendChild(setupModal);
+    };
+
+    title.appendChild(setupIcon);
 
     // Create PIN display container
     const pinDisplayContainer = document.createElement('div');
@@ -143,6 +313,7 @@ window.addEventListener('firebaseReady', function() {
     keypad.style.gridTemplateColumns = 'repeat(3, 1fr)';
     keypad.style.gap = '10px';
     keypad.style.margin = '20px 0';
+    keypad.style.marginTop = '30px'; // Increased top margin to compensate for removed button
 
     // Create number buttons
     const numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '✓'];
@@ -152,17 +323,17 @@ window.addEventListener('firebaseReady', function() {
         const button = document.createElement('button');
         button.className = 'numpad-btn';
         button.textContent = num;
-        button.style.padding = '15px';
+        button.style.padding = '18px'; // Increased from 15px
         button.style.border = '1px solid #e0e0e0';
         button.style.borderRadius = '8px';
         button.style.backgroundColor = 'white';
         button.style.fontSize = '18px';
         button.style.cursor = 'pointer';
         button.style.transition = 'background-color 0.2s';
-        button.style.color = '#333'; // Set explicit text color
-        button.style.webkitAppearance = 'none'; // Prevent iOS styling
-        button.style.appearance = 'none'; // Prevent iOS styling
-        button.style.textDecoration = 'none'; // Prevent link styling
+        button.style.color = '#333';
+        button.style.webkitAppearance = 'none';
+        button.style.appearance = 'none';
+        button.style.textDecoration = 'none';
         
         if (num === 'C') {
             button.classList.add('backspace-btn');
@@ -212,7 +383,6 @@ window.addEventListener('firebaseReady', function() {
 
     // Assemble the form
     signInFormContainer.appendChild(title);
-    signInFormContainer.appendChild(setupButton);
     signInFormContainer.appendChild(pinDisplayContainer);
     signInFormContainer.appendChild(keypad);
     signInFormContainer.appendChild(signInStatus);
@@ -702,164 +872,6 @@ window.addEventListener('firebaseReady', function() {
         }
     }
 
-    // Setup button click handler
-    setupButton.addEventListener('click', () => {
-        // Show setup modal
-        const setupModal = document.createElement('div');
-        setupModal.className = 'modal';
-        setupModal.style.display = 'flex';
-        setupModal.style.position = 'fixed';
-        setupModal.style.top = '0';
-        setupModal.style.left = '0';
-        setupModal.style.width = '100%';
-        setupModal.style.height = '100%';
-        setupModal.style.backgroundColor = 'rgba(0,0,0,0.5)';
-        setupModal.style.zIndex = '1000';
-        setupModal.style.alignItems = 'center';
-        setupModal.style.justifyContent = 'center';
-
-        const modalContent = document.createElement('div');
-        modalContent.className = 'modal-content';
-        modalContent.style.backgroundColor = 'white';
-        modalContent.style.borderRadius = '10px';
-        modalContent.style.width = '90%';
-        modalContent.style.maxWidth = '500px';
-        modalContent.style.padding = '20px';
-
-        const modalTitle = document.createElement('h2');
-        modalTitle.textContent = 'Setup New Employee';
-        modalTitle.style.marginBottom = '20px';
-        modalTitle.style.color = 'var(--primary)';
-
-        const nameInput = document.createElement('input');
-        nameInput.type = 'text';
-        nameInput.placeholder = 'Employee Name';
-        nameInput.style.width = '100%';
-        nameInput.style.padding = '10px';
-        nameInput.style.marginBottom = '15px';
-        nameInput.style.border = '1px solid #e0e0e0';
-        nameInput.style.borderRadius = '8px';
-        nameInput.style.fontSize = '16px';
-
-        const setupPinDisplayContainer = document.createElement('div');
-        setupPinDisplayContainer.className = 'payment-details';
-        setupPinDisplayContainer.style.background = 'var(--light)';
-        setupPinDisplayContainer.style.padding = '15px';
-        setupPinDisplayContainer.style.borderRadius = '8px';
-        setupPinDisplayContainer.style.margin = '20px 0';
-
-        const setupPinDisplay = document.createElement('div');
-        setupPinDisplay.id = 'setupPinDisplay';
-        setupPinDisplay.className = 'total-amount';
-        setupPinDisplay.style.fontSize = '24px';
-        setupPinDisplay.style.fontWeight = 'bold';
-        setupPinDisplay.style.color = 'var(--primary)';
-        setupPinDisplay.style.marginBottom = '15px';
-        setupPinDisplay.style.textAlign = 'center';
-        setupPinDisplay.style.letterSpacing = '5px';
-        setupPinDisplay.textContent = '----';
-
-        setupPinDisplayContainer.appendChild(setupPinDisplay);
-
-        const setupKeypad = document.createElement('div');
-        setupKeypad.className = 'numpad';
-        setupKeypad.style.display = 'grid';
-        setupKeypad.style.gridTemplateColumns = 'repeat(3, 1fr)';
-        setupKeypad.style.gap = '10px';
-        setupKeypad.style.margin = '20px 0';
-
-        let setupPin = '';
-
-        numbers.forEach(num => {
-            const button = document.createElement('button');
-            button.className = 'numpad-btn';
-            button.textContent = num;
-            button.style.padding = '15px';
-            button.style.border = '1px solid #e0e0e0';
-            button.style.borderRadius = '8px';
-            button.style.backgroundColor = 'white';
-            button.style.fontSize = '18px';
-            button.style.cursor = 'pointer';
-            button.style.transition = 'background-color 0.2s';
-            
-            if (num === 'C') {
-                button.classList.add('backspace-btn');
-                button.style.backgroundColor = '#f8f9fa';
-                button.style.color = 'var(--dark)';
-            } else if (num === '✓') {
-                button.classList.add('process-btn');
-                button.style.backgroundColor = 'var(--primary)';
-                button.style.color = 'white';
-            }
-
-            button.addEventListener('mouseover', () => {
-                if (num !== 'C' && num !== '✓') {
-                    button.style.backgroundColor = 'var(--light)';
-                }
-            });
-
-            button.addEventListener('mouseout', () => {
-                if (num !== 'C' && num !== '✓') {
-                    button.style.backgroundColor = 'white';
-                }
-            });
-
-            button.addEventListener('click', () => {
-                if (num === 'C') {
-                    setupPin = '';
-                    setupPinDisplay.textContent = '----';
-                } else if (num === '✓') {
-                    if (setupPin.length === 4 && nameInput.value.trim()) {
-                        saveEmployee(nameInput.value.trim(), setupPin);
-                    }
-                } else if (setupPin.length < 4) {
-                    setupPin += num;
-                    setupPinDisplay.textContent = setupPin.padEnd(4, '-');
-                }
-            });
-
-            setupKeypad.appendChild(button);
-        });
-
-        const setupStatus = document.createElement('div');
-        setupStatus.id = 'setupStatus';
-        setupStatus.style.marginTop = '10px';
-        setupStatus.style.textAlign = 'center';
-        setupStatus.style.color = '#666';
-
-        const actionButtons = document.createElement('div');
-        actionButtons.className = 'action-buttons';
-        actionButtons.style.display = 'flex';
-        actionButtons.style.gap = '10px';
-        actionButtons.style.marginTop = '20px';
-
-        const cancelButton = document.createElement('button');
-        cancelButton.className = 'action-btn cancel-btn';
-        cancelButton.textContent = 'Cancel';
-        cancelButton.style.flex = '1';
-        cancelButton.style.padding = '12px';
-        cancelButton.style.borderRadius = '8px';
-        cancelButton.style.border = 'none';
-        cancelButton.style.backgroundColor = '#f0f0f0';
-        cancelButton.style.color = 'var(--dark)';
-        cancelButton.style.cursor = 'pointer';
-        cancelButton.style.fontWeight = 'bold';
-
-        cancelButton.addEventListener('click', () => {
-            document.body.removeChild(setupModal);
-        });
-
-        modalContent.appendChild(modalTitle);
-        modalContent.appendChild(nameInput);
-        modalContent.appendChild(setupPinDisplayContainer);
-        modalContent.appendChild(setupKeypad);
-        modalContent.appendChild(setupStatus);
-        modalContent.appendChild(actionButtons);
-        actionButtons.appendChild(cancelButton);
-        setupModal.appendChild(modalContent);
-        document.body.appendChild(setupModal);
-    });
-
     // Save new employee
     async function saveEmployee(name, pin) {
         try {
@@ -917,15 +929,272 @@ window.addEventListener('firebaseReady', function() {
     }
 
     function displayCalendar(month, year) {
+        // If employee history modal is open, close it first
+        const employeeHistoryModal = document.querySelector('.employee-history-modal');
+        if (employeeHistoryModal && employeeHistoryModal.style.display === 'flex') {
+            employeeHistoryModal.style.display = 'none';
+        }
+
+        // Show calendar modal
+        const calendarModal = document.querySelector('.calendar-modal');
+        if (calendarModal) {
+            calendarModal.style.display = 'flex';
+        }
+
         // Remove any existing overlays and calendars
         const existingOverlay = document.querySelector('.calendar-overlay');
-        const existingCalendar = document.querySelector('.calendar-popup');
-        if (existingOverlay) document.body.removeChild(existingOverlay);
-        if (existingCalendar) document.body.removeChild(existingCalendar);
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+        const existingCalendar = document.querySelector('.calendar');
+        if (existingCalendar) {
+            existingCalendar.remove();
+        }
 
-        // Create overlay
+        // Create calendar overlay
         const overlay = document.createElement('div');
         overlay.className = 'calendar-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.style.zIndex = '900';
+        document.body.appendChild(overlay);
+
+        // Create calendar container
+        const calendar = document.createElement('div');
+        calendar.className = 'calendar';
+        calendar.style.position = 'fixed';
+        calendar.style.top = '50%';
+        calendar.style.left = '50%';
+        calendar.style.transform = 'translate(-50%, -50%)';
+        calendar.style.backgroundColor = 'white';
+        calendar.style.padding = '20px';
+        calendar.style.borderRadius = '8px';
+        calendar.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+        calendar.style.zIndex = '901';
+        calendar.style.minWidth = '1020px';
+        calendar.style.maxHeight = '85vh';
+        calendar.style.overflowY = 'auto';
+
+        // Create header
+        const header = document.createElement('div');
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'center';
+        header.style.marginBottom = '20px';
+        header.style.position = 'relative';
+
+        // Create person icon for employee history
+        const personIcon = document.createElement('div');
+        personIcon.innerHTML = `
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
+                <path d="M5 20c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="currentColor" stroke-width="2"/>
+            </svg>
+        `;
+        personIcon.style.position = 'absolute';
+        personIcon.style.left = '0';
+        personIcon.style.top = '0';
+        personIcon.style.cursor = 'pointer';
+        personIcon.style.color = 'var(--primary)';
+        personIcon.style.transition = 'transform 0.2s, color 0.2s';
+        personIcon.style.padding = '8px';
+        personIcon.style.borderRadius = '4px';
+        personIcon.onmouseover = () => {
+            personIcon.style.transform = 'scale(1.1)';
+            personIcon.style.color = 'var(--primary-dark)';
+        };
+        personIcon.onmouseout = () => {
+            personIcon.style.transform = 'scale(1)';
+            personIcon.style.color = 'var(--primary)';
+        };
+        personIcon.onclick = () => {
+            // Close calendar if it's open
+            const calendarModal = document.querySelector('.calendar-modal');
+            if (calendarModal && calendarModal.style.display === 'flex') {
+                calendarModal.style.display = 'none';
+            }
+            
+            // Show the employee history modal and fetch data
+            const today = new Date();
+            fetchEmployeeHistory(today.getFullYear(), today.getMonth());
+        };
+        header.appendChild(personIcon);
+
+        // Add close button (X) in top right corner
+        const closeButton = document.createElement('button');
+        closeButton.innerHTML = '×';
+        closeButton.style.position = 'absolute';
+        closeButton.style.top = '0';
+        closeButton.style.right = '0';
+        closeButton.style.border = 'none';
+        closeButton.style.background = 'none';
+        closeButton.style.fontSize = '24px';
+        closeButton.style.cursor = 'pointer';
+        closeButton.style.color = 'var(--primary)';
+        closeButton.onclick = () => {
+            overlay.remove();
+            calendar.remove();
+        };
+        header.appendChild(closeButton);
+
+        // Create navigation container
+        const navContainer = document.createElement('div');
+        navContainer.style.display = 'flex';
+        navContainer.style.alignItems = 'center';
+        navContainer.style.gap = '20px';
+        navContainer.style.margin = '0 auto';
+
+        // Add navigation arrows
+        const prevMonth = document.createElement('button');
+        prevMonth.innerHTML = '←';
+        prevMonth.style.border = 'none';
+        prevMonth.style.background = 'none';
+        prevMonth.style.fontSize = '20px';
+        prevMonth.style.cursor = 'pointer';
+        prevMonth.style.color = 'var(--primary)';
+        prevMonth.onclick = () => {
+            if (month === 0) {
+                displayCalendar(11, year - 1);
+            } else {
+                displayCalendar(month - 1, year);
+            }
+        };
+        navContainer.appendChild(prevMonth);
+
+        // Add month/year display
+        const monthYear = document.createElement('div');
+        monthYear.textContent = `${new Date(year, month).toLocaleString('default', { month: 'long' })} ${year}`;
+        monthYear.style.fontWeight = 'bold';
+        monthYear.style.color = 'var(--primary)';
+        navContainer.appendChild(monthYear);
+
+        const nextMonth = document.createElement('button');
+        nextMonth.innerHTML = '→';
+        nextMonth.style.border = 'none';
+        nextMonth.style.background = 'none';
+        nextMonth.style.fontSize = '20px';
+        nextMonth.style.cursor = 'pointer';
+        nextMonth.style.color = 'var(--primary)';
+        nextMonth.onclick = () => {
+            if (month === 11) {
+                displayCalendar(0, year + 1);
+            } else {
+                displayCalendar(month + 1, year);
+            }
+        };
+        navContainer.appendChild(nextMonth);
+
+        header.appendChild(navContainer);
+        calendar.appendChild(header);
+
+        // Create calendar grid
+        const grid = document.createElement('div');
+        grid.style.display = 'grid';
+        grid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+        grid.style.gap = '10px';
+        grid.style.marginTop = '20px';
+
+        // Add day headers
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        days.forEach(day => {
+            const dayHeader = document.createElement('div');
+            dayHeader.textContent = day;
+            dayHeader.style.textAlign = 'center';
+            dayHeader.style.fontWeight = 'bold';
+            dayHeader.style.padding = '8px';
+            dayHeader.style.color = 'var(--primary)';
+            dayHeader.style.fontSize = '16px';
+            grid.appendChild(dayHeader);
+        });
+
+        // Get first day of month and total days
+        const firstDay = new Date(year, month, 1).getDay();
+        const totalDays = new Date(year, month + 1, 0).getDate();
+
+        // Add empty cells for days before first of month
+        for (let i = 0; i < firstDay; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.style.height = '100px';
+            emptyCell.style.backgroundColor = '#f8f9fa';
+            emptyCell.style.borderRadius = '4px';
+            grid.appendChild(emptyCell);
+        }
+
+        // Add days
+        for (let day = 1; day <= totalDays; day++) {
+            const cell = document.createElement('div');
+            cell.style.height = '100px';
+            cell.style.backgroundColor = 'white';
+            cell.style.border = '1px solid #e0e0e0';
+            cell.style.borderRadius = '4px';
+            cell.style.padding = '8px';
+            cell.style.position = 'relative';
+            cell.style.overflow = 'hidden';
+
+            const dayNumber = document.createElement('div');
+            dayNumber.textContent = day;
+            dayNumber.style.fontWeight = 'bold';
+            dayNumber.style.marginBottom = '5px';
+            dayNumber.style.fontSize = '16px';
+            cell.appendChild(dayNumber);
+
+            // Fetch and display employee records for this day
+            const dateStr = new Date(year, month, day).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+
+            // Fetch employee records for this day
+            getDocs(query(
+                collection(db, 'employeeSignIns'),
+                where('date', '==', dateStr)
+            )).then(querySnapshot => {
+                    querySnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const record = document.createElement('div');
+                    record.style.marginBottom = '5px';
+                    record.style.padding = '5px';
+                        record.style.backgroundColor = '#f8f9fa';
+                    record.style.borderRadius = '4px';
+                    record.style.fontSize = '12px';
+                    record.innerHTML = `
+                        <div style="font-weight: bold; font-size: 12px;">${data.employeeName}</div>
+                        <div style="color: #666; font-size: 11px;">
+                            ${data.signInTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            ${data.endTime ? ` - ${data.endTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ' - Present'}
+                        </div>
+                    `;
+                    cell.appendChild(record);
+                });
+            });
+
+            grid.appendChild(cell);
+        }
+
+        calendar.appendChild(grid);
+        document.body.appendChild(calendar);
+    }
+
+    // Update click outside handler for calendar
+    document.addEventListener('click', (e) => {
+        const calendarModal = document.querySelector('.calendar-modal');
+        const calendarContainer = document.querySelector('.calendar-container');
+        if (calendarModal && calendarModal.style.display === 'flex' && 
+            !calendarContainer.contains(e.target) && 
+            e.target !== calendarModal) {
+            calendarModal.style.display = 'none';
+        }
+    });
+
+    function showWorkHistory(dateStr, querySnapshot) {
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'history-overlay';
         overlay.style.position = 'fixed';
         overlay.style.top = '0';
         overlay.style.left = '0';
@@ -935,212 +1204,186 @@ window.addEventListener('firebaseReady', function() {
         overlay.style.zIndex = '999';
         document.body.appendChild(overlay);
 
-        // Create calendar popup
-        const calendar = document.createElement('div');
-        calendar.className = 'calendar-popup';
-        calendar.style.position = 'fixed';
-        calendar.style.top = '50%';
-        calendar.style.left = '50%';
-        calendar.style.transform = 'translate(-50%, -50%)';
-        calendar.style.backgroundColor = 'white';
-        calendar.style.padding = '20px';
-        calendar.style.borderRadius = '10px';
-        calendar.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
-        calendar.style.zIndex = '1000';
-        calendar.style.minWidth = '1200px';
-        calendar.style.maxWidth = '95vw';
-        calendar.style.maxHeight = '90vh';
-        calendar.style.overflowY = 'auto';
+        // Create history popup
+        const history = document.createElement('div');
+        history.className = 'history-popup';
+        history.style.position = 'fixed';
+        history.style.top = '50%';
+        history.style.left = '50%';
+        history.style.transform = 'translate(-50%, -50%)';
+        history.style.backgroundColor = 'white';
+        history.style.padding = '20px';
+        history.style.borderRadius = '10px';
+        history.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+        history.style.zIndex = '1000';
+        history.style.minWidth = '300px';
+        history.style.maxWidth = '400px';
+        history.style.maxHeight = '80vh';
+        history.style.overflowY = 'auto';
 
-        // Calendar header with month/year and navigation
-        const header = document.createElement('div');
-        header.style.display = 'flex';
-        header.style.justifyContent = 'space-between';
-        header.style.alignItems = 'center';
+        // Add header
+        const header = document.createElement('h2');
+        header.textContent = `Work History - ${new Date(dateStr).toLocaleDateString()}`;
+        header.style.color = 'var(--primary)';
         header.style.marginBottom = '20px';
+        history.appendChild(header);
 
-        const prevButton = document.createElement('button');
-        prevButton.textContent = '←';
-        prevButton.style.padding = '10px 20px';
-        prevButton.style.backgroundColor = 'var(--primary)';
-        prevButton.style.color = 'white';
-        prevButton.style.border = 'none';
-        prevButton.style.borderRadius = '5px';
-        prevButton.style.cursor = 'pointer';
-        prevButton.style.fontSize = '20px';
+        // Add work records
+        querySnapshot.forEach(doc => {
+            const data = doc.data();
+            const record = document.createElement('div');
+            record.style.padding = '15px';
+            record.style.borderBottom = '1px solid #e0e0e0';
+            record.style.marginBottom = '10px';
 
-        const monthYear = document.createElement('div');
-        monthYear.textContent = `${new Date(year, month).toLocaleString('default', { month: 'long' })} ${year}`;
-        monthYear.style.fontWeight = 'bold';
-        monthYear.style.color = 'var(--primary)';
-        monthYear.style.fontSize = '24px';
-
-        const nextButton = document.createElement('button');
-        nextButton.textContent = '→';
-        nextButton.style.padding = '10px 20px';
-        nextButton.style.backgroundColor = 'var(--primary)';
-        nextButton.style.color = 'white';
-        nextButton.style.border = 'none';
-        nextButton.style.borderRadius = '5px';
-        nextButton.style.cursor = 'pointer';
-        nextButton.style.fontSize = '20px';
-
-        prevButton.onclick = () => {
-            if (month === 0) {
-                displayCalendar(11, year - 1);
-            } else {
-                displayCalendar(month - 1, year);
-            }
-        };
-
-        nextButton.onclick = () => {
-            if (month === 11) {
-                displayCalendar(0, year + 1);
-            } else {
-                displayCalendar(month + 1, year);
-            }
-        };
-
-        header.appendChild(prevButton);
-        header.appendChild(monthYear);
-        header.appendChild(nextButton);
-        calendar.appendChild(header);
-
-        // Days of week header
-        const daysHeader = document.createElement('div');
-        daysHeader.style.display = 'grid';
-        daysHeader.style.gridTemplateColumns = 'repeat(7, 1fr)';
-        daysHeader.style.gap = '15px';
-        daysHeader.style.marginBottom = '15px';
-        ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
-            const dayElement = document.createElement('div');
-            dayElement.textContent = day;
-            dayElement.style.textAlign = 'center';
-            dayElement.style.fontWeight = 'bold';
-            dayElement.style.color = 'var(--primary)';
-            dayElement.style.fontSize = '20px';
-            dayElement.style.padding = '15px';
-            daysHeader.appendChild(dayElement);
-        });
-        calendar.appendChild(daysHeader);
-
-        // Calendar grid
-        const grid = document.createElement('div');
-        grid.style.display = 'grid';
-        grid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-        grid.style.gap = '15px';
-
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-        // Add empty cells for days before the first of the month
-        for (let i = 0; i < firstDay; i++) {
-            const emptyCell = document.createElement('div');
-            emptyCell.style.padding = '15px';
-            emptyCell.style.textAlign = 'center';
-            emptyCell.style.minHeight = '150px';
-            emptyCell.style.backgroundColor = '#f5f5f5';
-            emptyCell.style.borderRadius = '5px';
-            grid.appendChild(emptyCell);
-        }
-
-        // Add cells for each day of the month
-        for (let day = 1; day <= daysInMonth; day++) {
-            const cell = document.createElement('div');
-            cell.style.padding = '15px';
-            cell.style.textAlign = 'left';
-            cell.style.cursor = 'pointer';
-            cell.style.borderRadius = '5px';
-            cell.style.backgroundColor = 'white';
-            cell.style.border = '1px solid #e0e0e0';
-            cell.style.minHeight = '150px';
-            cell.style.position = 'relative';
-
-            // Add day number
-            const dayNumber = document.createElement('div');
-            dayNumber.textContent = day;
-            dayNumber.style.fontWeight = 'bold';
-            dayNumber.style.fontSize = '18px';
-            dayNumber.style.marginBottom = '10px';
-            dayNumber.style.color = 'var(--primary)';
-            cell.appendChild(dayNumber);
-
-            // Check if this day has any work records
-            const dateStr = new Date(year, month, day).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-            });
-
-            // Fetch and display work records for this day
-            getDocs(query(
-                collection(db, 'employeeSignIns'),
-                where('date', '==', dateStr)
-            )).then(querySnapshot => {
-                if (!querySnapshot.empty) {
-                    querySnapshot.forEach(doc => {
-                        const data = doc.data();
-                        const record = document.createElement('div');
-                        record.style.fontSize = '14px';
-                        record.style.marginBottom = '8px';
-                        record.style.padding = '8px';
-                        record.style.backgroundColor = '#f8f9fa';
-                        record.style.borderRadius = '3px';
-
-                        const signInTime = data.signInTime.toDate();
-                        const now = new Date();
-                        const endTime = data.endTime ? data.endTime.toDate() : now;
-                        const duration = Math.floor((endTime - signInTime) / (1000 * 60));
-
-                        // Calculate total break time
-                        const totalBreakTime = (data.breaks || [])
+            const signInTime = data.signInTime.toDate();
+            const completedBreaks = (data.breaks || [])
                             .filter(b => b.endTime)
-                            .reduce((total, b) => {
+                .map(b => {
                                 const start = b.startTime.toDate();
                                 const end = b.endTime.toDate();
-                                return total + Math.floor((end - start) / (1000 * 60));
-                            }, 0);
+                    const duration = Math.floor((end - start) / (1000 * 60));
+                    return `${start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} (${duration}m)`;
+                })
+                .join('<br>');
 
                         record.innerHTML = `
                             <div style="font-weight: bold;">${data.employeeName}</div>
-                            <div style="color: #666;">
-                                Worked: ${duration}m
-                                ${totalBreakTime > 0 ? `<br>Break: ${totalBreakTime}m` : ''}
+                <div style="font-size: 0.9em; color: #666;">
+                    Started: ${signInTime.toLocaleTimeString()}
+                    <br>
+                    Duration: ${formatDuration(signInTime)}
+                    ${completedBreaks ? `
+                        <br>
+                        <span style="color: #666;">Breaks taken:<br>${completedBreaks}</span>
+                    ` : ''}
+                    ${data.endTime ? `
+                        <br>
+                        <span style="color: #28a745;">Shift ended at ${data.endTime.toDate().toLocaleTimeString()}</span>
+                    ` : ''}
                             </div>
                         `;
 
-                        cell.appendChild(record);
-                    });
-                }
+            history.appendChild(record);
             });
 
-            // Highlight current day
-            if (day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear()) {
-                cell.style.backgroundColor = '#e8f4ff';
-                cell.style.border = '2px solid var(--primary)';
-            }
+        // Add close button
+        const closeButton = document.createElement('button');
+        closeButton.textContent = 'Close';
+        closeButton.style.padding = '10px 20px';
+        closeButton.style.backgroundColor = '#f0f0f0';
+        closeButton.style.color = '#333';
+        closeButton.style.border = 'none';
+        closeButton.style.borderRadius = '5px';
+        closeButton.style.cursor = 'pointer';
+        closeButton.style.marginTop = '20px';
+        closeButton.style.width = '100%';
 
-            grid.appendChild(cell);
+        closeButton.onclick = () => {
+            document.body.removeChild(overlay);
+            document.body.removeChild(history);
+        };
+
+        history.appendChild(closeButton);
+        document.body.appendChild(history);
+    }
+
+    // Create employee history modal
+    const employeeHistoryModal = document.createElement('div');
+    employeeHistoryModal.className = 'employee-history-modal';
+    employeeHistoryModal.style.position = 'fixed';
+    employeeHistoryModal.style.top = '0';
+    employeeHistoryModal.style.left = '0';
+    employeeHistoryModal.style.width = '100%';
+    employeeHistoryModal.style.height = '100%';
+    employeeHistoryModal.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
+    employeeHistoryModal.style.display = 'none';
+    employeeHistoryModal.style.justifyContent = 'center';
+    employeeHistoryModal.style.alignItems = 'center';
+    employeeHistoryModal.style.zIndex = '1000';
+    employeeHistoryModal.style.backdropFilter = 'blur(5px)';
+
+    // Create modal content
+    const modalContent = document.createElement('div');
+    modalContent.style.backgroundColor = 'white';
+    modalContent.style.padding = '20px';
+    modalContent.style.borderRadius = '8px';
+    modalContent.style.maxWidth = '800px';
+    modalContent.style.width = '90%';
+    modalContent.style.maxHeight = '80vh';
+    modalContent.style.overflowY = 'auto';
+    modalContent.style.position = 'relative';
+
+    // Add close button
+    const closeButton = document.createElement('button');
+    closeButton.innerHTML = '×';
+    closeButton.style.position = 'absolute';
+    closeButton.style.top = '10px';
+    closeButton.style.right = '10px';
+    closeButton.style.border = 'none';
+    closeButton.style.background = 'none';
+    closeButton.style.fontSize = '24px';
+    closeButton.style.cursor = 'pointer';
+    closeButton.style.color = 'var(--primary)';
+    closeButton.onclick = () => {
+        employeeHistoryModal.style.display = 'none';
+    };
+
+    // Add title
+    const modalTitle = document.createElement('h2');
+    modalTitle.textContent = 'Employee History';
+    modalTitle.style.marginBottom = '20px';
+    modalTitle.style.color = 'var(--primary)';
+
+    // Add content container
+    const historyContent = document.createElement('div');
+    historyContent.id = 'employeeHistoryContent';
+
+    // Assemble modal
+    modalContent.appendChild(closeButton);
+    modalContent.appendChild(modalTitle);
+    modalContent.appendChild(historyContent);
+    employeeHistoryModal.appendChild(modalContent);
+    document.body.appendChild(employeeHistoryModal);
+
+    // Add click outside handler for the modal
+    employeeHistoryModal.addEventListener('click', (e) => {
+        if (e.target === employeeHistoryModal) {
+            employeeHistoryModal.style.display = 'none';
         }
+    });
 
-        calendar.appendChild(grid);
+    // Create calendar modal
+    const calendarModal = document.createElement('div');
+    calendarModal.className = 'calendar-modal';
+    calendarModal.style.position = 'fixed';
+    calendarModal.style.top = '0';
+    calendarModal.style.left = '0';
+    calendarModal.style.width = '100%';
+    calendarModal.style.height = '100%';
+    calendarModal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    calendarModal.style.display = 'none';
+    calendarModal.style.justifyContent = 'center';
+    calendarModal.style.alignItems = 'center';
+    calendarModal.style.zIndex = '900'; // Lower than employee history modal
+    calendarModal.style.backdropFilter = 'blur(3px)';
 
-        // Add Employee History button
-        const employeeHistoryButton = document.createElement('button');
-        employeeHistoryButton.textContent = 'View Employee History';
-        employeeHistoryButton.style.padding = '10px 20px';
-        employeeHistoryButton.style.backgroundColor = 'var(--primary)';
-        employeeHistoryButton.style.color = 'white';
-        employeeHistoryButton.style.border = 'none';
-        employeeHistoryButton.style.borderRadius = '5px';
-        employeeHistoryButton.style.cursor = 'pointer';
-        employeeHistoryButton.style.marginTop = '20px';
-        employeeHistoryButton.style.width = '100%';
-        employeeHistoryButton.style.marginBottom = '10px';
+    // Create calendar container
+    const calendarContainer = document.createElement('div');
+    calendarContainer.className = 'calendar-container';
+    calendarContainer.style.backgroundColor = 'white';
+    calendarContainer.style.padding = '20px';
+    calendarContainer.style.borderRadius = '8px';
+    calendarContainer.style.minWidth = '1020px';
+    calendarContainer.style.maxHeight = '85vh';
+    calendarContainer.style.overflowY = 'auto';
+    calendarContainer.style.position = 'relative';
+    calendarContainer.style.zIndex = '901'; // Just above the modal background
 
-        employeeHistoryButton.onclick = async () => {
+    // Add fetchEmployeeHistory function
+    async function fetchEmployeeHistory(currentYear, currentMonth) {
             try {
-                const monthStr = new Date(year, month).toLocaleDateString('en-US', { 
+            const monthStr = new Date(currentYear, currentMonth).toLocaleDateString('en-US', { 
                     year: 'numeric', 
                     month: '2-digit'
                 });
@@ -1176,14 +1419,14 @@ window.addEventListener('firebaseReady', function() {
 
                 // Add header
                 const header = document.createElement('h2');
-                header.textContent = `Employee Work History - ${new Date(year, month).toLocaleString('default', { month: 'long', year: 'numeric' })}`;
+            header.textContent = `Employee Work History - ${new Date(currentYear, currentMonth).toLocaleString('default', { month: 'long', year: 'numeric' })}`;
                 header.style.color = 'var(--primary)';
                 header.style.marginBottom = '20px';
                 historyPopup.appendChild(header);
 
                 // Fetch all employee sign-ins for the month
-                const startDate = new Date(year, month, 1);
-                const endDate = new Date(year, month + 1, 0);
+            const startDate = new Date(currentYear, currentMonth, 1);
+            const endDate = new Date(currentYear, currentMonth + 1, 0);
                 const querySnapshot = await getDocs(query(
                     collection(db, 'employeeSignIns'),
                     where('date', '>=', startDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })),
@@ -1325,125 +1568,5 @@ window.addEventListener('firebaseReady', function() {
                 console.error('Error fetching employee history:', error);
                 alert('Error loading employee history. Please try again.');
             }
-        };
-
-        calendar.appendChild(employeeHistoryButton);
-
-        // Back button
-        const backButton = document.createElement('button');
-        backButton.textContent = 'Back';
-        backButton.style.padding = '10px 20px';
-        backButton.style.backgroundColor = '#f0f0f0';
-        backButton.style.color = '#333';
-        backButton.style.border = 'none';
-        backButton.style.borderRadius = '5px';
-        backButton.style.cursor = 'pointer';
-        backButton.style.marginTop = '20px';
-        backButton.style.width = '100%';
-
-        backButton.onclick = () => {
-            document.body.removeChild(overlay);
-            document.body.removeChild(calendar);
-        };
-
-        calendar.appendChild(backButton);
-        document.body.appendChild(calendar);
-    }
-
-    function showWorkHistory(dateStr, querySnapshot) {
-        // Create overlay
-        const overlay = document.createElement('div');
-        overlay.className = 'history-overlay';
-        overlay.style.position = 'fixed';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.width = '100%';
-        overlay.style.height = '100%';
-        overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
-        overlay.style.zIndex = '999';
-        document.body.appendChild(overlay);
-
-        // Create history popup
-        const history = document.createElement('div');
-        history.className = 'history-popup';
-        history.style.position = 'fixed';
-        history.style.top = '50%';
-        history.style.left = '50%';
-        history.style.transform = 'translate(-50%, -50%)';
-        history.style.backgroundColor = 'white';
-        history.style.padding = '20px';
-        history.style.borderRadius = '10px';
-        history.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
-        history.style.zIndex = '1000';
-        history.style.minWidth = '300px';
-        history.style.maxWidth = '400px';
-        history.style.maxHeight = '80vh';
-        history.style.overflowY = 'auto';
-
-        // Add header
-        const header = document.createElement('h2');
-        header.textContent = `Work History - ${new Date(dateStr).toLocaleDateString()}`;
-        header.style.color = 'var(--primary)';
-        header.style.marginBottom = '20px';
-        history.appendChild(header);
-
-        // Add work records
-        querySnapshot.forEach(doc => {
-            const data = doc.data();
-            const record = document.createElement('div');
-            record.style.padding = '15px';
-            record.style.borderBottom = '1px solid #e0e0e0';
-            record.style.marginBottom = '10px';
-
-            const signInTime = data.signInTime.toDate();
-            const completedBreaks = (data.breaks || [])
-                .filter(b => b.endTime)
-                .map(b => {
-                    const start = b.startTime.toDate();
-                    const end = b.endTime.toDate();
-                    const duration = Math.floor((end - start) / (1000 * 60));
-                    return `${start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} (${duration}m)`;
-                })
-                .join('<br>');
-
-            record.innerHTML = `
-                <div style="font-weight: bold;">${data.employeeName}</div>
-                <div style="font-size: 0.9em; color: #666;">
-                    Started: ${signInTime.toLocaleTimeString()}
-                    <br>
-                    Duration: ${formatDuration(signInTime)}
-                    ${completedBreaks ? `
-                        <br>
-                        <span style="color: #666;">Breaks taken:<br>${completedBreaks}</span>
-                    ` : ''}
-                    ${data.endTime ? `
-                        <br>
-                        <span style="color: #28a745;">Shift ended at ${data.endTime.toDate().toLocaleTimeString()}</span>
-                    ` : ''}
-                </div>
-            `;
-
-            history.appendChild(record);
-        });
-
-        // Add close button
-        const closeButton = document.createElement('button');
-        closeButton.textContent = 'Close';
-        closeButton.style.padding = '10px 20px';
-        closeButton.style.backgroundColor = '#f0f0f0';
-        closeButton.style.color = '#333';
-        closeButton.style.border = 'none';
-        closeButton.style.borderRadius = '5px';
-        closeButton.style.cursor = 'pointer';
-        closeButton.style.marginTop = '20px';
-        closeButton.style.width = '100%';
-
-        closeButton.onclick = () => {
-            document.body.removeChild(overlay);
-            document.body.removeChild(history);
-        };
-
-        history.appendChild(closeButton);
-        document.body.appendChild(history);
     }
 }); 
