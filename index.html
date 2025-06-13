@@ -2880,6 +2880,9 @@
                     // Close the payment modal
                     document.getElementById('paymentModal').style.display = 'none';
                     
+                    // Initialize a new order
+                    await initializeOrder();
+                    
                     // Refresh order log if we're in the Order Log category
                     if (activeCategory === 'Order Log') {
                         const orderLogContainer = document.querySelector('.order-log-container');
@@ -2959,21 +2962,11 @@
                         document.body.removeChild(overlay);
                         document.body.removeChild(successMessage);
                         
-                        // Generate new order number
-                        const newOrderNumber = await generateOrderNumber();
+                        // Clear the current order
+                        await clearCurrentOrder();
                         
-                        // Update current order in memory
-                        currentOrder = {
-                            items: [],
-                            subtotal: 0,
-                            total: 0,
-                            orderNumber: newOrderNumber
-                        };
-                        
-                        // Update UI
-                        document.querySelector('.order-title').textContent = `Current Order #${newOrderNumber}`;
-                        document.querySelector('.order-items').innerHTML = '';
-                        updateOrderSummary();
+                        // Initialize a new order
+                        await initializeOrder();
                         
                         // Refresh order log if we're in the Order Log category
                         if (activeCategory === 'Order Log') {
