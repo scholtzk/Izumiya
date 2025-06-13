@@ -81,6 +81,7 @@ window.renderAnalysisTab = function renderAnalysisTab() {
                     <option value="today">${t('Today')}</option>
                     <option value="week">${t('This Week')}</option>
                     <option value="month">${t('This Month')}</option>
+                    <option value="last30">${t('Last 30 Days')}</option>
                     <option value="year">${t('This Year')}</option>
                     <option value="custom">${t('Custom Range')}</option>
                 </select>
@@ -89,13 +90,17 @@ window.renderAnalysisTab = function renderAnalysisTab() {
                     <span>${t('to')}</span>
                     <input type="date" id="end-date" style="padding:8px;border-radius:4px;border:1px solid #ddd;">
                 </div>
+                <div id="period-date-range" style="color:#666;font-size:0.9em;"></div>
             </div>
 
             <!-- Quick Stats -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:30px;">
                 <div class="stat-card" style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
                     <h3 style="margin:0 0 10px 0;color:#666;">${t('Total Sales')}</h3>
-                    <div id="total-sales" style="font-size:24px;font-weight:bold;color:#6F4E37;">¥0</div>
+                    <div style="display:flex;align-items:baseline;gap:10px;">
+                        <div id="total-sales" style="font-size:24px;font-weight:bold;color:#6F4E37;">¥0</div>
+                        <div id="sales-change" style="font-size:24px;font-weight:bold;"></div>
+                    </div>
                 </div>
                 <div class="stat-card" style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
                     <h3 style="margin:0 0 10px 0;color:#666;">${t('Estimated Profit')}</h3>
@@ -187,15 +192,33 @@ function getPeriodDates(period) {
     switch(period) {
         case 'today':
             start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
             break;
         case 'week':
-            start.setDate(now.getDate() - 7);
+            // Set end to end of current day
+            end.setHours(23, 59, 59, 999);
+            // Set start to 6 days before today
+            start.setDate(now.getDate() - 6);
+            start.setHours(0, 0, 0, 0);
             break;
         case 'month':
-            start.setMonth(now.getMonth() - 1);
+            // Set to first day of current month
+            start.setDate(1);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            break;
+        case 'last30':
+            // Set end to end of current day
+            end.setHours(23, 59, 59, 999);
+            // Set start to 29 days before today (to include today)
+            start.setDate(now.getDate() - 29);
+            start.setHours(0, 0, 0, 0);
             break;
         case 'year':
-            start.setFullYear(now.getFullYear() - 1);
+            // Set to first day of current year
+            start.setMonth(0, 1);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
             break;
     }
     return { start, end };
@@ -319,6 +342,32 @@ async function loadAnalysisData(period) {
     const orders = await fetchOrders(start, end);
     const itemCosts = await fetchItemCosts();
     
+    // Format date range with day of week and month names
+    const formatDateRange = (start, end) => {
+        const formatDate = (date) => {
+            const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
+            const month = date.toLocaleDateString('en-US', { month: 'short' });
+            const day = date.getDate();
+            return `${dayOfWeek}, ${month} ${day}`;
+        };
+        
+        // If start and end are the same day, just show it once
+        if (start.toDateString() === end.toDateString()) {
+            return formatDate(start);
+        }
+        
+        return `${formatDate(start)} - ${formatDate(end)}`;
+    };
+
+    // Update period date range display
+    const periodDateRange = document.getElementById('period-date-range');
+    if (period === 'custom') {
+        periodDateRange.style.display = 'none';
+    } else {
+        periodDateRange.style.display = 'block';
+        periodDateRange.textContent = formatDateRange(start, end);
+    }
+
     // Calculate total sales and costs
     let totalSales = 0;
     let totalCosts = 0;
@@ -361,13 +410,47 @@ async function loadAnalysisData(period) {
     });
 
     const totalOrders = orders.length;
-    const estimatedProfit = totalSales - totalCosts - totalDiscounts;
+    const estimatedProfit = Math.round(totalSales - totalCosts - totalDiscounts);
 
+    // Calculate previous period for comparison
+    const prevStart = new Date(start);
+    const prevEnd = new Date(end);
+    const periodDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    prevStart.setDate(prevStart.getDate() - periodDays);
+    prevEnd.setDate(prevEnd.getDate() - periodDays);
+    const prevOrders = await fetchOrders(prevStart, prevEnd);
+    
+    let prevTotalSales = 0;
+    prevOrders.forEach(order => {
+        prevTotalSales += order.total;
+    });
+
+    // Calculate percentage change
+    const percentageChange = prevTotalSales > 0 
+        ? ((totalSales - prevTotalSales) / prevTotalSales) * 100 
+        : 0;
+
+    // Update UI
     document.getElementById('total-sales').textContent = formatCurrency(totalSales);
     document.getElementById('total-orders').textContent = formatCurrency(estimatedProfit);
     document.getElementById('avg-order').textContent = totalOrders;
     document.getElementById('total-orders').parentElement.querySelector('h3').textContent = t('Estimated Profit');
     document.getElementById('avg-order').parentElement.querySelector('h3').textContent = t('Orders');
+    
+    // Update percentage change
+    const changeElement = document.getElementById('sales-change');
+    if (period === 'today') {
+        changeElement.style.display = 'none';
+    } else {
+        changeElement.style.display = 'block';
+        if (percentageChange !== 0) {
+            const changeText = `${percentageChange > 0 ? '+' : ''}${percentageChange.toFixed(1)}%`;
+            changeElement.textContent = changeText;
+            changeElement.style.color = percentageChange >= 0 ? '#28a745' : '#dc3545';
+        } else {
+            changeElement.textContent = '';
+        }
+    }
 }
 
 // Fetch orders from Firebase
