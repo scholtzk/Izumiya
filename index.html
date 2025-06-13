@@ -2801,10 +2801,15 @@
                     document.getElementById('changeAmount').textContent = '0';
                     document.getElementById('paymentModal').style.display = 'flex';
                     
-                    // Update process button to handle pay now
-                    const processBtn = document.querySelector('.process-btn');
-                   // processBtn.onclick = null; // Remove previous event listeners
-                    processBtn.onclick = async () => {
+                    // Create new process button
+                    const processBtn = document.getElementById('completePaymentBtn');
+                    const newProcessBtn = processBtn.cloneNode(true);
+                    
+                    // Remove any existing click handlers
+                    processBtn.parentNode.replaceChild(newProcessBtn, processBtn);
+                    
+                    // Add new click handler
+                    newProcessBtn.addEventListener('click', async () => {
                         const tenderedAmount = parseInt(document.getElementById('tenderedAmount').textContent);
                         
                         if (tenderedAmount < totalAmount) {
@@ -2827,49 +2832,23 @@
                             // Close modal
                             document.getElementById('paymentModal').style.display = 'none';
                             
-                            // Reset current order
-                            const newOrderNumber = await generateOrderNumber();
-                            currentOrder = {
-                                items: [],
-                                subtotal: 0,
-                                total: 0,
-                                orderNumber: newOrderNumber
-                            };
-                            
-                            // Update UI for current order
-                            document.querySelector('.order-title').textContent = `Current Order #${newOrderNumber}`;
-                            document.querySelector('.order-items').innerHTML = '';
-                            updateOrderSummary();
-                            
-                            // Clear current order in Firebase
-                            const currentOrderRef = window.firebaseServices.doc(window.firebaseDb, 'currentOrder', 'active');
-                            await window.firebaseServices.setDoc(currentOrderRef, {
-                                items: [],
-                                subtotal: 0,
-                                total: 0,
-                                orderNumber: newOrderNumber,
-                                lastUpdated: window.firebaseServices.Timestamp.now()
-                            });
-                            
-                            // Refresh order log if we're in the Order Log category
-                            if (activeCategory === 'Order Log') {
-                                const container = document.querySelector('.order-log-container');
-                                if (container) {
-                                    await displayOrderLog(container);
-                                }
+                            // Refresh order log
+                            const orderLogContainer = document.querySelector('.order-log-container');
+                            if (orderLogContainer) {
+                                await displayOrderLog(orderLogContainer);
                             }
                         } catch (error) {
                             console.error('Error in payment process:', error);
                             alert('Error updating order. Please try again.');
                         }
-                    };
+                    });
                 } catch (error) {
                     console.error('Error in processPayNow:', error);
                     alert('Error loading order. Please try again.');
                 }
             }
 
-            // Process payment
+            // Process payment for new orders
             async function processPayment() {
                 const tenderedAmount = parseInt(document.getElementById('tenderedAmount').textContent);
                 const totalAmount = parseInt(document.getElementById('totalAmount').textContent);
@@ -2901,51 +2880,13 @@
                     // Close the payment modal
                     document.getElementById('paymentModal').style.display = 'none';
                     
-                    // Create overlay
-                    const overlay = document.createElement('div');
-                    overlay.style.position = 'fixed';
-                    overlay.style.top = '0';
-                    overlay.style.left = '0';
-                    overlay.style.width = '100%';
-                    overlay.style.height = '100%';
-                    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-                    overlay.style.zIndex = '999';
-                    overlay.style.cursor = 'pointer';
-                    
-                    // Show success message
-                    const successMessage = document.createElement('div');
-                    successMessage.style.position = 'fixed';
-                    successMessage.style.top = '50%';
-                    successMessage.style.left = '50%';
-                    successMessage.style.transform = 'translate(-50%, -50%)';
-                    successMessage.style.backgroundColor = '#4CAF50';
-                    successMessage.style.color = 'white';
-                    successMessage.style.padding = '40px';
-                    successMessage.style.borderRadius = '15px';
-                    successMessage.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
-                    successMessage.style.zIndex = '1000';
-                    successMessage.style.textAlign = 'center';
-                    successMessage.style.minWidth = '300px';
-                    successMessage.innerHTML = `
-                        <div style="font-size: 32px; font-weight: bold; margin-bottom: 10px;">Change: ¥${tenderedAmount - totalAmount}</div>
-                        <div style="font-size: 16px; opacity: 0.8;">Order #${currentOrder.orderNumber}</div>
-                    `;
-                    
-                    document.body.appendChild(overlay);
-                    document.body.appendChild(successMessage);
-                    
-                    // Add click event to remove the message and start new order
-                    const dismissPopup = () => {
-                        document.body.removeChild(overlay);
-                        document.body.removeChild(successMessage);
-                        startNewOrder().catch(error => {
-                            console.error('Error starting new order:', error);
-                            alert('Error starting new order. Please try again.');
-                        });
-                    };
-                    
-                    overlay.addEventListener('click', dismissPopup);
-                    successMessage.addEventListener('click', dismissPopup);
+                    // Refresh order log if we're in the Order Log category
+                    if (activeCategory === 'Order Log') {
+                        const orderLogContainer = document.querySelector('.order-log-container');
+                        if (orderLogContainer) {
+                            await displayOrderLog(orderLogContainer);
+                        }
+                    }
                 } catch (error) {
                     console.error('Error processing payment:', error);
                     alert('Error processing payment. Please try again.');
@@ -3147,10 +3088,10 @@
             
             cancelBtn.addEventListener('click', function() {
                 console.log('Cancel button clicked');
-                paymentModal.style.display = 'none';
+                document.getElementById('paymentModal').style.display = 'none';
             });
             
-            // Set up the process button click handler
+            // Set up the process button click handler for new orders
             processBtn.addEventListener('click', async function() {
                 console.log('Complete Payment button clicked');
                 await processPayment();
