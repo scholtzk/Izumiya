@@ -2874,22 +2874,64 @@
                         completedOrder
                     );
                     
-                    // Clear the current order
-                    await clearCurrentOrder();
-                    
                     // Close the payment modal
                     document.getElementById('paymentModal').style.display = 'none';
                     
-                    // Initialize a new order
-                    await initializeOrder();
+                    // Create overlay
+                    const overlay = document.createElement('div');
+                    overlay.style.position = 'fixed';
+                    overlay.style.top = '0';
+                    overlay.style.left = '0';
+                    overlay.style.width = '100%';
+                    overlay.style.height = '100%';
+                    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                    overlay.style.zIndex = '999';
+                    overlay.style.cursor = 'pointer';
                     
-                    // Refresh order log if we're in the Order Log category
-                    if (activeCategory === 'Order Log') {
-                        const orderLogContainer = document.querySelector('.order-log-container');
-                        if (orderLogContainer) {
-                            await displayOrderLog(orderLogContainer);
+                    // Show success message
+                    const successMessage = document.createElement('div');
+                    successMessage.style.position = 'fixed';
+                    successMessage.style.top = '50%';
+                    successMessage.style.left = '50%';
+                    successMessage.style.transform = 'translate(-50%, -50%)';
+                    successMessage.style.backgroundColor = '#4CAF50';
+                    successMessage.style.color = 'white';
+                    successMessage.style.padding = '40px';
+                    successMessage.style.borderRadius = '15px';
+                    successMessage.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+                    successMessage.style.zIndex = '1000';
+                    successMessage.style.textAlign = 'center';
+                    successMessage.style.minWidth = '300px';
+                    successMessage.innerHTML = `
+                        <div style="font-size: 32px; font-weight: bold; margin-bottom: 10px;">Change: ¥${tenderedAmount - totalAmount}</div>
+                        <div style="font-size: 16px; opacity: 0.8;">Order #${currentOrder.orderNumber}</div>
+                    `;
+                    
+                    document.body.appendChild(overlay);
+                    document.body.appendChild(successMessage);
+                    
+                    // Add click event to remove the message and start new order
+                    const dismissPopup = async () => {
+                        document.body.removeChild(overlay);
+                        document.body.removeChild(successMessage);
+                        
+                        // Clear the current order
+                        await clearCurrentOrder();
+                        
+                        // Initialize a new order
+                        await initializeOrder();
+                        
+                        // Refresh order log if we're in the Order Log category
+                        if (activeCategory === 'Order Log') {
+                            const container = document.querySelector('.order-log-container');
+                            if (container) {
+                                await displayOrderLog(container);
+                            }
                         }
-                    }
+                    };
+                    
+                    overlay.addEventListener('click', dismissPopup);
+                    successMessage.addEventListener('click', dismissPopup);
                 } catch (error) {
                     console.error('Error processing payment:', error);
                     alert('Error processing payment. Please try again.');
@@ -3084,8 +3126,12 @@
                 document.getElementById('paymentModal').style.display = 'none';
             });
             
-            // Set up the process button click handler for new orders
-            processBtn.addEventListener('click', async function() {
+            // Remove any existing click handlers from the process button
+            const newProcessBtn = processBtn.cloneNode(true);
+            processBtn.parentNode.replaceChild(newProcessBtn, processBtn);
+            
+            // Add new click handler
+            newProcessBtn.addEventListener('click', async function() {
                 console.log('Complete Payment button clicked');
                 await processPayment();
             });
