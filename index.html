@@ -55,6 +55,180 @@
         // Dispatch firebaseReady event
         window.dispatchEvent(new Event('firebaseReady'));
     </script>
+
+    <!-- Custom Modal Functions -->
+    <script>
+        // Function to create a custom alert modal
+        function showCustomAlert(message, type = 'info') {
+            // Create modal overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'custom-alert-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            overlay.style.zIndex = '2000';
+            overlay.style.display = 'flex';
+            overlay.style.justifyContent = 'center';
+            overlay.style.alignItems = 'center';
+
+            // Create modal content
+            const modal = document.createElement('div');
+            modal.className = 'custom-alert-modal';
+            modal.style.backgroundColor = 'white';
+            modal.style.padding = '30px';
+            modal.style.borderRadius = '10px';
+            modal.style.minWidth = '300px';
+            modal.style.maxWidth = '400px';
+            modal.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+            modal.style.textAlign = 'center';
+            modal.style.position = 'relative';
+
+            // Set color based on type
+            let color = 'var(--primary)';
+            if (type === 'error') color = '#dc3545';
+            if (type === 'warning') color = '#ffc107';
+            if (type === 'success') color = '#28a745';
+
+            // Create message
+            const messageElement = document.createElement('div');
+            messageElement.textContent = message;
+            messageElement.style.marginBottom = '25px';
+            messageElement.style.color = '#333';
+            messageElement.style.fontSize = '16px';
+            messageElement.style.lineHeight = '1.5';
+
+            // Create OK button
+            const okButton = document.createElement('button');
+            okButton.textContent = 'OK';
+            okButton.style.padding = '12px 30px';
+            okButton.style.border = 'none';
+            okButton.style.borderRadius = '8px';
+            okButton.style.backgroundColor = color;
+            okButton.style.color = 'white';
+            okButton.style.cursor = 'pointer';
+            okButton.style.fontSize = '16px';
+            okButton.style.fontWeight = 'bold';
+            okButton.style.minWidth = '100px';
+            okButton.onclick = () => {
+                document.body.removeChild(overlay);
+            };
+
+            // Assemble modal
+            modal.appendChild(messageElement);
+            modal.appendChild(okButton);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // Close modal when clicking outside
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            });
+
+            // Focus on button for keyboard navigation
+            okButton.focus();
+        }
+
+        // Function to create a custom confirm modal
+        function showCustomConfirm(message, onConfirm, onCancel) {
+            // Create modal overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'custom-confirm-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            overlay.style.zIndex = '2000';
+            overlay.style.display = 'flex';
+            overlay.style.justifyContent = 'center';
+            overlay.style.alignItems = 'center';
+
+            // Create modal content
+            const modal = document.createElement('div');
+            modal.className = 'custom-confirm-modal';
+            modal.style.backgroundColor = 'white';
+            modal.style.padding = '30px';
+            modal.style.borderRadius = '10px';
+            modal.style.minWidth = '300px';
+            modal.style.maxWidth = '400px';
+            modal.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+            modal.style.textAlign = 'center';
+            modal.style.position = 'relative';
+
+            // Create message
+            const messageElement = document.createElement('div');
+            messageElement.textContent = message;
+            messageElement.style.marginBottom = '25px';
+            messageElement.style.color = '#333';
+            messageElement.style.fontSize = '16px';
+            messageElement.style.lineHeight = '1.5';
+
+            // Create buttons container
+            const buttonsContainer = document.createElement('div');
+            buttonsContainer.style.display = 'flex';
+            buttonsContainer.style.gap = '15px';
+            buttonsContainer.style.justifyContent = 'center';
+
+            // Create Cancel button
+            const cancelButton = document.createElement('button');
+            cancelButton.textContent = 'Cancel';
+            cancelButton.style.padding = '12px 25px';
+            cancelButton.style.border = '1px solid #e0e0e0';
+            cancelButton.style.borderRadius = '8px';
+            cancelButton.style.backgroundColor = 'white';
+            cancelButton.style.color = '#666';
+            cancelButton.style.cursor = 'pointer';
+            cancelButton.style.fontSize = '16px';
+            cancelButton.style.fontWeight = 'bold';
+            cancelButton.style.minWidth = '80px';
+            cancelButton.onclick = () => {
+                document.body.removeChild(overlay);
+                if (onCancel) onCancel();
+            };
+
+            // Create Confirm button
+            const confirmButton = document.createElement('button');
+            confirmButton.textContent = 'Confirm';
+            confirmButton.style.padding = '12px 25px';
+            confirmButton.style.border = 'none';
+            confirmButton.style.borderRadius = '8px';
+            confirmButton.style.backgroundColor = '#dc3545';
+            confirmButton.style.color = 'white';
+            confirmButton.style.cursor = 'pointer';
+            confirmButton.style.fontSize = '16px';
+            confirmButton.style.fontWeight = 'bold';
+            confirmButton.style.minWidth = '80px';
+            confirmButton.onclick = () => {
+                document.body.removeChild(overlay);
+                if (onConfirm) onConfirm();
+            };
+
+            // Assemble modal
+            buttonsContainer.appendChild(cancelButton);
+            buttonsContainer.appendChild(confirmButton);
+            modal.appendChild(messageElement);
+            modal.appendChild(buttonsContainer);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // Close modal when clicking outside
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                    if (onCancel) onCancel();
+                }
+            });
+
+            // Focus on cancel button for keyboard navigation
+            cancelButton.focus();
+        }
+    </script>
     <style>
         :root {
             --primary: #6F4E37;
@@ -1952,12 +2126,12 @@
             const price = parseInt(document.getElementById('customItemPrice').value);
             
             if (!name) {
-                alert('Please enter an item name');
+                showCustomAlert('Please enter an item name', 'warning');
                 return;
             }
             
             if (isNaN(price) || price < 0) {
-                alert('Please enter a valid price');
+                showCustomAlert('Please enter a valid price', 'warning');
                 return;
             }
             
@@ -1995,7 +2169,7 @@
 
         // Reset order history
         async function resetOrderHistory() {
-            if (confirm("Are you sure you want to reset today's order history? This action cannot be undone.")) {
+            showCustomConfirm("Are you sure you want to reset today's order history? This action cannot be undone.", async () => {
                 try {
                     const ordersRef = window.firebaseServices.collection(window.firebaseDb, 'orders');
                     const querySnapshot = await window.firebaseServices.getDocs(ordersRef);
@@ -2019,15 +2193,15 @@
                         return Promise.resolve();
                     });
                     await Promise.all(deletePromises);
-                    alert("Today's order history has been reset.");
+                    showCustomAlert("Today's order history has been reset.", 'success');
                     if (activeCategory === 'Order Log') {
                         displayOrderLog();
                     }
                 } catch (error) {
                     console.error('Error resetting order history:', error);
-                    alert('Error resetting order history. Please try again.');
+                    showCustomAlert('Error resetting order history. Please try again.', 'error');
                 }
-            }
+            });
         }
 
         // Export today's orders
@@ -2052,7 +2226,7 @@
                     });
                 
                 if (todayOrders.length === 0) {
-                    alert('No orders found for today.');
+                    showCustomAlert('No orders found for today.', 'warning');
                     return;
                 }
                 
@@ -2093,7 +2267,7 @@
                 window.URL.revokeObjectURL(url);
             } catch (error) {
                 console.error('Error exporting orders:', error);
-                alert('Error exporting orders. Please try again.');
+                showCustomAlert('Error exporting orders. Please try again.', 'error');
             }
         }
 
@@ -2118,7 +2292,7 @@
                 updateOrderSummary();
             } catch (error) {
                 console.error('Error initializing order:', error);
-                alert('Error initializing order. Please refresh the page.');
+                showCustomAlert('Error initializing order. Please refresh the page.', 'error');
             }
         }
 
@@ -2720,7 +2894,7 @@
                                 orderLogItem.classList.toggle('completed');
                             } catch (error) {
                                 console.error('Error updating order completion status:', error);
-                                alert('Error updating order status. Please try again.');
+                                showCustomAlert('Error updating order status. Please try again.', 'error');
                             }
                         });
 
@@ -2765,7 +2939,7 @@
                                     }
                                 } catch (error) {
                                     console.error('Error updating item completion status:', error);
-                                    alert('Error updating item status. Please try again.');
+                                    showCustomAlert('Error updating item status. Please try again.', 'error');
                                 }
                             });
                         });
@@ -2774,7 +2948,7 @@
                     });
                 } catch (error) {
                     console.error('Error displaying order log:', error);
-                    alert('Error loading orders. Please try again.');
+                    showCustomAlert('Error loading orders. Please try again.', 'error');
                 }
             }
 
@@ -2787,7 +2961,7 @@
                     
                     if (!orderDoc.exists()) {
                         console.error('Order not found:', orderId);
-                        alert('Order not found');
+                        showCustomAlert('Order not found', 'error');
                         return;
                     }
                     
@@ -2813,7 +2987,7 @@
                         const tenderedAmount = parseInt(document.getElementById('tenderedAmount').textContent);
                         
                         if (tenderedAmount < totalAmount) {
-                            alert('Insufficient payment amount');
+                            showCustomAlert('Insufficient payment amount', 'warning');
                             return;
                         }
                         
@@ -2839,12 +3013,12 @@
                             }
                         } catch (error) {
                             console.error('Error in payment process:', error);
-                            alert('Error updating order. Please try again.');
+                            showCustomAlert('Error updating order. Please try again.', 'error');
                         }
                     });
                 } catch (error) {
                     console.error('Error in processPayNow:', error);
-                    alert('Error loading order. Please try again.');
+                    showCustomAlert('Error loading order. Please try again.', 'error');
                 }
             }
 
@@ -2854,7 +3028,7 @@
                 const totalAmount = parseInt(document.getElementById('totalAmount').textContent);
                 
                 if (tenderedAmount < totalAmount) {
-                    alert('Insufficient payment amount');
+                    showCustomAlert('Insufficient payment amount', 'warning');
                     return;
                 }
                 
@@ -2934,7 +3108,7 @@
                     successMessage.addEventListener('click', dismissPopup);
                 } catch (error) {
                     console.error('Error processing payment:', error);
-                    alert('Error processing payment. Please try again.');
+                    showCustomAlert('Error processing payment. Please try again.', 'error');
                 }
             }
 
@@ -3023,7 +3197,7 @@
                     successMessage.addEventListener('click', dismissPopup);
                 } catch (error) {
                     console.error('Error processing pay later:', error);
-                    alert('Error saving order. Please try again.');
+                    showCustomAlert('Error saving order. Please try again.', 'error');
                 }
             }
 
@@ -3048,7 +3222,7 @@
                     updateOrderSummary();
                 } catch (error) {
                     console.error('Error starting new order:', error);
-                    alert('Error starting new order. Please try again.');
+                    showCustomAlert('Error starting new order. Please try again.', 'error');
                 }
             }
             
@@ -3268,7 +3442,7 @@
                     const orderDoc = await window.firebaseServices.getDoc(orderRef);
                     
                     if (!orderDoc.exists()) {
-                        alert('Order not found');
+                        showCustomAlert('Order not found', 'error');
                         return;
                     }
 
@@ -3375,7 +3549,7 @@
                             }
                         } catch (error) {
                             console.error('Error deleting order:', error);
-                            alert('Error deleting order. Please try again.');
+                            showCustomAlert('Error deleting order. Please try again.', 'error');
                         }
                     };
 
@@ -3413,7 +3587,7 @@
                             }
                         } catch (error) {
                             console.error('Error saving order:', error);
-                            alert('Error saving order. Please try again.');
+                            showCustomAlert('Error saving order. Please try again.', 'error');
                         }
                     };
 
@@ -3679,7 +3853,7 @@
                     };
                 } catch (error) {
                     console.error('Error opening edit modal:', error);
-                    alert('Error loading order. Please try again.');
+                    showCustomAlert('Error loading order. Please try again.', 'error');
                 }
             }
         });

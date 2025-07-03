@@ -1,6 +1,176 @@
 // Stocktake System
 // Remove Firebase imports since we'll use window.firebaseServices
 
+// Custom modal functions
+function showCustomAlert(message, type = 'info') {
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'custom-alert-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    overlay.style.zIndex = '2000';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+
+    // Create modal content
+    const modal = document.createElement('div');
+    modal.className = 'custom-alert-modal';
+    modal.style.backgroundColor = 'white';
+    modal.style.padding = '30px';
+    modal.style.borderRadius = '10px';
+    modal.style.minWidth = '300px';
+    modal.style.maxWidth = '400px';
+    modal.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+    modal.style.textAlign = 'center';
+    modal.style.position = 'relative';
+
+    // Set color based on type
+    let color = 'var(--primary)';
+    if (type === 'error') color = '#dc3545';
+    if (type === 'warning') color = '#ffc107';
+    if (type === 'success') color = '#28a745';
+
+    // Create message
+    const messageElement = document.createElement('div');
+    messageElement.textContent = message;
+    messageElement.style.marginBottom = '25px';
+    messageElement.style.color = '#333';
+    messageElement.style.fontSize = '16px';
+    messageElement.style.lineHeight = '1.5';
+
+    // Create OK button
+    const okButton = document.createElement('button');
+    okButton.textContent = 'OK';
+    okButton.style.padding = '12px 30px';
+    okButton.style.border = 'none';
+    okButton.style.borderRadius = '8px';
+    okButton.style.backgroundColor = color;
+    okButton.style.color = 'white';
+    okButton.style.cursor = 'pointer';
+    okButton.style.fontSize = '16px';
+    okButton.style.fontWeight = 'bold';
+    okButton.style.minWidth = '100px';
+    okButton.onclick = () => {
+        document.body.removeChild(overlay);
+    };
+
+    // Assemble modal
+    modal.appendChild(messageElement);
+    modal.appendChild(okButton);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Close modal when clicking outside
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            document.body.removeChild(overlay);
+        }
+    });
+
+    // Focus on button for keyboard navigation
+    okButton.focus();
+}
+
+function showCustomConfirm(message, onConfirm, onCancel) {
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'custom-confirm-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    overlay.style.zIndex = '2000';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+
+    // Create modal content
+    const modal = document.createElement('div');
+    modal.className = 'custom-confirm-modal';
+    modal.style.backgroundColor = 'white';
+    modal.style.padding = '30px';
+    modal.style.borderRadius = '10px';
+    modal.style.minWidth = '300px';
+    modal.style.maxWidth = '400px';
+    modal.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+    modal.style.textAlign = 'center';
+    modal.style.position = 'relative';
+
+    // Create message
+    const messageElement = document.createElement('div');
+    messageElement.textContent = message;
+    messageElement.style.marginBottom = '25px';
+    messageElement.style.color = '#333';
+    messageElement.style.fontSize = '16px';
+    messageElement.style.lineHeight = '1.5';
+
+    // Create buttons container
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.style.display = 'flex';
+    buttonsContainer.style.gap = '15px';
+    buttonsContainer.style.justifyContent = 'center';
+
+    // Create Cancel button
+    const cancelButton = document.createElement('button');
+    cancelButton.textContent = 'Cancel';
+    cancelButton.style.padding = '12px 25px';
+    cancelButton.style.border = '1px solid #e0e0e0';
+    cancelButton.style.borderRadius = '8px';
+    cancelButton.style.backgroundColor = 'white';
+    cancelButton.style.color = '#666';
+    cancelButton.style.cursor = 'pointer';
+    cancelButton.style.fontSize = '16px';
+    cancelButton.style.fontWeight = 'bold';
+    cancelButton.style.minWidth = '80px';
+    cancelButton.onclick = () => {
+        document.body.removeChild(overlay);
+        if (onCancel) onCancel();
+    };
+
+    // Create Confirm button
+    const confirmButton = document.createElement('button');
+    confirmButton.textContent = 'Confirm';
+    confirmButton.style.padding = '12px 25px';
+    confirmButton.style.border = 'none';
+    confirmButton.style.borderRadius = '8px';
+    confirmButton.style.backgroundColor = '#dc3545';
+    confirmButton.style.color = 'white';
+    confirmButton.style.cursor = 'pointer';
+    confirmButton.style.fontSize = '16px';
+    confirmButton.style.fontWeight = 'bold';
+    confirmButton.style.minWidth = '80px';
+    confirmButton.onclick = () => {
+        document.body.removeChild(overlay);
+        if (onConfirm) onConfirm();
+    };
+
+    // Assemble modal
+    buttonsContainer.appendChild(cancelButton);
+    buttonsContainer.appendChild(confirmButton);
+    modal.appendChild(messageElement);
+    modal.appendChild(buttonsContainer);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Close modal when clicking outside
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            document.body.removeChild(overlay);
+            if (onCancel) onCancel();
+        }
+    });
+
+    // Focus on cancel button for keyboard navigation
+    cancelButton.focus();
+}
+
 const inventoryData = {
     'Toast': {
         name: 'Toast',
@@ -709,7 +879,7 @@ function addStocktakeEventListeners() {
                 const activeAction = document.querySelector('.stock-action-btn.active');
                 
                 if (!activeAction) {
-                    alert(currentLang === 'ja' ? '追加または減算を選択してください' : 'Please select Add or Subtract');
+                    showCustomAlert(currentLang === 'ja' ? '追加または減算を選択してください' : 'Please select Add or Subtract', 'warning');
                     return;
                 }
                 
@@ -845,7 +1015,7 @@ async function saveStocktake() {
         });
     } catch (error) {
         console.error('Error saving stocktake data:', error);
-        alert(currentLang === 'ja' ? 'エラーが発生しました' : 'Error saving stock data');
+        showCustomAlert(currentLang === 'ja' ? 'エラーが発生しました' : 'Error saving stock data', 'error');
     }
 }
 
@@ -1095,11 +1265,11 @@ function editItem(key) {
 
 // Function to delete item
 function deleteItem(key) {
-    if (confirm(currentLang === 'ja' ? 'このアイテムを削除してもよろしいですか？' : 'Are you sure you want to delete this item?')) {
+    showCustomConfirm(currentLang === 'ja' ? 'このアイテムを削除してもよろしいですか？' : 'Are you sure you want to delete this item?', () => {
         delete inventoryData[key];
         showEditModal();
         renderStocktake(document.querySelector('.stocktake-container'));
-    }
+    });
 }
 
 // Function to update order button state
@@ -1241,7 +1411,7 @@ function showBulkOrderModal(items) {
             }
         } catch (error) {
             console.error('Error saving order status:', error);
-            alert(currentLang === 'ja' ? '発注状態の保存に失敗しました' : 'Failed to save order status');
+            showCustomAlert(currentLang === 'ja' ? '発注状態の保存に失敗しました' : 'Failed to save order status', 'error');
         }
     });
 }
@@ -1268,7 +1438,7 @@ function markItemAsArrived(itemKey) {
             }
         }).catch(error => {
             console.error('Error saving stock update:', error);
-            alert(currentLang === 'ja' ? '在庫の更新に失敗しました' : 'Failed to update stock');
+            showCustomAlert(currentLang === 'ja' ? '在庫の更新に失敗しました' : 'Failed to update stock', 'error');
         });
     }
 }
@@ -1349,7 +1519,7 @@ async function updateStockAmount(itemKey, amount, action) {
         });
     } catch (error) {
         console.error('Error saving stock update:', error);
-        alert(currentLang === 'ja' ? '在庫の更新に失敗しました' : 'Failed to update stock');
+        showCustomAlert(currentLang === 'ja' ? '在庫の更新に失敗しました' : 'Failed to update stock', 'error');
     }
 }
 
@@ -1755,7 +1925,7 @@ async function updateSubscriptionDelivery(itemKey) {
             }
         } catch (error) {
             console.error('Error updating subscription delivery:', error);
-            alert(currentLang === 'ja' ? '配送の更新に失敗しました' : 'Failed to update delivery');
+            showCustomAlert(currentLang === 'ja' ? '配送の更新に失敗しました' : 'Failed to update delivery', 'error');
         }
     }
 }

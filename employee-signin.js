@@ -408,7 +408,7 @@ window.addEventListener('firebaseReady', function() {
 
     // Initialize Firebase services
     const db = window.firebaseDb;
-    const { collection, addDoc, Timestamp, getDocs, query, where, orderBy, updateDoc } = window.firebaseServices;
+    const { collection, addDoc, Timestamp, getDocs, query, where, orderBy, updateDoc, deleteDoc } = window.firebaseServices;
 
     // Function to format time duration
     function formatDuration(startTime) {
@@ -431,11 +431,19 @@ window.addEventListener('firebaseReady', function() {
             const signInLogList = document.getElementById('signInLogList');
             signInLogList.innerHTML = '';
 
+            // Fetch actual sign-ins for today
             const querySnapshot = await getDocs(query(
                 collection(db, 'employeeSignIns'),
                 where('date', '==', todayStr)
             ));
 
+            // Fetch scheduled shifts for today
+            const scheduledShiftsSnapshot = await getDocs(query(
+                collection(db, 'scheduledShifts'),
+                where('date', '==', todayStr)
+            ));
+
+            // Display actual sign-ins
             querySnapshot.forEach(doc => {
                 const data = doc.data();
                 const signInItem = document.createElement('div');
@@ -494,6 +502,33 @@ window.addEventListener('firebaseReady', function() {
                 signInItem.appendChild(employeeInfo);
                 signInLogList.appendChild(signInItem);
             });
+
+            // Display scheduled shifts
+            scheduledShiftsSnapshot.forEach(doc => {
+                const data = doc.data();
+                const scheduledItem = document.createElement('div');
+                scheduledItem.style.padding = '15px';
+                scheduledItem.style.borderBottom = '1px solid #e0e0e0';
+                scheduledItem.style.display = 'flex';
+                scheduledItem.style.justifyContent = 'space-between';
+                scheduledItem.style.alignItems = 'center';
+                scheduledItem.style.backgroundColor = '#e3f2fd';
+                scheduledItem.style.borderRadius = '4px';
+                scheduledItem.style.marginBottom = '5px';
+
+                const scheduledInfo = document.createElement('div');
+                scheduledInfo.innerHTML = `
+                    <div style="font-weight: bold; color: #1976d2;">${data.employeeName}</div>
+                    <div style="font-size: 0.9em; color: #1976d2;">
+                        Scheduled: ${data.startTime}
+                        <br>
+                        <span style="color: #666;">(Scheduled shift)</span>
+                    </div>
+                `;
+
+                scheduledItem.appendChild(scheduledInfo);
+                signInLogList.appendChild(scheduledItem);
+            });
         } catch (error) {
             console.error('Error fetching sign-ins:', error);
             document.getElementById('signInLogList').innerHTML = 
@@ -504,6 +539,177 @@ window.addEventListener('firebaseReady', function() {
     // Call displayTodaySignIns initially and set up refresh interval
     displayTodaySignIns();
     setInterval(displayTodaySignIns, 60000); // Refresh every minute
+
+    // Function to create a custom alert modal
+    function showCustomAlert(message, type = 'info') {
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'custom-alert-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.style.zIndex = '2000';
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.className = 'custom-alert-modal';
+        modal.style.backgroundColor = 'white';
+        modal.style.padding = '30px';
+        modal.style.borderRadius = '10px';
+        modal.style.minWidth = '300px';
+        modal.style.maxWidth = '400px';
+        modal.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+        modal.style.textAlign = 'center';
+        modal.style.position = 'relative';
+
+        // Set color based on type
+        let color = 'var(--primary)';
+        if (type === 'error') color = '#dc3545';
+        if (type === 'warning') color = '#ffc107';
+        if (type === 'success') color = '#28a745';
+
+        // Create message
+        const messageElement = document.createElement('div');
+        messageElement.textContent = message;
+        messageElement.style.marginBottom = '25px';
+        messageElement.style.color = '#333';
+        messageElement.style.fontSize = '16px';
+        messageElement.style.lineHeight = '1.5';
+
+        // Create OK button
+        const okButton = document.createElement('button');
+        okButton.textContent = 'OK';
+        okButton.style.padding = '12px 30px';
+        okButton.style.border = 'none';
+        okButton.style.borderRadius = '8px';
+        okButton.style.backgroundColor = color;
+        okButton.style.color = 'white';
+        okButton.style.cursor = 'pointer';
+        okButton.style.fontSize = '16px';
+        okButton.style.fontWeight = 'bold';
+        okButton.style.minWidth = '100px';
+        okButton.onclick = () => {
+            document.body.removeChild(overlay);
+        };
+
+        // Assemble modal
+        modal.appendChild(messageElement);
+        modal.appendChild(okButton);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        // Close modal when clicking outside
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                document.body.removeChild(overlay);
+            }
+        });
+
+        // Focus on button for keyboard navigation
+        okButton.focus();
+    }
+
+    // Function to create a custom confirm modal
+    function showCustomConfirm(message, onConfirm, onCancel) {
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'custom-confirm-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.style.zIndex = '2000';
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.className = 'custom-confirm-modal';
+        modal.style.backgroundColor = 'white';
+        modal.style.padding = '30px';
+        modal.style.borderRadius = '10px';
+        modal.style.minWidth = '300px';
+        modal.style.maxWidth = '400px';
+        modal.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+        modal.style.textAlign = 'center';
+        modal.style.position = 'relative';
+
+        // Create message
+        const messageElement = document.createElement('div');
+        messageElement.textContent = message;
+        messageElement.style.marginBottom = '25px';
+        messageElement.style.color = '#333';
+        messageElement.style.fontSize = '16px';
+        messageElement.style.lineHeight = '1.5';
+
+        // Create buttons container
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.style.display = 'flex';
+        buttonsContainer.style.gap = '15px';
+        buttonsContainer.style.justifyContent = 'center';
+
+        // Create Cancel button
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Cancel';
+        cancelButton.style.padding = '12px 25px';
+        cancelButton.style.border = '1px solid #e0e0e0';
+        cancelButton.style.borderRadius = '8px';
+        cancelButton.style.backgroundColor = 'white';
+        cancelButton.style.color = '#666';
+        cancelButton.style.cursor = 'pointer';
+        cancelButton.style.fontSize = '16px';
+        cancelButton.style.fontWeight = 'bold';
+        cancelButton.style.minWidth = '80px';
+        cancelButton.onclick = () => {
+            document.body.removeChild(overlay);
+            if (onCancel) onCancel();
+        };
+
+        // Create Confirm button
+        const confirmButton = document.createElement('button');
+        confirmButton.textContent = 'Confirm';
+        confirmButton.style.padding = '12px 25px';
+        confirmButton.style.border = 'none';
+        confirmButton.style.borderRadius = '8px';
+        confirmButton.style.backgroundColor = '#dc3545';
+        confirmButton.style.color = 'white';
+        confirmButton.style.cursor = 'pointer';
+        confirmButton.style.fontSize = '16px';
+        confirmButton.style.fontWeight = 'bold';
+        confirmButton.style.minWidth = '80px';
+        confirmButton.onclick = () => {
+            document.body.removeChild(overlay);
+            if (onConfirm) onConfirm();
+        };
+
+        // Assemble modal
+        buttonsContainer.appendChild(cancelButton);
+        buttonsContainer.appendChild(confirmButton);
+        modal.appendChild(messageElement);
+        modal.appendChild(buttonsContainer);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        // Close modal when clicking outside
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                document.body.removeChild(overlay);
+                if (onCancel) onCancel();
+            }
+        });
+
+        // Focus on cancel button for keyboard navigation
+        cancelButton.focus();
+    }
 
     // Function to create a popup window
     function createPopupWindow(title, content) {
@@ -668,6 +874,16 @@ window.addEventListener('firebaseReady', function() {
                             signInTime: signInTime,
                             date: todayStr,
                             breaks: []
+                        });
+
+                        // Remove scheduled shift for this employee for today if it exists
+                        const scheduledShiftQuery = await getDocs(query(
+                            collection(db, 'scheduledShifts'),
+                            where('employeeId', '==', employeeDoc.id),
+                            where('date', '==', todayStr)
+                        ));
+                        scheduledShiftQuery.forEach(async (doc) => {
+                            await deleteDoc(doc.ref);
                         });
 
                         // Close popup and refresh
@@ -1018,9 +1234,8 @@ window.addEventListener('firebaseReady', function() {
                 calendarModal.style.display = 'none';
             }
             
-            // Show the employee history modal and fetch data
-            const today = new Date();
-            fetchEmployeeHistory(today.getFullYear(), today.getMonth());
+            // Show the employee history modal and fetch data for the current calendar month
+            fetchEmployeeHistory(year, month);
         };
         header.appendChild(personIcon);
 
@@ -1124,57 +1339,122 @@ window.addEventListener('firebaseReady', function() {
             grid.appendChild(emptyCell);
         }
 
-        // Add days
-        for (let day = 1; day <= totalDays; day++) {
-            const cell = document.createElement('div');
-            cell.style.height = '100px';
-            cell.style.backgroundColor = 'white';
-            cell.style.border = '1px solid #e0e0e0';
-            cell.style.borderRadius = '4px';
-            cell.style.padding = '8px';
-            cell.style.position = 'relative';
-            cell.style.overflow = 'hidden';
+                    // Add days
+            for (let day = 1; day <= totalDays; day++) {
+                const cell = document.createElement('div');
+                cell.style.height = '100px';
+                cell.style.backgroundColor = 'white';
+                cell.style.border = '1px solid #e0e0e0';
+                cell.style.borderRadius = '4px';
+                cell.style.padding = '8px';
+                cell.style.position = 'relative';
+                cell.style.overflow = 'hidden';
+                cell.style.cursor = 'pointer';
+                cell.style.transition = 'background-color 0.2s';
 
-            const dayNumber = document.createElement('div');
-            dayNumber.textContent = day;
-            dayNumber.style.fontWeight = 'bold';
-            dayNumber.style.marginBottom = '5px';
-            dayNumber.style.fontSize = '16px';
-            cell.appendChild(dayNumber);
+                const dayNumber = document.createElement('div');
+                dayNumber.textContent = day;
+                dayNumber.style.fontWeight = 'bold';
+                dayNumber.style.marginBottom = '5px';
+                dayNumber.style.fontSize = '16px';
+                dayNumber.style.textAlign = 'center';
+                
+                cell.onmouseover = () => {
+                    cell.style.backgroundColor = '#f8f9fa';
+                };
+                cell.onmouseout = () => {
+                    cell.style.backgroundColor = 'white';
+                };
+                
+                cell.appendChild(dayNumber);
 
-            // Fetch and display employee records for this day
-            const dateStr = new Date(year, month, day).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-            });
+                // Fetch and display employee records for this day
+                const dateStr = new Date(year, month, day).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                });
 
-            // Fetch employee records for this day
-            getDocs(query(
-                collection(db, 'employeeSignIns'),
-                where('date', '==', dateStr)
-            )).then(querySnapshot => {
+                // Fetch employee records for this day
+                getDocs(query(
+                    collection(db, 'employeeSignIns'),
+                    where('date', '==', dateStr)
+                )).then(querySnapshot => {
+                        querySnapshot.forEach(doc => {
+                            const data = doc.data();
+                            const record = document.createElement('div');
+                        record.style.marginBottom = '5px';
+                        record.style.padding = '5px';
+                            record.style.backgroundColor = '#f8f9fa';
+                        record.style.borderRadius = '4px';
+                        record.style.fontSize = '12px';
+                        record.innerHTML = `
+                            <div style="font-weight: bold; font-size: 12px;">${data.employeeName}</div>
+                            <div style="color: #666; font-size: 11px;">
+                                ${data.signInTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                ${data.endTime ? ` - ${data.endTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ' - Present'}
+                            </div>
+                        `;
+                        cell.appendChild(record);
+                    });
+                });
+
+                // Fetch scheduled shifts for this day
+                getDocs(query(
+                    collection(db, 'scheduledShifts'),
+                    where('date', '==', dateStr)
+                )).then(querySnapshot => {
                     querySnapshot.forEach(doc => {
                         const data = doc.data();
                         const record = document.createElement('div');
-                    record.style.marginBottom = '5px';
-                    record.style.padding = '5px';
-                        record.style.backgroundColor = '#f8f9fa';
-                    record.style.borderRadius = '4px';
-                    record.style.fontSize = '12px';
-                    record.innerHTML = `
-                        <div style="font-weight: bold; font-size: 12px;">${data.employeeName}</div>
-                        <div style="color: #666; font-size: 11px;">
-                            ${data.signInTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            ${data.endTime ? ` - ${data.endTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ' - Present'}
-                        </div>
-                    `;
-                    cell.appendChild(record);
+                        record.style.marginBottom = '5px';
+                        record.style.padding = '5px';
+                        record.style.backgroundColor = '#e3f2fd';
+                        record.style.borderRadius = '4px';
+                        record.style.fontSize = '12px';
+                        record.style.border = '1px solid #2196f3';
+                        record.style.position = 'relative';
+                        record.style.cursor = 'pointer';
+                        record.innerHTML = `
+                            <div style="font-weight: bold; font-size: 12px; color: #1976d2;">${data.employeeName}</div>
+                            <div style="color: #1976d2; font-size: 11px;">
+                                Scheduled: ${data.startTime}
+                            </div>
+                            <div style="position: absolute; top: 2px; right: 2px; font-size: 10px; color: #f44336; cursor: pointer;" title="Delete scheduled shift">×</div>
+                        `;
+                        
+                        // Add click handler to delete scheduled shift
+                        record.onclick = async (e) => {
+                            // Don't trigger if clicking the delete button
+                            if (e.target.style.position === 'absolute') {
+                                e.stopPropagation();
+                                showCustomConfirm(
+                                    `Delete scheduled shift for ${data.employeeName}?`,
+                                    async () => {
+                                        try {
+                                            await deleteDoc(doc.ref);
+                                            displayCalendar(month, year);
+                                        } catch (error) {
+                                            console.error('Error deleting scheduled shift:', error);
+                                            showCustomAlert('Error deleting scheduled shift. Please try again.', 'error');
+                                        }
+                                    }
+                                );
+                                return;
+                            }
+                        };
+                        
+                        cell.appendChild(record);
+                    });
                 });
-            });
 
-            grid.appendChild(cell);
-        }
+                // Add click handler to open shift scheduling modal
+                cell.onclick = () => {
+                    openShiftSchedulingModal(dateStr, year, month, day);
+                };
+
+                grid.appendChild(cell);
+            }
 
         calendar.appendChild(grid);
         document.body.appendChild(calendar);
@@ -1380,6 +1660,215 @@ window.addEventListener('firebaseReady', function() {
     calendarContainer.style.position = 'relative';
     calendarContainer.style.zIndex = '901'; // Just above the modal background
 
+    // Function to open shift scheduling modal
+    async function openShiftSchedulingModal(dateStr, year, month, day) {
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'shift-scheduling-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.style.zIndex = '1000';
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.className = 'shift-scheduling-modal';
+        modal.style.backgroundColor = 'white';
+        modal.style.padding = '30px';
+        modal.style.borderRadius = '10px';
+        modal.style.minWidth = '400px';
+        modal.style.maxWidth = '500px';
+        modal.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+        modal.style.position = 'relative';
+
+        // Add close button
+        const closeButton = document.createElement('button');
+        closeButton.innerHTML = '×';
+        closeButton.style.position = 'absolute';
+        closeButton.style.top = '15px';
+        closeButton.style.right = '20px';
+        closeButton.style.border = 'none';
+        closeButton.style.background = 'none';
+        closeButton.style.fontSize = '24px';
+        closeButton.style.cursor = 'pointer';
+        closeButton.style.color = '#666';
+        closeButton.onclick = () => {
+            document.body.removeChild(overlay);
+        };
+
+        // Create title
+        const title = document.createElement('h2');
+        title.textContent = `Schedule Shift - ${new Date(year, month, day).toLocaleDateString()}`;
+        title.style.marginBottom = '25px';
+        title.style.color = 'var(--primary)';
+        title.style.textAlign = 'center';
+
+        // Create form
+        const form = document.createElement('div');
+        form.style.display = 'flex';
+        form.style.flexDirection = 'column';
+        form.style.gap = '20px';
+
+        // Employee selection
+        const employeeSection = document.createElement('div');
+        employeeSection.style.display = 'flex';
+        employeeSection.style.flexDirection = 'column';
+        employeeSection.style.gap = '8px';
+
+        const employeeLabel = document.createElement('label');
+        employeeLabel.textContent = 'Select Employee:';
+        employeeLabel.style.fontWeight = 'bold';
+        employeeLabel.style.color = '#333';
+
+        const employeeSelect = document.createElement('select');
+        employeeSelect.id = 'employeeSelect';
+        employeeSelect.style.padding = '12px';
+        employeeSelect.style.border = '1px solid #e0e0e0';
+        employeeSelect.style.borderRadius = '8px';
+        employeeSelect.style.fontSize = '16px';
+        employeeSelect.style.backgroundColor = 'white';
+
+        // Add default option
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Choose an employee...';
+        employeeSelect.appendChild(defaultOption);
+
+        // Fetch employees and populate dropdown
+        try {
+            const employeesSnapshot = await getDocs(collection(db, 'employees'));
+            employeesSnapshot.forEach(doc => {
+                const employeeData = doc.data();
+                const option = document.createElement('option');
+                option.value = doc.id;
+                option.textContent = employeeData.name;
+                employeeSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error fetching employees:', error);
+        }
+
+        employeeSection.appendChild(employeeLabel);
+        employeeSection.appendChild(employeeSelect);
+
+        // Start time selection
+        const timeSection = document.createElement('div');
+        timeSection.style.display = 'flex';
+        timeSection.style.flexDirection = 'column';
+        timeSection.style.gap = '8px';
+
+        const timeLabel = document.createElement('label');
+        timeLabel.textContent = 'Start Time:';
+        timeLabel.style.fontWeight = 'bold';
+        timeLabel.style.color = '#333';
+
+        const timeInput = document.createElement('input');
+        timeInput.type = 'time';
+        timeInput.id = 'startTimeInput';
+        timeInput.style.padding = '12px';
+        timeInput.style.border = '1px solid #e0e0e0';
+        timeInput.style.borderRadius = '8px';
+        timeInput.style.fontSize = '16px';
+        timeInput.style.backgroundColor = 'white';
+
+        timeSection.appendChild(timeLabel);
+        timeSection.appendChild(timeInput);
+
+        // Add form sections
+        form.appendChild(employeeSection);
+        form.appendChild(timeSection);
+
+        // Create buttons container
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.style.display = 'flex';
+        buttonsContainer.style.gap = '15px';
+        buttonsContainer.style.marginTop = '25px';
+
+        // Cancel button
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Cancel';
+        cancelButton.style.flex = '1';
+        cancelButton.style.padding = '12px';
+        cancelButton.style.border = '1px solid #e0e0e0';
+        cancelButton.style.borderRadius = '8px';
+        cancelButton.style.backgroundColor = 'white';
+        cancelButton.style.color = '#666';
+        cancelButton.style.cursor = 'pointer';
+        cancelButton.style.fontSize = '16px';
+        cancelButton.style.fontWeight = 'bold';
+        cancelButton.onclick = () => {
+            document.body.removeChild(overlay);
+        };
+
+        // Schedule button
+        const scheduleButton = document.createElement('button');
+        scheduleButton.textContent = 'Schedule Shift';
+        scheduleButton.style.flex = '1';
+        scheduleButton.style.padding = '12px';
+        scheduleButton.style.border = 'none';
+        scheduleButton.style.borderRadius = '8px';
+        scheduleButton.style.backgroundColor = 'var(--primary)';
+        scheduleButton.style.color = 'white';
+        scheduleButton.style.cursor = 'pointer';
+        scheduleButton.style.fontSize = '16px';
+        scheduleButton.style.fontWeight = 'bold';
+        scheduleButton.onclick = async () => {
+            const selectedEmployeeId = employeeSelect.value;
+            const startTime = timeInput.value;
+
+            if (!selectedEmployeeId || !startTime) {
+                showCustomAlert('Please select an employee and start time.', 'warning');
+                return;
+            }
+
+            try {
+                // Get employee name
+                const employeeDoc = await getDocs(query(collection(db, 'employees'), where('__name__', '==', selectedEmployeeId)));
+                const employeeName = employeeDoc.docs[0].data().name;
+
+                // Create scheduled shift
+                await addDoc(collection(db, 'scheduledShifts'), {
+                    employeeId: selectedEmployeeId,
+                    employeeName: employeeName,
+                    date: dateStr,
+                    startTime: startTime,
+                    createdAt: Timestamp.now()
+                });
+
+                // Close modal and refresh calendar
+                document.body.removeChild(overlay);
+                displayCalendar(month, year);
+            } catch (error) {
+                console.error('Error scheduling shift:', error);
+                showCustomAlert('Error scheduling shift. Please try again.', 'error');
+            }
+        };
+
+        buttonsContainer.appendChild(cancelButton);
+        buttonsContainer.appendChild(scheduleButton);
+
+        // Assemble modal
+        modal.appendChild(closeButton);
+        modal.appendChild(title);
+        modal.appendChild(form);
+        modal.appendChild(buttonsContainer);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        // Close modal when clicking outside
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                document.body.removeChild(overlay);
+            }
+        });
+    }
+
     // Add fetchEmployeeHistory function
     async function fetchEmployeeHistory(currentYear, currentMonth) {
             try {
@@ -1566,7 +2055,7 @@ window.addEventListener('firebaseReady', function() {
                 document.body.appendChild(historyPopup);
             } catch (error) {
                 console.error('Error fetching employee history:', error);
-                alert('Error loading employee history. Please try again.');
+                showCustomAlert('Error loading employee history. Please try again.', 'error');
             }
     }
 }); 
