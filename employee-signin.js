@@ -10,7 +10,7 @@ window.addEventListener('firebaseReady', function() {
     container.style.padding = '20px';
     container.style.backgroundColor = 'white';
     container.style.borderRadius = '10px';
-    container.style.display = 'flex';
+    container.style.display = 'none';
     container.style.gap = '40px';
     container.style.width = '100%';
     container.style.height = '100%';

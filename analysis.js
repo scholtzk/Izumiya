@@ -10,8 +10,10 @@ import {
     orderBy, 
     Timestamp,
     setDoc,
-    doc
+    doc,
+    getDoc
 } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+import { getDisplayName } from './menu.js';
 
 // Chart.js CDN loader
 function loadChartJs(callback) {
@@ -63,6 +65,64 @@ function getLastNDates(n) {
         dates.push(d);
     }
     return dates;
+}
+
+// Utility: Show/hide loading spinner overlay
+function showLoadingSpinner() {
+    let spinner = document.getElementById('analysis-loading-spinner');
+    if (!spinner) {
+        spinner = document.createElement('div');
+        spinner.id = 'analysis-loading-spinner';
+        spinner.style.position = 'fixed';
+        spinner.style.top = '0';
+        spinner.style.left = '0';
+        spinner.style.width = '100vw';
+        spinner.style.height = '100vh';
+        spinner.style.background = 'rgba(255,255,255,0.6)';
+        spinner.style.zIndex = '3000';
+        spinner.style.display = 'flex';
+        spinner.style.justifyContent = 'center';
+        spinner.style.alignItems = 'center';
+        spinner.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;">
+                <div class="lds-dual-ring"></div>
+                <div style="margin-top:16px;color:#6F4E37;font-weight:bold;">Loading...</div>
+            </div>
+        `;
+        // Spinner CSS
+        const style = document.createElement('style');
+        style.innerHTML = `
+        .lds-dual-ring {
+          display: inline-block;
+          width: 64px;
+          height: 64px;
+        }
+        .lds-dual-ring:after {
+          content: " ";
+          display: block;
+          width: 46px;
+          height: 46px;
+          margin: 1px;
+          border-radius: 50%;
+          border: 6px solid #6F4E37;
+          border-color: #6F4E37 transparent #6F4E37 transparent;
+          animation: lds-dual-ring 1.2s linear infinite;
+        }
+        @keyframes lds-dual-ring {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        `;
+        spinner.appendChild(style);
+        document.body.appendChild(spinner);
+    } else {
+        spinner.style.display = 'flex';
+    }
+}
+
+function hideLoadingSpinner() {
+    const spinner = document.getElementById('analysis-loading-spinner');
+    if (spinner) spinner.style.display = 'none';
 }
 
 // Main render function
@@ -386,134 +446,164 @@ function initializeCharts() {
 
 // Load analysis data
 async function loadAnalysisData(period) {
-    const { start, end } = getPeriodDates(period);
-    const orders = await fetchOrders(start, end);
-    const itemCosts = await fetchItemCosts();
-    
-    // Format date range with day of week and month names
-    const formatDateRange = (start, end) => {
-        const formatDate = (date) => {
-            const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
-            const month = date.toLocaleDateString('en-US', { month: 'short' });
-            const day = date.getDate();
-            return `${dayOfWeek}, ${month} ${day}`;
+    showLoadingSpinner();
+    try {
+        const t = (window.t || ((k) => k));
+        const { start, end } = getPeriodDates(period);
+        const orders = await fetchOrders(start, end);
+        const itemCosts = await fetchItemCosts();
+        
+        // Format date range with day of week and month names
+        const formatDateRange = (start, end) => {
+            const formatDate = (date) => {
+                const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
+                const month = date.toLocaleDateString('en-US', { month: 'short' });
+                const day = date.getDate();
+                return `${dayOfWeek}, ${month} ${day}`;
+            };
+            
+            // If start and end are the same day, just show it once
+            if (start.toDateString() === end.toDateString()) {
+                return formatDate(start);
+            }
+            
+            return `${formatDate(start)} - ${formatDate(end)}`;
         };
-        
-        // If start and end are the same day, just show it once
-        if (start.toDateString() === end.toDateString()) {
-            return formatDate(start);
+
+        // Update period date range display
+        const periodDateRange = document.getElementById('period-date-range');
+        if (period === 'custom') {
+            periodDateRange.style.display = 'none';
+        } else {
+            periodDateRange.style.display = 'block';
+            periodDateRange.textContent = formatDateRange(start, end);
         }
-        
-        return `${formatDate(start)} - ${formatDate(end)}`;
-    };
 
-    // Update period date range display
-    const periodDateRange = document.getElementById('period-date-range');
-    if (period === 'custom') {
-        periodDateRange.style.display = 'none';
-    } else {
-        periodDateRange.style.display = 'block';
-        periodDateRange.textContent = formatDateRange(start, end);
-    }
-
-    // Calculate total sales and costs
-    let totalSales = 0;
-    let totalCosts = 0;
-    let totalDiscounts = 0;
-    
-    orders.forEach(order => {
-        totalSales += order.total;
-        totalDiscounts += order.discount || 0;
+        // Calculate total sales and costs
+        let totalSales = 0;
+        let totalCosts = 0;
+        let totalDiscounts = 0;
         
-        // Calculate costs for each item in the order
-        if (order.items) {
-            order.items.forEach(item => {
-                if (item && item.name) {
-                    let itemName = item.name;
-                    let quantity = item.quantity || 0;
-                    
-                    // Handle customizations
-                    if (item.name === 'Soft Drink' && item.customizations && item.customizations.length > 0) {
-                        item.customizations.forEach(customization => {
-                            const cost = itemCosts[customization] || 0;
-                            totalCosts += cost * quantity;
-                        });
-                    } else if (item.customizations && item.customizations.length > 0) {
-                        item.customizations.forEach(customization => {
-                            if (customization.includes('Ice Cream') || customization.includes('Cake')) {
+        orders.forEach(order => {
+            totalSales += order.total;
+            totalDiscounts += order.discount || 0;
+            
+            // Calculate costs for each item in the order
+            if (order.items) {
+                order.items.forEach(item => {
+                    if (item && item.name) {
+                        let itemName = item.name;
+                        let quantity = item.quantity || 0;
+                        
+                        // Handle customizations
+                        if (item.name === 'Soft Drink' && item.customizations && item.customizations.length > 0) {
+                            item.customizations.forEach(customization => {
                                 const cost = itemCosts[customization] || 0;
                                 totalCosts += cost * quantity;
-                            } else {
-                                const cost = itemCosts[itemName] || 0;
-                                totalCosts += cost * quantity;
-                            }
-                        });
-                    } else {
-                        const cost = itemCosts[itemName] || 0;
-                        totalCosts += cost * quantity;
+                            });
+                        } else if (item.customizations && item.customizations.length > 0) {
+                            item.customizations.forEach(customization => {
+                                if (customization.includes('Ice Cream') || customization.includes('Cake')) {
+                                    const cost = itemCosts[customization] || 0;
+                                    totalCosts += cost * quantity;
+                                } else {
+                                    const cost = itemCosts[itemName] || 0;
+                                    totalCosts += cost * quantity;
+                                }
+                            });
+                        } else {
+                            const cost = itemCosts[itemName] || 0;
+                            totalCosts += cost * quantity;
+                        }
                     }
-                }
-            });
-        }
-    });
+                });
+            }
+        });
 
-    const totalOrders = orders.length;
-    const estimatedProfit = Math.round(totalSales - totalCosts - totalDiscounts);
+        const totalOrders = orders.length;
+        const estimatedProfit = Math.round(totalSales - totalCosts - totalDiscounts);
 
-    // Calculate previous period for comparison
-    const prevStart = new Date(start);
-    const prevEnd = new Date(end);
-    const periodDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-    prevStart.setDate(prevStart.getDate() - periodDays);
-    prevEnd.setDate(prevEnd.getDate() - periodDays);
-    const prevOrders = await fetchOrders(prevStart, prevEnd);
-    
-    let prevTotalSales = 0;
-    prevOrders.forEach(order => {
-        prevTotalSales += order.total;
-    });
+        // Calculate previous period for comparison
+        const prevStart = new Date(start);
+        const prevEnd = new Date(end);
+        const periodDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        prevStart.setDate(prevStart.getDate() - periodDays);
+        prevEnd.setDate(prevEnd.getDate() - periodDays);
+        const prevOrders = await fetchOrders(prevStart, prevEnd);
+        
+        let prevTotalSales = 0;
+        prevOrders.forEach(order => {
+            prevTotalSales += order.total;
+        });
 
-    // Calculate percentage change
-    const percentageChange = prevTotalSales > 0 
-        ? ((totalSales - prevTotalSales) / prevTotalSales) * 100 
-        : 0;
+        // Calculate percentage change
+        const percentageChange = prevTotalSales > 0 
+            ? ((totalSales - prevTotalSales) / prevTotalSales) * 100 
+            : 0;
 
-    // Update UI
-    document.getElementById('total-sales').textContent = formatCurrency(totalSales);
-    document.getElementById('total-orders').textContent = formatCurrency(estimatedProfit);
-    document.getElementById('avg-order').textContent = totalOrders;
-    document.getElementById('total-orders').parentElement.querySelector('h3').textContent = t('Estimated Profit');
-    document.getElementById('avg-order').parentElement.querySelector('h3').textContent = t('Orders');
-    
-    // Update percentage change
-    const changeElement = document.getElementById('sales-change');
-    if (period === 'today') {
-        changeElement.style.display = 'none';
-    } else {
-        changeElement.style.display = 'block';
-        if (percentageChange !== 0) {
-            const changeText = `${percentageChange > 0 ? '+' : ''}${percentageChange.toFixed(1)}%`;
-            changeElement.textContent = changeText;
-            changeElement.style.color = percentageChange >= 0 ? '#28a745' : '#dc3545';
+        // Update UI
+        document.getElementById('total-sales').textContent = formatCurrency(totalSales);
+        document.getElementById('total-orders').textContent = formatCurrency(estimatedProfit);
+        document.getElementById('avg-order').textContent = totalOrders;
+        document.getElementById('total-orders').parentElement.querySelector('h3').textContent = t('Estimated Profit');
+        document.getElementById('avg-order').parentElement.querySelector('h3').textContent = t('Orders');
+        
+        // Update percentage change
+        const changeElement = document.getElementById('sales-change');
+        if (period === 'today') {
+            changeElement.style.display = 'none';
         } else {
-            changeElement.textContent = '';
+            changeElement.style.display = 'block';
+            if (percentageChange !== 0) {
+                const changeText = `${percentageChange > 0 ? '+' : ''}${percentageChange.toFixed(1)}%`;
+                changeElement.textContent = changeText;
+                changeElement.style.color = percentageChange >= 0 ? '#28a745' : '#dc3545';
+            } else {
+                changeElement.textContent = '';
+            }
         }
+    } finally {
+        hideLoadingSpinner();
     }
 }
 
-// Fetch orders from Firebase
+// Keep only the new, parallelized fetchOrders function
 async function fetchOrders(start, end) {
     try {
-        const ordersRef = collection(window.firebaseDb, 'orders');
-        const q = query(
-            ordersRef,
-            where('timestamp', '>=', Timestamp.fromDate(start)),
-            where('timestamp', '<=', Timestamp.fromDate(end)),
-            orderBy('timestamp', 'asc')
-        );
-        
-        const querySnapshot = await getDocs(q);
-        const orders = querySnapshot.docs.map(doc => doc.data());
+        const orders = [];
+        const dateList = [];
+        const currentDate = new Date(start);
+        const endDate = new Date(end);
+        while (currentDate <= endDate) {
+            dateList.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        // Fetch all daily orders in parallel
+        const fetchPromises = dateList.map(date => {
+            const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            const dailyOrdersRef = doc(window.firebaseDb, 'dailyOrders', dateKey);
+            return getDoc(dailyOrdersRef).then(dailyDoc => {
+                if (dailyDoc.exists()) {
+                    const data = dailyDoc.data();
+                    return Object.entries(data.orders || {})
+                        .filter(([key, order]) => key !== 'current')
+                        .map(([key, order]) => order)
+                        .filter(order => {
+                            if (!order.timestamp) return false;
+                            const orderTime = order.timestamp.toDate();
+                            return orderTime >= start && orderTime <= end;
+                        });
+                }
+                return [];
+            }).catch(error => {
+                console.error(`Error fetching orders for date ${dateKey}:`, error);
+                return [];
+            });
+        });
+        const results = await Promise.all(fetchPromises);
+        results.forEach(dayOrders => orders.push(...dayOrders));
+        // Sort by timestamp
+        orders.sort((a, b) => a.timestamp.seconds - b.timestamp.seconds);
         return orders;
     } catch (error) {
         console.error('Error fetching orders:', error);
@@ -611,167 +701,172 @@ async function updatePeakHoursChart(orders) {
 
 // Load usage analysis for past 7 days
 async function loadUsageAnalysis() {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - 6); // Past 7 days including today
-    start.setHours(0, 0, 0, 0);
-    end.setHours(23, 59, 59, 999);
+    showLoadingSpinner();
+    try {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(start.getDate() - 6); // Past 7 days including today
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
 
-    const orders = await fetchOrders(start, end);
-    const itemCosts = await fetchItemCosts(); // Fetch existing costs
+        const orders = await fetchOrders(start, end);
+        const itemCosts = await fetchItemCosts(); // Fetch existing costs
 
-    const usageAnalysis = document.getElementById('usage-analysis');
-    const t = (window.t || ((k) => k));
+        const usageAnalysis = document.getElementById('usage-analysis');
+        const t = (window.t || ((k) => k));
 
-    // Get all dates in the range
-    const dates = [];
-    const currentDate = new Date(start);
-    while (currentDate <= end) {
-        dates.push(new Date(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    // Calculate usage by date and item
-    const usageByDate = {};
-    dates.forEach(date => {
-        usageByDate[formatDate(date)] = {};
-    });
-
-    // Initialize with zeros for all items
-    const allItems = new Set();
-    orders.forEach(order => {
-        if (order.items) {
-            order.items.forEach(item => {
-                if (item && item.name) {
-                    if (item.name === 'Soft Drink' && item.customizations && item.customizations.length > 0) {
-                        item.customizations.forEach(customization => {
-                            allItems.add(customization);
-                        });
-                    } else if (item.customizations && item.customizations.length > 0) {
-                        item.customizations.forEach(customization => {
-                            if (customization.includes('Ice Cream') || customization.includes('Cake')) {
-                                allItems.add(customization);
-                            } else {
-                                allItems.add(item.name);
-                            }
-                        });
-                    } else {
-                        allItems.add(item.name);
-                    }
-                }
-            });
+        // Get all dates in the range
+        const dates = [];
+        const currentDate = new Date(start);
+        while (currentDate <= end) {
+            dates.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
         }
-    });
 
-    // Initialize all dates with zeros for all items
-    dates.forEach(date => {
-        const dateStr = formatDate(date);
-        allItems.forEach(item => {
-            usageByDate[dateStr][item] = 0;
+        // Calculate usage by date and item
+        const usageByDate = {};
+        dates.forEach(date => {
+            usageByDate[formatDate(date)] = {};
         });
-    });
 
-    // Fill in actual usage
-    orders.forEach(order => {
-        if (order.items) {
-            const orderDate = order.timestamp.toDate();
-            const dateStr = formatDate(orderDate);
-            order.items.forEach(item => {
-                if (item && item.name && usageByDate[dateStr]) {
-                    if (item.name === 'Soft Drink' && item.customizations && item.customizations.length > 0) {
-                        item.customizations.forEach(customization => {
-                            usageByDate[dateStr][customization] = (usageByDate[dateStr][customization] || 0) + (item.quantity || 0);
-                        });
-                    } else if (item.customizations && item.customizations.length > 0) {
-                        item.customizations.forEach(customization => {
-                            if (customization.includes('Ice Cream') || customization.includes('Cake')) {
-                                usageByDate[dateStr][customization] = (usageByDate[dateStr][customization] || 0) + (item.quantity || 0);
-                            } else {
-                                usageByDate[dateStr][item.name] = (usageByDate[dateStr][item.name] || 0) + (item.quantity || 0);
-                            }
-                        });
-                    } else {
-                        usageByDate[dateStr][item.name] = (usageByDate[dateStr][item.name] || 0) + (item.quantity || 0);
+        // Initialize with zeros for all items
+        const allItems = new Set();
+        orders.forEach(order => {
+            if (order.items) {
+                order.items.forEach(item => {
+                    if (item && item.name) {
+                        if (item.name === 'Soft Drink' && item.customizations && item.customizations.length > 0) {
+                            item.customizations.forEach(customization => {
+                                allItems.add(customization);
+                            });
+                        } else if (item.customizations && item.customizations.length > 0) {
+                            item.customizations.forEach(customization => {
+                                if (customization.includes('Ice Cream') || customization.includes('Cake')) {
+                                    allItems.add(customization);
+                                } else {
+                                    allItems.add(item.name);
+                                }
+                            });
+                        } else {
+                            allItems.add(item.name);
+                        }
                     }
-                }
-            });
-        }
-    });
+                });
+            }
+        });
 
-    // Calculate averages and totals
-    const itemTotals = {};
-    const itemAverages = {};
-    const itemCostsData = {};
-
-    allItems.forEach(item => {
-        itemTotals[item] = 0;
-        // Calculate total including today
+        // Initialize all dates with zeros for all items
         dates.forEach(date => {
             const dateStr = formatDate(date);
-            itemTotals[item] += usageByDate[dateStr][item] || 0;
+            allItems.forEach(item => {
+                usageByDate[dateStr][item] = 0;
+            });
         });
-        
-        // Calculate average excluding today
-        const pastDates = dates.slice(0, -1); // Exclude today
-        const pastTotal = pastDates.reduce((sum, date) => {
-            const dateStr = formatDate(date);
-            return sum + (usageByDate[dateStr][item] || 0);
-        }, 0);
-        itemAverages[item] = pastTotal / pastDates.length;
 
-        // Get cost data
-        itemCostsData[item] = itemCosts[item] || 0;
-    });
+        // Fill in actual usage
+        orders.forEach(order => {
+            if (order.items) {
+                const orderDate = order.timestamp.toDate();
+                const dateStr = formatDate(orderDate);
+                order.items.forEach(item => {
+                    if (item && item.name && usageByDate[dateStr]) {
+                        if (item.name === 'Soft Drink' && item.customizations && item.customizations.length > 0) {
+                            item.customizations.forEach(customization => {
+                                usageByDate[dateStr][customization] = (usageByDate[dateStr][customization] || 0) + (item.quantity || 0);
+                            });
+                        } else if (item.customizations && item.customizations.length > 0) {
+                            item.customizations.forEach(customization => {
+                                if (customization.includes('Ice Cream') || customization.includes('Cake')) {
+                                    usageByDate[dateStr][customization] = (usageByDate[dateStr][customization] || 0) + (item.quantity || 0);
+                                } else {
+                                    usageByDate[dateStr][item.name] = (usageByDate[dateStr][item.name] || 0) + (item.quantity || 0);
+                                }
+                            });
+                        } else {
+                            usageByDate[dateStr][item.name] = (usageByDate[dateStr][item.name] || 0) + (item.quantity || 0);
+                        }
+                    }
+                });
+            }
+        });
 
-    // Sort items by total usage
-    const sortedItems = Array.from(allItems)
-        .sort((a, b) => itemTotals[b] - itemTotals[a]);
+        // Calculate averages and totals
+        const itemTotals = {};
+        const itemAverages = {};
+        const itemCostsData = {};
 
-    // Generate HTML
-    usageAnalysis.innerHTML = `
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;">
-            ${sortedItems.map(item => `
-                <div style="background:#f8f9fa;padding:15px;border-radius:6px;border-left:4px solid #A67C52;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                        <div style="font-weight:bold;">${getDisplayName(item)}</div>
-                        <button onclick="editItemCost('${item}', ${itemCostsData[item]})" 
-                                style="background:#6F4E37;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;">
-                            ${t('Edit Cost')}
-                        </button>
-                    </div>
-                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
-                        <div>
-                            <div style="color:#666;font-size:0.9em;">${t('Total Usage')}</div>
-                            <div style="font-weight:bold;color:#6F4E37;">${itemTotals[item]}</div>
+        allItems.forEach(item => {
+            itemTotals[item] = 0;
+            // Calculate total including today
+            dates.forEach(date => {
+                const dateStr = formatDate(date);
+                itemTotals[item] += usageByDate[dateStr][item] || 0;
+            });
+            
+            // Calculate average excluding today
+            const pastDates = dates.slice(0, -1); // Exclude today
+            const pastTotal = pastDates.reduce((sum, date) => {
+                const dateStr = formatDate(date);
+                return sum + (usageByDate[dateStr][item] || 0);
+            }, 0);
+            itemAverages[item] = pastTotal / pastDates.length;
+
+            // Get cost data
+            itemCostsData[item] = itemCosts[item] || 0;
+        });
+
+        // Sort items by total usage
+        const sortedItems = Array.from(allItems)
+            .sort((a, b) => itemTotals[b] - itemTotals[a]);
+
+        // Generate HTML
+        usageAnalysis.innerHTML = `
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;">
+                ${sortedItems.map(item => `
+                    <div style="background:#f8f9fa;padding:15px;border-radius:6px;border-left:4px solid #A67C52;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <div style="font-weight:bold;">${getDisplayName(item)}</div>
+                            <button onclick="editItemCost('${item}', ${itemCostsData[item]})" 
+                                    style="background:#6F4E37;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;">
+                                ${t('Edit Cost')}
+                            </button>
                         </div>
-                        <div>
-                            <div style="color:#666;font-size:0.9em;">${t('Average per Day')}</div>
-                            <div style="font-weight:bold;color:#6F4E37;">${itemAverages[item].toFixed(1)}</div>
+                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+                            <div>
+                                <div style="color:#666;font-size:0.9em;">${t('Total Usage')}</div>
+                                <div style="font-weight:bold;color:#6F4E37;">${itemTotals[item]}</div>
+                            </div>
+                            <div>
+                                <div style="color:#666;font-size:0.9em;">${t('Average per Day')}</div>
+                                <div style="font-weight:bold;color:#6F4E37;">${itemAverages[item].toFixed(1)}</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:10px;font-size:0.9em;color:#666;">
+                            ${t('Cost per Item')}:
+                            <div style="font-weight:bold;color:#6F4E37;">¥${itemCostsData[item].toLocaleString()}</div>
+                        </div>
+                        <div style="margin-top:10px;font-size:0.9em;color:#666;">
+                            ${t('Daily Breakdown')}:
+                            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:5px;">
+                                ${dates.map(date => {
+                                    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
+                                    const usage = usageByDate[formatDate(date)][item] || 0;
+                                    return `
+                                        <div style="text-align:center;padding:5px;background:${usage > 0 ? '#e9ecef' : '#f8f9fa'};border-radius:4px;">
+                                            <div style="font-size:0.8em;">${dayOfWeek}</div>
+                                            <div style="font-weight:bold;">${usage}</div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
                         </div>
                     </div>
-                    <div style="margin-top:10px;font-size:0.9em;color:#666;">
-                        ${t('Cost per Item')}:
-                        <div style="font-weight:bold;color:#6F4E37;">¥${itemCostsData[item].toLocaleString()}</div>
-                    </div>
-                    <div style="margin-top:10px;font-size:0.9em;color:#666;">
-                        ${t('Daily Breakdown')}:
-                        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:5px;">
-                            ${dates.map(date => {
-                                const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
-                                const usage = usageByDate[formatDate(date)][item] || 0;
-                                return `
-                                    <div style="text-align:center;padding:5px;background:${usage > 0 ? '#e9ecef' : '#f8f9fa'};border-radius:4px;">
-                                        <div style="font-size:0.8em;">${dayOfWeek}</div>
-                                        <div style="font-weight:bold;">${usage}</div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    </div>
-                </div>
-            `).join('')}
-        </div>
-    `;
+                `).join('')}
+            </div>
+        `;
+    } finally {
+        hideLoadingSpinner();
+    }
 }
 
 // Load custom date range
@@ -789,148 +884,176 @@ function loadCustomDateRange() {
     }
 }
 
-// Helper: getDisplayName (uses global currentLang/menuData)
-function getDisplayName(englishName) {
-    if (window.menuData && window.currentLang) {
-        for (const category of Object.values(window.menuData)) {
-            for (const item of category) {
-                if (item.name === englishName) {
-                    return window.currentLang === 'ja' && item.name_ja ? item.name_ja : item.name;
-                }
-            }
-        }
-    }
-    return englishName;
-}
-
 // Update sales trend chart
 async function loadSalesTrendData(period) {
-    const { start, end } = getPeriodDates(period);
-    const orders = await fetchOrders(start, end);
-    
-    // Get previous period for comparison
-    const prevStart = new Date(start);
-    const prevEnd = new Date(end);
-    const periodDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-    prevStart.setDate(prevStart.getDate() - periodDays);
-    prevEnd.setDate(prevEnd.getDate() - periodDays);
-    const prevOrders = await fetchOrders(prevStart, prevEnd);
-    
-    // Get all dates in the range
-    const dates = [];
-    const currentDate = new Date(start);
-    while (currentDate <= end) {
-        dates.push(new Date(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    // Initialize sales data with zeros
-    const salesByDate = {};
-    const prevSalesByDate = {};
-    dates.forEach(date => {
-        const dateStr = formatDate(date);
-        salesByDate[dateStr] = 0;
-        prevSalesByDate[dateStr] = 0;
-    });
-
-    // Fill in current period sales
-    orders.forEach(order => {
-        const date = formatDate(order.timestamp.toDate());
-        if (salesByDate[date] !== undefined) {
-            salesByDate[date] += order.total;
-        }
-    });
-
-    // Fill in previous period sales
-    prevOrders.forEach(order => {
-        const orderDate = order.timestamp.toDate();
-        const currentPeriodDate = new Date(orderDate);
-        currentPeriodDate.setDate(currentPeriodDate.getDate() + periodDays);
-        const mappedDate = formatDate(currentPeriodDate);
+    showLoadingSpinner();
+    try {
+        const { start, end } = getPeriodDates(period);
+        const orders = await fetchOrders(start, end);
         
-        const dateIndex = dates.findIndex(d => formatDate(d) === mappedDate);
-        if (dateIndex !== -1) {
-            const targetDate = formatDate(dates[dateIndex]);
-            prevSalesByDate[targetDate] = (prevSalesByDate[targetDate] || 0) + order.total;
+        // Get previous period for comparison
+        const prevStart = new Date(start);
+        const prevEnd = new Date(end);
+        const periodDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        prevStart.setDate(prevStart.getDate() - periodDays);
+        prevEnd.setDate(prevEnd.getDate() - periodDays);
+        const prevOrders = await fetchOrders(prevStart, prevEnd);
+        
+        // Get all dates in the range
+        const dates = [];
+        const currentDate = new Date(start);
+        while (currentDate <= end) {
+            dates.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
         }
-    });
 
-    // Calculate percentage changes for each day
-    const percentageChanges = {};
-    dates.forEach((date, index) => {
-        const dateStr = formatDate(date);
-        const current = salesByDate[dateStr];
-        const previous = prevSalesByDate[dateStr];
-        if (previous > 0) {
-            percentageChanges[dateStr] = ((current - previous) / previous) * 100;
-        } else {
-            percentageChanges[dateStr] = null;
-        }
-    });
-
-    // Create labels based on period
-    let labels;
-    if (period === 'month') {
-        // For monthly view, use consistent format "Day DD"
-        labels = dates.map(date => {
-            const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
-            const day = date.getDate();
-            return `${dayOfWeek} ${day}`;
-        });
-    } else {
-        // For other periods (week, year), use original format
-        labels = dates.map(date => {
+        // Initialize sales data with zeros
+        const salesByDate = {};
+        const prevSalesByDate = {};
+        dates.forEach(date => {
             const dateStr = formatDate(date);
-            const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
-            return [dateStr, dayOfWeek];
+            salesByDate[dateStr] = 0;
+            prevSalesByDate[dateStr] = 0;
         });
-    }
 
-    // Update chart
-    window.salesTrendChart.data.labels = labels;
-    window.salesTrendChart.data.datasets[0].data = Object.values(salesByDate);
-    
-    // Add percentage changes as annotations
-    const annotations = {};
-    Object.entries(percentageChanges).forEach(([date, change], index) => {
-        if (change !== null) {
-            annotations[`label${index}`] = {
-                type: 'label',
-                xValue: index,
-                yValue: salesByDate[date],
-                content: `${change > 0 ? '+' : ''}${change.toFixed(1)}%`,
-                color: change >= 0 ? '#28a745' : '#dc3545',
-                font: {
-                    size: 12,
-                    weight: 'bold'
+        // Fill in current period sales
+        orders.forEach(order => {
+            const date = formatDate(order.timestamp.toDate());
+            if (salesByDate[date] !== undefined) {
+                salesByDate[date] += order.total;
+            }
+        });
+
+        // Fill in previous period sales
+        prevOrders.forEach(order => {
+            const orderDate = order.timestamp.toDate();
+            const currentPeriodDate = new Date(orderDate);
+            currentPeriodDate.setDate(currentPeriodDate.getDate() + periodDays);
+            const mappedDate = formatDate(currentPeriodDate);
+            
+            const dateIndex = dates.findIndex(d => formatDate(d) === mappedDate);
+            if (dateIndex !== -1) {
+                const targetDate = formatDate(dates[dateIndex]);
+                prevSalesByDate[targetDate] = (prevSalesByDate[targetDate] || 0) + order.total;
+            }
+        });
+
+        // Calculate percentage changes for each day
+        const percentageChanges = {};
+        dates.forEach((date, index) => {
+            const dateStr = formatDate(date);
+            const current = salesByDate[dateStr];
+            const previous = prevSalesByDate[dateStr];
+            if (previous > 0) {
+                percentageChanges[dateStr] = ((current - previous) / previous) * 100;
+            } else {
+                percentageChanges[dateStr] = null;
+            }
+        });
+
+        // Create labels based on period
+        let labels;
+        if (period === 'month') {
+            // For monthly view, use consistent format "Day DD"
+            labels = dates.map(date => {
+                const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
+                const day = date.getDate();
+                return `${dayOfWeek} ${day}`;
+            });
+        } else if (period === 'year') {
+            // For yearly view, use YYYY-MM-DD for each bar, but show only months as grid lines/labels
+            labels = dates.map(date => formatDate(date));
+        } else {
+            // For other periods (week, last30), use original format
+            labels = dates.map(date => {
+                const dateStr = formatDate(date);
+                const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
+                return [dateStr, dayOfWeek];
+            });
+        }
+
+        // Update chart
+        window.salesTrendChart.data.labels = labels;
+        window.salesTrendChart.data.datasets[0].data = Object.values(salesByDate);
+        
+        // Add percentage changes as annotations
+        const annotations = {};
+        Object.entries(percentageChanges).forEach(([date, change], index) => {
+            if (change !== null) {
+                annotations[`label${index}`] = {
+                    type: 'label',
+                    xValue: index,
+                    yValue: salesByDate[date],
+                    content: `${change > 0 ? '+' : ''}${change.toFixed(1)}%`,
+                    color: change >= 0 ? '#28a745' : '#dc3545',
+                    font: {
+                        size: 12,
+                        weight: 'bold'
+                    },
+                    yAdjust: -15
+                };
+            }
+        });
+        
+        // Update chart options based on period
+        if (period === 'month') {
+            window.salesTrendChart.options.scales.x = {
+                ...window.salesTrendChart.options.scales.x,
+                ticks: {
+                    maxRotation: 45,
+                    minRotation: 45
+                }
+            };
+        } else if (period === 'year') {
+            // Show only months as grid lines/labels
+            window.salesTrendChart.options.scales.x = {
+                ...window.salesTrendChart.options.scales.x,
+                ticks: {
+                    callback: function(value, index, ticks) {
+                        // value is the label (YYYY-MM-DD)
+                        const date = new Date(labels[index]);
+                        if (date.getDate() === 1) {
+                            // Show month name at the first of each month
+                            return date.toLocaleDateString('en-US', { month: 'short' });
+                        }
+                        return '';
+                    },
+                    maxRotation: 0,
+                    minRotation: 0,
+                    autoSkip: false
                 },
-                yAdjust: -15
+                grid: {
+                    // Draw grid line only at the first of each month, none for other days
+                    drawOnChartArea: true,
+                    color: function(context) {
+                        const index = context.tick && context.tick.value !== undefined ? context.tick.value : context.index;
+                        const date = new Date(labels[index]);
+                        if (date.getDate() === 1) {
+                            return '#bbb';
+                        }
+                        // No grid line for other days
+                        return 'rgba(0,0,0,0)';
+                    },
+                    // Remove border grid line for clarity
+                    drawBorder: false
+                }
+            };
+        } else {
+            // Reset to default options for other periods
+            window.salesTrendChart.options.scales.x = {
+                ...window.salesTrendChart.options.scales.x,
+                ticks: {
+                    maxRotation: 0,
+                    minRotation: 0
+                }
             };
         }
-    });
-    
-    // Update chart options based on period
-    if (period === 'month') {
-        window.salesTrendChart.options.scales.x = {
-            ...window.salesTrendChart.options.scales.x,
-            ticks: {
-                maxRotation: 45,
-                minRotation: 45
-            }
-        };
-    } else {
-        // Reset to default options for other periods
-        window.salesTrendChart.options.scales.x = {
-            ...window.salesTrendChart.options.scales.x,
-            ticks: {
-                maxRotation: 0,
-                minRotation: 0
-            }
-        };
+        
+        window.salesTrendChart.options.plugins.annotation.annotations = annotations;
+        window.salesTrendChart.update();
+    } finally {
+        hideLoadingSpinner();
     }
-    
-    window.salesTrendChart.options.plugins.annotation.annotations = annotations;
-    window.salesTrendChart.update();
 }
 
 // Add these new functions for cost management

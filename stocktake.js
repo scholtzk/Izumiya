@@ -587,112 +587,129 @@ async function renderStocktake(container) {
     container.innerHTML = `
         <div class="stocktake-container">
             <div class="stocktake-header">
-                <h2>${currentLang === 'ja' ? '在庫管理' : 'Stock Management'}</h2>
+                <h2>${window.currentLang === 'ja' ? '在庫管理' : 'Stock Management'}</h2>
                 <div class="stocktake-controls">
-                    <button class="stocktake-btn" id="editItems">${currentLang === 'ja' ? 'アイテム編集' : 'Edit Items'}</button>
-                    <button class="stocktake-btn" id="orderSelected" disabled>${currentLang === 'ja' ? '選択したアイテムを注文' : 'Order Selected'}</button>
-                    <button class="stocktake-btn" id="exportStocktake">${currentLang === 'ja' ? 'エクスポート' : 'Export'}</button>
-                    <button class="stocktake-btn" id="saveStocktake">${currentLang === 'ja' ? '保存' : 'Save'}</button>
+                    <button class="stocktake-btn" id="editItems">${window.currentLang === 'ja' ? 'アイテム編集' : 'Edit Items'}</button>
+                    <button class="stocktake-btn" id="orderSelected" disabled>${window.currentLang === 'ja' ? '選択したアイテムを注文' : 'Order Selected'}</button>
+                    <button class="stocktake-btn" id="exportStocktake">${window.currentLang === 'ja' ? 'エクスポート' : 'Export'}</button>
+                    <button class="stocktake-btn" id="saveStocktake">${window.currentLang === 'ja' ? '保存' : 'Save'}</button>
                 </div>
             </div>
             
             <div class="stocktake-filters">
                 <select id="categoryFilter">
-                    <option value="all">${currentLang === 'ja' ? '全カテゴリー' : 'All Categories'}</option>
+                    <option value="all">${window.currentLang === 'ja' ? '全カテゴリー' : 'All Categories'}</option>
                     ${[...new Set(Object.values(inventoryData).map(item => item.category))].map(category => 
                         `<option value="${category}">${category}</option>`
                     ).join('')}
                 </select>
                 <select id="stockFilter">
-                    <option value="all">${currentLang === 'ja' ? '全在庫' : 'All Stock'}</option>
-                    <option value="low">${currentLang === 'ja' ? '在庫切れ' : 'Low Stock'}</option>
-                    <option value="out">${currentLang === 'ja' ? '在庫なし' : 'Out of Stock'}</option>
+                    <option value="all">${window.currentLang === 'ja' ? '全在庫' : 'All Stock'}</option>
+                    <option value="low">${window.currentLang === 'ja' ? '在庫切れ' : 'Low Stock'}</option>
+                    <option value="out">${window.currentLang === 'ja' ? '在庫なし' : 'Out of Stock'}</option>
                 </select>
-                <input type="text" id="searchStock" placeholder="${currentLang === 'ja' ? '検索...' : 'Search...'}">
+                <input type="text" id="searchStock" placeholder="${window.currentLang === 'ja' ? '検索...' : 'Search...'}">
             </div>
 
             <div class="stocktake-grid">
-                ${Object.entries(inventoryData)
-                    .sort((a, b) => a[1].category.localeCompare(b[1].category))
-                    .reduce((acc, [key, item], index, array) => {
-                        // Add category header if it's the first item or category changed
-                        if (index === 0 || item.category !== array[index - 1][1].category) {
-                            acc.push(`
-                                ${index > 0 ? '<div class="category-divider"></div>' : ''}
-                                <div class="category-header">${item.category}</div>
-                            `);
+                ${(() => {
+                    // Group items by category and sort alphabetically
+                    const itemsByCategory = {};
+                    Object.entries(inventoryData).forEach(([key, item]) => {
+                        const category = item.category || 'Misc';
+                        if (!itemsByCategory[category]) {
+                            itemsByCategory[category] = [];
                         }
-                        
-                        // Add the item
-                        acc.push(`
-                            <div class="stocktake-item" data-category="${item.category}" data-item="${key}">
-                                <div class="stocktake-item-header">
-                                    <div class="stocktake-item-title">
-                                        <input type="checkbox" class="item-selector" data-item="${key}">
-                                        <h3><a href="${item.supplierUrl}" target="_blank">${currentLang === 'ja' ? item.name_ja : item.name}</a></h3>
-                                    </div>
-                                    <span class="stocktake-category">${item.category}</span>
-                                </div>
-                                <div class="stocktake-item-details">
-                                    <div class="stocktake-stock">
-                                        <label>${currentLang === 'ja' ? '在庫数' : 'Current Stock'}:</label>
-                                        <span class="current-stock">${item.currentStock}</span>
-                                        <span class="stocktake-unit">${item.unit}</span>
-                                        <button class="update-stock-btn" data-item="${key}">${currentLang === 'ja' ? '在庫更新' : 'Update Stock'}</button>
-                                    </div>
-                                </div>
-                                ${item.isSubscription ? `
-                                    <div class="stocktake-status subscription">
-                                        <div class="next-delivery">
-                                            <span class="delivery-label">${currentLang === 'ja' ? '次回配送予定' : 'Next Delivery'}:</span>
-                                            <span class="delivery-value">${item.nextDeliveryDate ? item.nextDeliveryDate.toDate().toLocaleDateString() : 'Not set'}</span>
-                                        </div>
-                                        <button class="update-delivery-btn" onclick="window.stocktakeSystem.updateSubscriptionDelivery('${key}')">
-                                            ${currentLang === 'ja' ? '配送更新' : 'Update Delivery'}
-                                        </button>
-                                    </div>
-                                ` : `
-                                    <div class="stocktake-status">
-                                        ${currentLang === 'ja' ? '読み込み中...' : 'Loading...'}
-                                    </div>
-                                `}
-                                ${!item.orderStatus || !item.orderStatus.ordered ? `
-                                    <div class="order-actions">
-                                        <button class="order-btn" onclick="window.stocktakeSystem.markItemAsOrdered('${key}')">
-                                            ${currentLang === 'ja' ? '発注済みとしてマーク' : 'Mark as Ordered'}
-                                        </button>
-                                    </div>
-                                ` : `
-                                    <div class="order-status">
-                                        <div class="order-date">
-                                            <span class="order-label">${currentLang === 'ja' ? '発注日' : 'Ordered'}:</span>
-                                            <span class="order-value">${item.orderStatus.orderDate.toDate().toLocaleDateString()}</span>
-                                        </div>
-                                        <div class="arrival-date">
-                                            <span class="order-label">${currentLang === 'ja' ? '到着予定' : 'Expected Arrival'}:</span>
-                                            <span class="order-value">${item.orderStatus.estimatedArrival.toDate().toLocaleDateString()}</span>
-                                        </div>
-                                        ${item.orderStatus.quantity ? `
-                                            <div class="order-quantity">
-                                                <span class="order-label">${currentLang === 'ja' ? '発注数量' : 'Order Quantity'}:</span>
-                                                <span class="order-value">${item.orderStatus.quantity} ${item.unit}</span>
+                        itemsByCategory[category].push({ key, item });
+                    });
+
+                    // Sort categories alphabetically
+                    const sortedCategories = Object.keys(itemsByCategory).sort();
+
+                    // Sort items within each category alphabetically by name
+                    sortedCategories.forEach(category => {
+                        itemsByCategory[category].sort((a, b) => {
+                            const nameA = window.currentLang === 'ja' ? a.item.name_ja : a.item.name;
+                            const nameB = window.currentLang === 'ja' ? b.item.name_ja : b.item.name;
+                            return nameA.localeCompare(nameB);
+                        });
+                    });
+
+                    // Generate HTML for each category
+                    return sortedCategories.map(category => `
+                        <div class="category-section">
+                            <div class="category-header">${category}</div>
+                            <div class="category-items">
+                                ${itemsByCategory[category].map(({ key, item }) => `
+                                    <div class="stocktake-item" data-category="${item.category}" data-item="${key}">
+                                        <div class="stocktake-item-header">
+                                            <div class="stocktake-item-title">
+                                                <input type="checkbox" class="item-selector" data-item="${key}">
+                                                <h3><a href="${item.supplierUrl}" target="_blank">${window.currentLang === 'ja' ? item.name_ja : item.name}</a></h3>
                                             </div>
-                                        ` : ''}
-                                        <div class="order-actions">
-                                            <button class="arrived-btn" onclick="window.stocktakeSystem.markItemAsArrived('${key}')">
-                                                ${currentLang === 'ja' ? '到着済み' : 'Mark as Arrived'}
-                                            </button>
+                                            <span class="stocktake-category">${item.category}</span>
+                                        </div>
+                                        <div class="stocktake-item-details">
+                                            <div class="stocktake-stock">
+                                                <label>${window.currentLang === 'ja' ? '在庫数' : 'Current Stock'}:</label>
+                                                <span class="current-stock">${item.currentStock}</span>
+                                                <span class="stocktake-unit">${item.unit}</span>
+                                                <button class="update-stock-btn" data-item="${key}">${window.currentLang === 'ja' ? '在庫更新' : 'Update Stock'}</button>
+                                            </div>
+                                        </div>
+                                        ${item.isSubscription ? `
+                                            <div class="stocktake-status subscription">
+                                                <div class="next-delivery">
+                                                    <span class="delivery-label">${window.currentLang === 'ja' ? '次回配送予定' : 'Next Delivery'}:</span>
+                                                    <span class="delivery-value">${item.nextDeliveryDate ? item.nextDeliveryDate.toDate().toLocaleDateString() : 'Not set'}</span>
+                                                </div>
+                                                <button class="update-delivery-btn" onclick="window.stocktakeSystem.updateSubscriptionDelivery('${key}')">
+                                                    ${window.currentLang === 'ja' ? '配送更新' : 'Update Delivery'}
+                                                </button>
+                                            </div>
+                                        ` : `
+                                            <div class="stocktake-status">
+                                                ${window.currentLang === 'ja' ? '読み込み中...' : 'Loading...'}
+                                            </div>
+                                        `}
+                                        ${!item.orderStatus || !item.orderStatus.ordered ? `
+                                            <div class="order-actions">
+                                                <button class="order-btn" onclick="window.stocktakeSystem.markItemAsOrdered('${key}')">
+                                                    ${window.currentLang === 'ja' ? '発注済みとしてマーク' : 'Mark as Ordered'}
+                                                </button>
+                                            </div>
+                                        ` : `
+                                            <div class="order-status">
+                                                <div class="order-date">
+                                                    <span class="order-label">${window.currentLang === 'ja' ? '発注日' : 'Ordered'}:</span>
+                                                    <span class="order-value">${item.orderStatus.orderDate.toDate().toLocaleDateString()}</span>
+                                                </div>
+                                                <div class="arrival-date">
+                                                    <span class="order-label">${window.currentLang === 'ja' ? '到着予定' : 'Expected Arrival'}:</span>
+                                                    <span class="order-value">${item.orderStatus.estimatedArrival.toDate().toLocaleDateString()}</span>
+                                                </div>
+                                                ${item.orderStatus.quantity ? `
+                                                    <div class="order-quantity">
+                                                        <span class="order-label">${window.currentLang === 'ja' ? '発注数量' : 'Order Quantity'}:</span>
+                                                        <span class="order-value">${item.orderStatus.quantity} ${item.unit}</span>
+                                                    </div>
+                                                ` : ''}
+                                                <div class="order-actions">
+                                                    <button class="arrived-btn" onclick="window.stocktakeSystem.markItemAsArrived('${key}')">
+                                                        ${window.currentLang === 'ja' ? '到着済み' : 'Mark as Arrived'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        `}
+                                        <div class="stocktake-usage" data-item="${key}">
+                                            <div class="usage-loading">${window.currentLang === 'ja' ? '使用量を読み込み中...' : 'Loading usage data...'}</div>
                                         </div>
                                     </div>
-                                `}
-                                <div class="stocktake-usage" data-item="${key}">
-                                    <div class="usage-loading">${currentLang === 'ja' ? '使用量を読み込み中...' : 'Loading usage data...'}</div>
-                                </div>
+                                `).join('')}
                             </div>
-                        `);
-                        return acc;
-                    }, [])
-                    .join('')}
+                        </div>
+                    `).join('');
+                })()}
             </div>
         </div>
 
@@ -700,11 +717,11 @@ async function renderStocktake(container) {
         <div id="editItemsModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>${currentLang === 'ja' ? 'アイテム編集' : 'Edit Items'}</h2>
+                    <h2>${window.currentLang === 'ja' ? 'アイテム編集' : 'Edit Items'}</h2>
                     <button class="close-modal">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <button id="addNewItem" class="stocktake-btn">${currentLang === 'ja' ? '新規アイテム追加' : 'Add New Item'}</button>
+                    <button id="addNewItem" class="stocktake-btn">${window.currentLang === 'ja' ? '新規アイテム追加' : 'Add New Item'}</button>
                     <div id="itemsList"></div>
                 </div>
             </div>
@@ -714,13 +731,13 @@ async function renderStocktake(container) {
         <div id="updateStockModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>${currentLang === 'ja' ? '在庫更新' : 'Update Stock'} - <span id="updateItemName"></span></h2>
+                    <h2>${window.currentLang === 'ja' ? '在庫更新' : 'Update Stock'} - <span id="updateItemName"></span></h2>
                     <button class="close-modal">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="stock-update-options">
-                        <button class="stock-action-btn add" data-action="add">${currentLang === 'ja' ? '追加' : 'Add'}</button>
-                        <button class="stock-action-btn subtract" data-action="subtract">${currentLang === 'ja' ? '減算' : 'Subtract'}</button>
+                        <button class="stock-action-btn add" data-action="add">${window.currentLang === 'ja' ? '追加' : 'Add'}</button>
+                        <button class="stock-action-btn subtract" data-action="subtract">${window.currentLang === 'ja' ? '減算' : 'Subtract'}</button>
                     </div>
                     <div class="numpad-display">
                         <input type="text" id="stockAmount" readonly>
@@ -763,15 +780,7 @@ async function renderStocktake(container) {
                 } else {
                     daysLeft = Math.floor(currentStock / usageData.average);
                 }
-                
-                console.log('Debug stock status:', {
-                    item: item.name,
-                    currentStock,
-                    average: usageData.average,
-                    daysLeft,
-                    shippingTime: item.shippingTime,
-                    condition: daysLeft === 0 || daysLeft <= item.shippingTime
-                });
+                ;
                 
                 // Update status based on days left vs shipping time
                 const statusDiv = document.querySelector(`.stocktake-item[data-item="${key}"] .stocktake-status`);
@@ -779,41 +788,41 @@ async function renderStocktake(container) {
                     if (daysLeft === 0 || daysLeft <= item.shippingTime) {
                         statusDiv.classList.add('low-stock');
                         statusDiv.classList.remove('stock-ok', 'reorder-soon');
-                        statusDiv.textContent = currentLang === 'ja' ? '発注が必要' : 'Reorder Needed';
+                        statusDiv.textContent = window.currentLang === 'ja' ? '発注が必要' : 'Reorder Needed';
                     } else if (daysLeft === item.shippingTime + 1) {
                         statusDiv.classList.remove('low-stock', 'stock-ok');
                         statusDiv.classList.add('reorder-soon');
-                        statusDiv.textContent = currentLang === 'ja' ? '発注予定' : 'Reorder Soon';
+                        statusDiv.textContent = window.currentLang === 'ja' ? '発注予定' : 'Reorder Soon';
                     } else {
                         statusDiv.classList.remove('low-stock', 'reorder-soon');
                         statusDiv.classList.add('stock-ok');
-                        statusDiv.textContent = currentLang === 'ja' ? '在庫十分' : 'Stock OK';
+                        statusDiv.textContent = window.currentLang === 'ja' ? '在庫十分' : 'Stock OK';
                     }
                 }
                 
                 usageContainer.innerHTML = `
                     <div class="usage-header">
                         <div class="usage-total">
-                            <span class="usage-label">${currentLang === 'ja' ? '在庫予測' : 'Stock Projection'}:</span>
+                            <span class="usage-label">${window.currentLang === 'ja' ? '在庫予測' : 'Stock Projection'}:</span>
                             <span class="usage-value">${daysLeft === 0 ? 
-                                (currentLang === 'ja' ? '使用なし' : 'No Usage') : 
-                                `${daysLeft} ${currentLang === 'ja' ? '日' : 'days'}`}</span>
+                                (window.currentLang === 'ja' ? '使用なし' : 'No Usage') : 
+                                `${daysLeft} ${window.currentLang === 'ja' ? '日' : 'days'}`}</span>
                         </div>
                         <div class="usage-average">
-                            <span class="usage-label">${currentLang === 'ja' ? '配送予定日数' : 'Shipping Time'}:</span>
-                            <span class="usage-value">${item.shippingTime || 3} ${currentLang === 'ja' ? '日' : 'days'}</span>
+                            <span class="usage-label">${window.currentLang === 'ja' ? '配送予定日数' : 'Shipping Time'}:</span>
+                            <span class="usage-value">${item.shippingTime || 3} ${window.currentLang === 'ja' ? '日' : 'days'}</span>
                         </div>
                     </div>
                     <div class="usage-header">
                         <div class="usage-average">
-                            <span class="usage-label">${currentLang === 'ja' ? '平均使用量' : 'Average Usage'}:</span>
+                            <span class="usage-label">${window.currentLang === 'ja' ? '平均使用量' : 'Average Usage'}:</span>
                             <span class="usage-value">${usageData.average.toFixed(1)} ${item.unit}/day</span>
                         </div>
                     </div>
                 `;
             } catch (error) {
                 console.error('Error loading usage data:', error);
-                usageContainer.innerHTML = `<div class="usage-error">${currentLang === 'ja' ? '使用量データの読み込みに失敗しました' : 'Failed to load usage data'}</div>`;
+                usageContainer.innerHTML = `<div class="usage-error">${window.currentLang === 'ja' ? '使用量データの読み込みに失敗しました' : 'Failed to load usage data'}</div>`;
             }
         }
     }));
@@ -879,7 +888,7 @@ function addStocktakeEventListeners() {
                 const activeAction = document.querySelector('.stock-action-btn.active');
                 
                 if (!activeAction) {
-                    showCustomAlert(currentLang === 'ja' ? '追加または減算を選択してください' : 'Please select Add or Subtract', 'warning');
+                    showCustomAlert(window.currentLang === 'ja' ? '追加または減算を選択してください' : 'Please select Add or Subtract', 'warning');
                     return;
                 }
                 
@@ -958,15 +967,15 @@ async function updateStockLevel(event) {
         if (daysLeft === 0 || daysLeft <= item.shippingTime) {
             statusDiv.classList.add('low-stock');
             statusDiv.classList.remove('stock-ok', 'reorder-soon');
-            statusDiv.textContent = currentLang === 'ja' ? '発注が必要' : 'Reorder Needed';
+            statusDiv.textContent = window.currentLang === 'ja' ? '発注が必要' : 'Reorder Needed';
         } else if (daysLeft === item.shippingTime + 1) {
             statusDiv.classList.remove('low-stock', 'stock-ok');
             statusDiv.classList.add('reorder-soon');
-            statusDiv.textContent = currentLang === 'ja' ? '発注予定' : 'Reorder Soon';
+            statusDiv.textContent = window.currentLang === 'ja' ? '発注予定' : 'Reorder Soon';
         } else {
             statusDiv.classList.remove('low-stock', 'reorder-soon');
             statusDiv.classList.add('stock-ok');
-            statusDiv.textContent = currentLang === 'ja' ? '在庫十分' : 'Stock OK';
+            statusDiv.textContent = window.currentLang === 'ja' ? '在庫十分' : 'Stock OK';
         }
     }
 }
@@ -974,7 +983,7 @@ async function updateStockLevel(event) {
 // Function to export stocktake data
 function exportStocktake() {
     const data = Object.entries(inventoryData).map(([key, item]) => ({
-        name: currentLang === 'ja' ? item.name_ja : item.name,
+        name: window.currentLang === 'ja' ? item.name_ja : item.name,
         category: item.category,
         currentStock: item.currentStock,
         shippingTime: item.shippingTime,
@@ -1015,7 +1024,7 @@ async function saveStocktake() {
         });
     } catch (error) {
         console.error('Error saving stocktake data:', error);
-        showCustomAlert(currentLang === 'ja' ? 'エラーが発生しました' : 'Error saving stock data', 'error');
+        showCustomAlert(window.currentLang === 'ja' ? 'エラーが発生しました' : 'Error saving stock data', 'error');
     }
 }
 
@@ -1079,9 +1088,9 @@ function showEditModal() {
                 ${itemsByCategory[category].map(({ key, item }) => `
                     <div class="edit-item" data-key="${key}">
                         <div class="edit-item-header">
-                            <h3>${currentLang === 'ja' ? item.name_ja : item.name}</h3>
-                            <button class="edit-item-btn" data-key="${key}">${currentLang === 'ja' ? '編集' : 'Edit'}</button>
-                            <button class="delete-item-btn" data-key="${key}">${currentLang === 'ja' ? '削除' : 'Delete'}</button>
+                            <h3>${window.currentLang === 'ja' ? item.name_ja : item.name}</h3>
+                            <button class="edit-item-btn" data-key="${key}">${window.currentLang === 'ja' ? '編集' : 'Edit'}</button>
+                            <button class="delete-item-btn" data-key="${key}">${window.currentLang === 'ja' ? '削除' : 'Delete'}</button>
                         </div>
                     </div>
                 `).join('')}
@@ -1196,8 +1205,8 @@ function editItem(key) {
                 </div>
             </div>
             <div class="form-actions">
-                <button type="submit" class="stocktake-btn save-btn">${currentLang === 'ja' ? '保存' : 'Save'}</button>
-                <button type="button" class="stocktake-btn cancel-btn">${currentLang === 'ja' ? 'キャンセル' : 'Cancel'}</button>
+                <button type="submit" class="stocktake-btn save-btn">${window.currentLang === 'ja' ? '保存' : 'Save'}</button>
+                <button type="button" class="stocktake-btn cancel-btn">${window.currentLang === 'ja' ? 'キャンセル' : 'Cancel'}</button>
             </div>
         </form>
     `;
@@ -1252,7 +1261,7 @@ function editItem(key) {
             }
         } catch (error) {
             console.error('Error saving item:', error);
-            alert(currentLang === 'ja' ? '保存に失敗しました' : 'Failed to save changes');
+            alert(window.currentLang === 'ja' ? '保存に失敗しました' : 'Failed to save changes');
         }
     });
 
@@ -1265,7 +1274,7 @@ function editItem(key) {
 
 // Function to delete item
 function deleteItem(key) {
-    showCustomConfirm(currentLang === 'ja' ? 'このアイテムを削除してもよろしいですか？' : 'Are you sure you want to delete this item?', () => {
+    showCustomConfirm(window.currentLang === 'ja' ? 'このアイテムを削除してもよろしいですか？' : 'Are you sure you want to delete this item?', () => {
         delete inventoryData[key];
         showEditModal();
         renderStocktake(document.querySelector('.stocktake-container'));
@@ -1322,7 +1331,7 @@ function showBulkOrderModal(items) {
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
-                <h2>${currentLang === 'ja' ? '一括発注' : 'Bulk Order'}</h2>
+                <h2>${window.currentLang === 'ja' ? '一括発注' : 'Bulk Order'}</h2>
                 <button class="close-modal">&times;</button>
             </div>
             <div class="modal-body">
@@ -1330,27 +1339,27 @@ function showBulkOrderModal(items) {
                     ${otherItems.map(({key, item}) => `
                         <div class="bulk-order-item">
                             <div class="bulk-order-header">
-                                <h3>${currentLang === 'ja' ? item.name_ja : item.name}</h3>
+                                <h3>${window.currentLang === 'ja' ? item.name_ja : item.name}</h3>
                                 <a href="${item.supplierUrl}" target="_blank" class="supplier-link">
-                                    ${currentLang === 'ja' ? '仕入先サイト' : 'Supplier Site'}
+                                    ${window.currentLang === 'ja' ? '仕入先サイト' : 'Supplier Site'}
                                 </a>
                             </div>
                             <div class="bulk-order-details">
                                 <div class="form-group">
-                                    <label>${currentLang === 'ja' ? '発注数量' : 'Order Quantity'}:</label>
+                                    <label>${window.currentLang === 'ja' ? '発注数量' : 'Order Quantity'}:</label>
                                     <input type="number" name="quantity_${key}" value="${item.reorderQuantity}" min="1" required>
                                     <span class="unit">${item.unit}</span>
                                 </div>
                                 <div class="form-group">
-                                    <label>${currentLang === 'ja' ? '到着予定日' : 'Expected Arrival'}:</label>
+                                    <label>${window.currentLang === 'ja' ? '到着予定日' : 'Expected Arrival'}:</label>
                                     <input type="date" name="arrival_${key}" required>
                                 </div>
                             </div>
                         </div>
                     `).join('')}
                     <div class="form-actions">
-                        <button type="submit" class="stocktake-btn">${currentLang === 'ja' ? '発注を確定' : 'Confirm Orders'}</button>
-                        <button type="button" class="stocktake-btn cancel-btn">${currentLang === 'ja' ? 'キャンセル' : 'Cancel'}</button>
+                        <button type="submit" class="stocktake-btn">${window.currentLang === 'ja' ? '発注を確定' : 'Confirm Orders'}</button>
+                        <button type="button" class="stocktake-btn cancel-btn">${window.currentLang === 'ja' ? 'キャンセル' : 'Cancel'}</button>
                     </div>
                 </form>
             </div>
@@ -1411,7 +1420,7 @@ function showBulkOrderModal(items) {
             }
         } catch (error) {
             console.error('Error saving order status:', error);
-            showCustomAlert(currentLang === 'ja' ? '発注状態の保存に失敗しました' : 'Failed to save order status', 'error');
+            showCustomAlert(window.currentLang === 'ja' ? '発注状態の保存に失敗しました' : 'Failed to save order status', 'error');
         }
     });
 }
@@ -1438,7 +1447,7 @@ function markItemAsArrived(itemKey) {
             }
         }).catch(error => {
             console.error('Error saving stock update:', error);
-            showCustomAlert(currentLang === 'ja' ? '在庫の更新に失敗しました' : 'Failed to update stock', 'error');
+            showCustomAlert(window.currentLang === 'ja' ? '在庫の更新に失敗しました' : 'Failed to update stock', 'error');
         });
     }
 }
@@ -1455,7 +1464,7 @@ function showUpdateStockModal(itemKey) {
         display.value = '';
     }
     
-    itemName.textContent = currentLang === 'ja' ? item.name_ja : item.name;
+    itemName.textContent = window.currentLang === 'ja' ? item.name_ja : item.name;
     
     // Reset action buttons and select Add by default
     document.querySelectorAll('.stock-action-btn').forEach(btn => {
@@ -1475,7 +1484,7 @@ async function updateStockAmount(itemKey, amount, action) {
     if (action === 'subtract') {
         // Prevent negative stock
         if (amount > currentStock) {
-            alert(currentLang === 'ja' ? '在庫が不足しています' : 'Insufficient stock');
+            alert(window.currentLang === 'ja' ? '在庫が不足しています' : 'Insufficient stock');
             return;
         }
         item.currentStock -= amount;
@@ -1499,15 +1508,15 @@ async function updateStockAmount(itemKey, amount, action) {
     if (daysLeft === 0 || daysLeft <= item.shippingTime) {
         statusDiv.classList.add('low-stock');
         statusDiv.classList.remove('stock-ok', 'reorder-soon');
-        statusDiv.textContent = currentLang === 'ja' ? '発注が必要' : 'Reorder Needed';
+        statusDiv.textContent = window.currentLang === 'ja' ? '発注が必要' : 'Reorder Needed';
     } else if (daysLeft === item.shippingTime + 1) {
         statusDiv.classList.remove('low-stock', 'stock-ok');
         statusDiv.classList.add('reorder-soon');
-        statusDiv.textContent = currentLang === 'ja' ? '発注予定' : 'Reorder Soon';
+        statusDiv.textContent = window.currentLang === 'ja' ? '発注予定' : 'Reorder Soon';
     } else {
         statusDiv.classList.remove('low-stock', 'reorder-soon');
         statusDiv.classList.add('stock-ok');
-        statusDiv.textContent = currentLang === 'ja' ? '在庫十分' : 'Stock OK';
+        statusDiv.textContent = window.currentLang === 'ja' ? '在庫十分' : 'Stock OK';
     }
 
     // Save to Firebase
@@ -1519,7 +1528,7 @@ async function updateStockAmount(itemKey, amount, action) {
         });
     } catch (error) {
         console.error('Error saving stock update:', error);
-        showCustomAlert(currentLang === 'ja' ? '在庫の更新に失敗しました' : 'Failed to update stock', 'error');
+        showCustomAlert(window.currentLang === 'ja' ? '在庫の更新に失敗しました' : 'Failed to update stock', 'error');
     }
 }
 
@@ -1588,155 +1597,147 @@ function handleSpecialStockCircumstances(itemName, quantity, isAdding = false) {
         }
     };
 
-    const itemNameLower = itemName.toLowerCase();
+    const itemNameLower = ` ${itemName.toLowerCase()} `; // pad with spaces for exact match
     const stockChanges = {};
 
-    // Check for special cases
+    // Debug log for special stock circumstances
     for (const [specialItem, changes] of Object.entries(specialCases)) {
-        if (itemNameLower.includes(specialItem)) {
+        if (itemNameLower.includes(` ${specialItem} `)) {
             for (const [stockItem, change] of Object.entries(changes)) {
                 const multiplier = isAdding ? -1 : 1; // Reverse the change if we're adding stock back
                 stockChanges[stockItem] = change * quantity * multiplier;
+                console.log('[Stock Debug] Special stock change:', stockItem, 'by', change * quantity * multiplier, 'for', itemName);
             }
         }
     }
-
     return stockChanges;
 }
 
-// Function to process the most recent order
-async function processMostRecentOrder() {
-    console.log('Starting processMostRecentOrder function');
+// Helper to normalize names for matching
+function normalizeName(str) {
+    return str.toLowerCase().replace(/\s+/g, '');
+}
+
+// New function to process a given order for stock reduction
+async function processOrderForStock(order) {
+    console.log('[Stock Debug] processOrderForStock called with order:', order);
     try {
-        // Get the most recent order
-        console.log('Fetching most recent order...');
-        const ordersRef = window.firebaseServices.collection(window.firebaseDb, 'orders');
-        const querySnapshot = await window.firebaseServices.getDocs(ordersRef);
-        console.log('Query snapshot:', querySnapshot);
-        
-        if (querySnapshot.empty) {
-            console.log('No orders found');
-            return;
-        }
-
-        // Get the most recent order by sorting the documents
-        const orders = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        })).sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
-
-        const order = orders[0];
-        console.log('Found order:', order);
-
         // Process each item in the order
         for (const item of order.items) {
             const itemName = item.name.toLowerCase();
-            console.log('Processing item:', itemName, 'Quantity:', item.quantity);
-
+            console.log('[Stock Debug] Processing item:', itemName, item);
             // Handle special stock circumstances
             const specialStockChanges = handleSpecialStockCircumstances(item.name, item.quantity);
-            
-            // Apply special stock changes
+            let specialMatched = false;
             for (const [stockItem, change] of Object.entries(specialStockChanges)) {
                 const inventoryKey = Object.entries(inventoryData).find(([_, inventoryItem]) => 
                     stockItem === inventoryItem.name
                 )?.[0];
-
                 if (inventoryKey) {
                     const oldStock = inventoryData[inventoryKey].currentStock;
                     const newStock = Math.max(0, oldStock + change);
                     inventoryData[inventoryKey].currentStock = newStock;
-                    console.log(`Updated ${inventoryKey} stock:`, {
-                        itemName: stockItem,
-                        change,
-                        oldStock,
-                        newStock
-                    });
+                    specialMatched = true;
                 }
             }
-
-            // Handle items with customizations (soft drinks, ice cream, cakes)
-            if (item.customizations && item.customizations.length > 0) {
-                if (item.name === 'Soft Drink') {
-                    // Handle soft drink customizations
-                    item.customizations.forEach(customization => {
-                        const inventoryKey = Object.entries(inventoryData).find(([_, inventoryItem]) => 
-                            customization === inventoryItem.name
-                        )?.[0];
-
+            // Debug log before customizations loop
+            console.log('[Stock Debug] Entering customizations loop for:', itemName, item.customizations);
+            // Handle ice cream and cake customizations (robust matching)
+            let customizationMatched = false;
+            if (Array.isArray(item.customizations)) {
+                item.customizations.forEach(customization => {
+                    if (customization.toLowerCase().includes('ice cream') || customization.toLowerCase().includes('cake')) {
+                        const normalizedCustomization = normalizeName(customization);
+                        const inventoryKey = Object.entries(inventoryData).find(([_, inventoryItem]) => {
+                            const normInv = normalizeName(inventoryItem.name);
+                            if (normalizedCustomization.startsWith(normInv)) {
+                                const rest = normalizedCustomization.slice(normInv.length);
+                                // Allow if the rest is 'cake' or 'icecream' (with or without spaces)
+                                if (rest === 'cake' || rest === 'icecream' || rest === '') {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        })?.[0];
                         if (inventoryKey) {
                             const oldStock = inventoryData[inventoryKey].currentStock;
                             const newStock = Math.max(0, oldStock - item.quantity);
                             inventoryData[inventoryKey].currentStock = newStock;
-                            console.log(`Updated ${inventoryKey} stock:`, {
-                                itemName: customization,
-                                quantity: item.quantity,
-                                oldStock,
-                                newStock
-                            });
+                            customizationMatched = true;
+                            console.log('[Stock Debug] Customization match:', customization, 'matched inventory:', inventoryData[inventoryKey].name, '| Reduced/Restored by', item.quantity);
+                        } else {
+                            console.log('[Stock Debug] No customization match for:', customization);
                         }
-                    });
-                } else {
-                    // Handle ice cream and cake customizations
-                    item.customizations.forEach(customization => {
-                        if (customization.includes('Ice Cream') || customization.includes('Cake')) {
-                            const inventoryKey = Object.entries(inventoryData).find(([_, inventoryItem]) => 
-                                customization === inventoryItem.name
-                            )?.[0];
-
-                            if (inventoryKey) {
-                                const oldStock = inventoryData[inventoryKey].currentStock;
-                                const newStock = Math.max(0, oldStock - item.quantity);
-                                inventoryData[inventoryKey].currentStock = newStock;
-                                console.log(`Updated ${inventoryKey} stock:`, {
-                                    itemName: customization,
-                                    quantity: item.quantity,
-                                    oldStock,
-                                    newStock
-                                });
-                            }
-                        }
-                    });
-                }
-            } else {
-                // Handle regular stock items
-                const inventoryKey = Object.entries(inventoryData).find(([_, inventoryItem]) => 
-                    itemName === inventoryItem.name.toLowerCase() || 
-                    itemName === inventoryItem.name_ja.toLowerCase()
-                )?.[0];
-
-                if (inventoryKey) {
-                    const oldStock = inventoryData[inventoryKey].currentStock;
-                    const newStock = Math.max(0, oldStock - item.quantity);
-                    inventoryData[inventoryKey].currentStock = newStock;
-                    console.log(`Updated ${inventoryKey} stock:`, {
-                        itemName,
-                        quantity: item.quantity,
-                        oldStock,
-                        newStock
-                    });
-                }
+                    }
+                });
+            }
+            // Debug log before regular item reduction
+            console.log('[Stock Debug] Before regular item reduction for:', itemName);
+            // Always handle regular stock items (like restoreStockFromOrder)
+            console.log('[Stock Debug] Order itemName:', itemName, '| Normalized:', normalizeName(itemName));
+            Object.entries(inventoryData).forEach(([key, inventoryItem]) => {
+                console.log('[Stock Debug] Inventory item:', inventoryItem.name, '| Normalized:', normalizeName(inventoryItem.name));
+            });
+            const normalizedItemName = normalizeName(itemName);
+            const inventoryKey = Object.entries(inventoryData).find(([_, inventoryItem]) => 
+                normalizedItemName === normalizeName(inventoryItem.name) || 
+                normalizedItemName === normalizeName(inventoryItem.name_ja || '')
+            )?.[0];
+            if (inventoryKey) {
+                const oldStock = inventoryData[inventoryKey].currentStock;
+                const newStock = Math.max(0, oldStock - item.quantity);
+                inventoryData[inventoryKey].currentStock = newStock;
+            }
+            // Handle soft drink customizations (robust matching)
+            if (item.name.toLowerCase() === 'soft drink' && Array.isArray(item.customizations)) {
+                console.log('[Stock Debug] Entering soft drink reduction customization block for:', item.customizations);
+                item.customizations.forEach(customization => {
+                    const normalizedCustomization = normalizeName(customization);
+                    const inventoryKey = Object.entries(inventoryData).find(([_, inventoryItem]) => {
+                        return normalizedCustomization === normalizeName(inventoryItem.name);
+                    })?.[0];
+                    if (inventoryKey) {
+                        inventoryData[inventoryKey].currentStock = Math.max(0, inventoryData[inventoryKey].currentStock - item.quantity);
+                        console.log('[Stock Debug] Soft drink customization match:', customization, 'matched inventory:', inventoryData[inventoryKey].name, '| Reduced by', item.quantity);
+                    } else {
+                        console.log('[Stock Debug] No soft drink customization match for:', customization);
+                    }
+                });
             }
         }
-
         // Save updated stock to Firebase
-        console.log('Saving updated stock to Firebase...');
         const stocktakeRef = window.firebaseServices.doc(window.firebaseDb, 'stocktake', 'current');
         await window.firebaseServices.setDoc(stocktakeRef, {
             inventory: inventoryData,
             lastUpdated: window.firebaseServices.Timestamp.now()
         });
-        console.log('Stock saved to Firebase');
-
         // Update display if stocktake view is active
         const stocktakeContainer = document.querySelector('.stocktake-container');
         if (stocktakeContainer && stocktakeContainer.style.display !== 'none') {
-            console.log('Updating stocktake display');
             renderStocktake(stocktakeContainer);
         }
-
     } catch (error) {
-        console.error('Error processing order:', error);
+        console.error('Error processing order for stock:', error);
+    }
+}
+
+// Update processMostRecentOrder to use the new function
+async function processMostRecentOrder() {
+    try {
+        // Get the most recent order
+        const ordersRef = window.firebaseServices.collection(window.firebaseDb, 'orders');
+        const querySnapshot = await window.firebaseServices.getDocs(ordersRef);
+        if (querySnapshot.empty) {
+            return;
+        }
+        const orders = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        })).sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
+        const order = orders[0];
+        await processOrderForStock(order);
+    } catch (error) {
+        console.error('Error processing most recent order:', error);
     }
 }
 
@@ -1764,28 +1765,47 @@ async function restoreStockFromOrder(orderData) {
     try {
         for (const item of orderData.items) {
             const itemName = item.name.toLowerCase();
-            
             // Handle special stock circumstances
             const specialStockChanges = handleSpecialStockCircumstances(item.name, item.quantity, true);
-            
             // Apply special stock changes
             for (const [stockItem, change] of Object.entries(specialStockChanges)) {
                 const inventoryKey = Object.entries(inventoryData).find(([_, inventoryItem]) => 
                     stockItem === inventoryItem.name
                 )?.[0];
-
                 if (inventoryKey) {
                     inventoryData[inventoryKey].currentStock += change;
                     console.log(`Restored ${change} ${inventoryKey} to stock`);
                 }
             }
-
+            // Handle cake/ice cream customizations (robust matching)
+            if (Array.isArray(item.customizations)) {
+                item.customizations.forEach(customization => {
+                    if (customization.toLowerCase().includes('ice cream') || customization.toLowerCase().includes('cake')) {
+                        const normalizedCustomization = normalizeName(customization);
+                        const inventoryKey = Object.entries(inventoryData).find(([_, inventoryItem]) => {
+                            const normInv = normalizeName(inventoryItem.name);
+                            if (normalizedCustomization.startsWith(normInv)) {
+                                const rest = normalizedCustomization.slice(normInv.length);
+                                if (rest === 'cake' || rest === 'icecream' || rest === '') {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        })?.[0];
+                        if (inventoryKey) {
+                            inventoryData[inventoryKey].currentStock += item.quantity;
+                            console.log(`[Stock Debug] Restock customization match:`, customization, 'matched inventory:', inventoryData[inventoryKey].name, '| Restored by', item.quantity);
+                        } else {
+                            console.log('[Stock Debug] No restock customization match for:', customization);
+                        }
+                    }
+                });
+            }
             // Handle regular stock items
             const inventoryKey = Object.entries(inventoryData).find(([_, inventoryItem]) => 
                 itemName === inventoryItem.name.toLowerCase() || 
                 itemName === inventoryItem.name_ja.toLowerCase()
             )?.[0];
-
             if (inventoryKey) {
                 inventoryData[inventoryKey].currentStock += item.quantity;
                 console.log(`Restored ${item.quantity} ${inventoryKey} to stock`);
@@ -1925,7 +1945,7 @@ async function updateSubscriptionDelivery(itemKey) {
             }
         } catch (error) {
             console.error('Error updating subscription delivery:', error);
-            showCustomAlert(currentLang === 'ja' ? '配送の更新に失敗しました' : 'Failed to update delivery', 'error');
+            showCustomAlert(window.currentLang === 'ja' ? '配送の更新に失敗しました' : 'Failed to update delivery', 'error');
         }
     }
 }
@@ -1942,7 +1962,8 @@ window.stocktakeSystem = {
     markItemAsArrived,
     showBulkOrderModal,
     showEditModal,
-    updateSubscriptionDelivery
+    updateSubscriptionDelivery,
+    processOrderForStock // export the new function
 };
 
 // Initialize when the script loads
@@ -2002,9 +2023,6 @@ const stocktakeStyles = `
     }
 
     .stocktake-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 20px;
         padding: 0 20px;
     }
 
@@ -2339,20 +2357,23 @@ const stocktakeStyles = `
         font-weight: normal;
     }
 
+    .category-section {
+        margin-bottom: 30px;
+    }
+
     .category-header {
-        grid-column: 1 / -1;
         font-size: 1.2em;
         font-weight: bold;
         color: var(--primary);
-        padding: 15px 0 5px 0;
-        margin-top: 10px;
+        padding: 15px 0 10px 0;
+        margin-bottom: 15px;
+        border-bottom: 2px solid var(--primary);
     }
 
-    .category-divider {
-        grid-column: 1 / -1;
-        height: 1px;
-        background-color: #ddd;
-        margin: 10px 0;
+    .category-items {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
     }
 
     .stocktake-usage {
