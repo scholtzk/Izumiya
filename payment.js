@@ -7,6 +7,11 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
     const changeAmountEl = document.getElementById('changeAmount');
     const totalAmountEl = document.getElementById('totalAmount');
     let tenderedAmount = '';
+    
+    // Ensure tenderedAmount is always a string
+    function ensureString(value) {
+        return String(value || '');
+    }
 
     // Check if all required elements exist
     if (!paymentModal || !tenderedAmountEl || !changeAmountEl || !totalAmountEl) {
@@ -31,8 +36,15 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
     paymentModal.querySelectorAll('.numpad-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const value = this.textContent;
+            console.log('Numpad button clicked:', value, 'Current tenderedAmount:', tenderedAmount);
+            
             if (value === '⌫') {
-                tenderedAmount = tenderedAmount.slice(0, -1);
+                // Backspace functionality
+                tenderedAmount = ensureString(tenderedAmount);
+                if (tenderedAmount && tenderedAmount.length > 0) {
+                    tenderedAmount = tenderedAmount.slice(0, -1);
+                    console.log('Backspace: new tenderedAmount:', tenderedAmount);
+                }
             } else if (value === 'Pay Later') {
                 processPayLater();
                 paymentModal.style.display = 'none';
@@ -45,12 +57,15 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                     val = (window.currentOrder && typeof window.currentOrder.total === 'number') ? String(window.currentOrder.total) : '0';
                     console.log('Fallback value:', val);
                 }
-                tenderedAmount = val;
-                updateDisplay();
+                tenderedAmount = ensureString(val);
+                console.log('Cash button: new tenderedAmount:', tenderedAmount);
             } else {
-                tenderedAmount += value;
-                updateDisplay();
+                // Regular number input
+                tenderedAmount = ensureString(tenderedAmount) + value;
+                console.log('Number input: new tenderedAmount:', tenderedAmount);
             }
+            
+            updateDisplay();
         });
     });
 
