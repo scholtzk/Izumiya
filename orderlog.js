@@ -955,63 +955,129 @@ function showEditOrderDiscountModal(order, renderEditOrderItems) {
         console.error('Discount modal not found');
         return;
     }
+    
+    // Find or create the discountAmount element (same logic as main.js)
+    let discountAmountEl = document.getElementById('discountAmount');
+    if (!discountAmountEl) {
+        // Create the span if it doesn't exist
+        discountAmountEl = document.createElement('span');
+        discountAmountEl.id = 'discountAmount';
+        discountAmountEl.textContent = '0';
+        
+        // Find the total-amount div and add the span
+        const totalAmountDiv = discountModal.querySelector('.total-amount');
+        if (totalAmountDiv) {
+            totalAmountDiv.innerHTML = 'Discount Amount: -¥<span id="discountAmount">0</span>';
+            discountAmountEl = document.getElementById('discountAmount');
+        }
+    }
+    
+    if (!discountAmountEl) {
+        console.error('Discount amount element not found and could not be created');
+        return;
+    }
+    
     window.discountAmount = '';
-    document.getElementById('discountAmount').textContent = '0';
+    discountAmountEl.textContent = '0';
     discountModal.style.display = 'flex';
+    
+    // Check for apply button
+    let applyDiscountBtn = document.getElementById('applyDiscountBtn');
+    if (!applyDiscountBtn) {
+        console.error('applyDiscountBtn not found');
+        return;
+    }
+    
     // Remove any existing event listeners
     const numpadBtns = discountModal.querySelectorAll('.numpad-btn');
     numpadBtns.forEach(btn => {
         btn.replaceWith(btn.cloneNode(true));
     });
+    
+    // Add fresh event listeners
     discountModal.querySelectorAll('.numpad-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const value = this.textContent;
+            
             if (value === '⌫') {
+                // Backspace functionality
                 window.discountAmount = window.discountAmount.slice(0, -1);
             } else {
+                // Add digit
                 window.discountAmount += value;
             }
+            
+            // Update the discount amount display
             const amount = window.discountAmount ? parseInt(window.discountAmount) : 0;
-            document.getElementById('discountAmount').textContent = amount;
-            document.querySelector('#applyDiscountBtn').disabled = amount <= 0;
+            discountAmountEl.textContent = amount;
+            
+            // Enable/disable apply button based on amount
+            applyDiscountBtn.disabled = amount <= 0;
+            console.log('Discount amount:', amount, 'Button disabled:', applyDiscountBtn.disabled);
         });
     });
-    document.querySelector('#applyDiscountBtn').disabled = true;
+    
+    // Reset apply button state
+    applyDiscountBtn.disabled = true;
+    console.log('Initial button state - disabled:', applyDiscountBtn.disabled);
+    
+    // Test: Enable button after a short delay to see if it works
+    setTimeout(() => {
+        if (applyDiscountBtn) {
+            applyDiscountBtn.disabled = false;
+            console.log('Test: Button manually enabled, disabled state:', applyDiscountBtn.disabled);
+        }
+    }, 1000);
 
     // Remove previous listeners for Apply/Cancel
-    const newApplyBtn = discountModal.querySelector('#applyDiscountBtn').cloneNode(true);
-    discountModal.querySelector('#applyDiscountBtn').replaceWith(newApplyBtn);
-    const newCancelBtn = discountModal.querySelector('#cancelDiscountBtn').cloneNode(true);
-    discountModal.querySelector('#cancelDiscountBtn').replaceWith(newCancelBtn);
-
-    newApplyBtn.addEventListener('click', () => {
-        const amount = parseInt(window.discountAmount);
-        if (amount > 0) {
-            const discountItem = {
-                name: 'Local Discount',
-                price: -amount,
-                quantity: 1,
-                id: Date.now(),
-                customizations: ['Discount'],
-                isAdded: true // Mark as added
-            };
-            order.items.push(discountItem);
-            discountModal.style.display = 'none';
-            renderEditOrderItems();
-            // Close the add-item modal as well
-            const addItemModal = document.getElementById('addItemModal');
-            if (addItemModal) addItemModal.style.display = 'none';
-            // Update total
-            const updatedTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const totalElement = document.querySelector('.edit-order-total');
-            if (totalElement) {
-                totalElement.textContent = `Total: ¥${updatedTotal}`;
+    const existingApplyBtn = discountModal.querySelector('#applyDiscountBtn');
+    const existingCancelBtn = discountModal.querySelector('#cancelDiscountBtn');
+    
+    if (existingApplyBtn) {
+        const newApplyBtn = existingApplyBtn.cloneNode(true);
+        existingApplyBtn.replaceWith(newApplyBtn);
+        console.log('Button cloned and replaced');
+        
+        // Add event listener to the new apply button
+        newApplyBtn.addEventListener('click', () => {
+            const amount = parseInt(window.discountAmount);
+            if (amount > 0) {
+                const discountItem = {
+                    name: 'Local Discount',
+                    price: -amount,
+                    quantity: 1,
+                    id: Date.now(),
+                    customizations: ['Discount'],
+                    isAdded: true // Mark as added
+                };
+                order.items.push(discountItem);
+                discountModal.style.display = 'none';
+                renderEditOrderItems();
+                // Close the add-item modal as well
+                const addItemModal = document.getElementById('addItemModal');
+                if (addItemModal) addItemModal.style.display = 'none';
+                // Update total
+                const updatedTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                const totalElement = document.querySelector('.edit-order-total');
+                if (totalElement) {
+                    totalElement.textContent = `Total: ¥${updatedTotal}`;
+                }
             }
-        }
-    });
-    newCancelBtn.addEventListener('click', () => {
-        discountModal.style.display = 'none';
-    });
+        });
+        
+        // Update the reference to the new button for the numpad event listeners
+        applyDiscountBtn = newApplyBtn;
+        console.log('Button reference updated, new button disabled:', applyDiscountBtn.disabled);
+    }
+    
+    if (existingCancelBtn) {
+        const newCancelBtn = existingCancelBtn.cloneNode(true);
+        existingCancelBtn.replaceWith(newCancelBtn);
+        
+        newCancelBtn.addEventListener('click', () => {
+            discountModal.style.display = 'none';
+        });
+    }
 }
 
 // Helper function to identify coffee items
