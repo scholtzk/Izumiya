@@ -24,8 +24,6 @@ export const menuData = {
         { name: 'Beer', name_ja: 'ビール', price: 580, hasMilk: false },
         { name: 'Water', name_ja: '水', price: 380, hasMilk: false },
         { type: 'divider' },
-        { name: 'Takeaway', name_ja: 'テイクアウェイ', isMilkAddon: true },
-        { name: '', price: 0, isBlank: true },
         { name: 'Local Discount', name_ja: 'ローカル割引', price: 0, isDiscount: true, hidePrice: true }
     ],
     'Food': [
