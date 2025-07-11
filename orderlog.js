@@ -1014,6 +1014,15 @@ function showEditOrderDiscountModal(order, renderEditOrderItems) {
     });
 }
 
+// Helper function to identify coffee items
+function isCoffeeItem(itemName) {
+    const coffeeItems = [
+        'Espresso', 'Cappuccino', 'Americano', 'Latte', 'Matcha Latte', 'Hot Cocoa',
+        'Ice Americano', 'Ice Latte', 'Ice Matcha Latte', 'Ice Cocoa'
+    ];
+    return coffeeItems.includes(itemName);
+}
+
 // Current Order Management Functions
 export function renderOrderItems(currentOrder, currentLang, getDisplayName, showMilkTypeButtons, hideMilkTypeButtons, updateItemQuantity, getDailyOrdersDoc) {
     if (!currentOrder || !Array.isArray(currentOrder.items)) return;
@@ -1069,8 +1078,8 @@ export function renderOrderItems(currentOrder, currentLang, getDisplayName, show
             }
             // Add selected class to clicked item
             orderItemEl.classList.add('selected');
-            // Show milk type buttons if item has milk
-            if (item.hasMilk) {
+            // Show milk type buttons if item has milk or is a coffee item
+            if (item.hasMilk || isCoffeeItem(item.name)) {
                 showMilkTypeButtons(item, orderItemEl, renderOrderItems);
             }
         });

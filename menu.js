@@ -719,14 +719,6 @@ export function loadMenuItems(category, renderOrderItems, updateOrderSummary, sa
                     if (item.isCustom) {
                         showCustomItemModal();
                     } else if (item.isDiscount) {
-                        const discountModal = document.getElementById('discountModal');
-                        const discountAmountEl = document.getElementById('discountAmount');
-                        const applyDiscountBtn = document.getElementById('applyDiscountBtn');
-                        console.log('discountModal:', discountModal, 'discountAmountEl:', discountAmountEl, 'applyDiscountBtn:', applyDiscountBtn);
-                        if (!discountModal || !discountAmountEl || !applyDiscountBtn) {
-                            // Removed showCustomAlert popup to avoid interference
-                            return;
-                        }
                         showDiscountModal();
                     } else if (item.hasJam) {
                         showJamOptions(item, itemCard, addItemToOrder, renderOrderItems, updateOrderSummary, saveCurrentOrder, showCustomItemModal, showDiscountModal);
@@ -793,41 +785,56 @@ export function showMilkTypeButtons(item, orderItemEl, renderOrderItems) {
     const currentMilkType = item.customizations?.find(c => c.includes('Milk'));
     const hasTakeaway = item.customizations?.includes('Takeaway');
 
-    // Only show Oat and Soy milk options, plus Takeaway
-    milkButtonsContainer.innerHTML = `
-        <button class="milk-type-btn ${currentMilkType === 'Oat Milk' ? 'active' : ''}" data-milk="Oat">Oat</button>
-        <button class="milk-type-btn ${currentMilkType === 'Soy Milk' ? 'active' : ''}" data-milk="Soy">Soy</button>
-        <button class="takeaway-btn${hasTakeaway ? ' active' : ''}" data-takeaway="true">Takeaway</button>
-    `;
+    // Check if this is a coffee item without milk
+    const coffeeItemsWithoutMilk = ['Espresso', 'Americano', 'Ice Americano'];
+    const isCoffeeWithoutMilk = coffeeItemsWithoutMilk.includes(item.name);
 
-    milkButtonsContainer.querySelectorAll('.milk-type-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const milkType = btn.dataset.milk;
-            // Find the item in window.currentOrder.items
-            const updatedItem = window.currentOrder.items.find(i => i.id === item.id);
-            if (updatedItem) {
-                updatedItem.customizations = updatedItem.customizations || [];
-                const milkCustomization = `${milkType} Milk`;
-                // If already selected, remove it (toggle off)
-                if (updatedItem.customizations.includes(milkCustomization)) {
-                    updatedItem.customizations = updatedItem.customizations.filter(c => c !== milkCustomization);
-                } else {
-                    // Remove any existing milk customizations first
-                    updatedItem.customizations = updatedItem.customizations.filter(c => !c.includes('Milk'));
-                    // Add the new milk type
-                    updatedItem.customizations.push(milkCustomization);
+    // Show different options based on item type
+    if (isCoffeeWithoutMilk) {
+        // For coffee items without milk, only show takeaway option
+        milkButtonsContainer.innerHTML = `
+            <button class="takeaway-btn${hasTakeaway ? ' active' : ''}" data-takeaway="true">Takeaway</button>
+        `;
+    } else {
+        // For items with milk, show oat, soy, and takeaway options
+        milkButtonsContainer.innerHTML = `
+            <button class="milk-type-btn ${currentMilkType === 'Oat Milk' ? 'active' : ''}" data-milk="Oat">Oat</button>
+            <button class="milk-type-btn ${currentMilkType === 'Soy Milk' ? 'active' : ''}" data-milk="Soy">Soy</button>
+            <button class="takeaway-btn${hasTakeaway ? ' active' : ''}" data-takeaway="true">Takeaway</button>
+        `;
+    }
+
+    // Only add milk button event listeners if milk buttons are present
+    if (!isCoffeeWithoutMilk) {
+        milkButtonsContainer.querySelectorAll('.milk-type-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const milkType = btn.dataset.milk;
+                // Find the item in window.currentOrder.items
+                const updatedItem = window.currentOrder.items.find(i => i.id === item.id);
+                if (updatedItem) {
+                    updatedItem.customizations = updatedItem.customizations || [];
+                    const milkCustomization = `${milkType} Milk`;
+                    // If already selected, remove it (toggle off)
+                    if (updatedItem.customizations.includes(milkCustomization)) {
+                        updatedItem.customizations = updatedItem.customizations.filter(c => c !== milkCustomization);
+                    } else {
+                        // Remove any existing milk customizations first
+                        updatedItem.customizations = updatedItem.customizations.filter(c => !c.includes('Milk'));
+                        // Add the new milk type
+                        updatedItem.customizations.push(milkCustomization);
+                    }
+                    // Update order summary and save
+                    updateOrderSummary(window.currentOrder);
+                    saveCurrentOrder(window.currentOrder);
+                    // Re-render order items
+                    renderOrderItems(window.currentOrder, window.currentLang, window.getDisplayName, showMilkTypeButtons, hideMilkTypeButtons, window.updateItemQuantity, window.getDailyOrdersDoc);
+                    // Hide the milk options after selection
+                    hideMilkTypeButtons();
                 }
-                // Update order summary and save
-                updateOrderSummary(window.currentOrder);
-                saveCurrentOrder(window.currentOrder);
-                // Re-render order items
-                renderOrderItems(window.currentOrder, window.currentLang, window.getDisplayName, showMilkTypeButtons, hideMilkTypeButtons, window.updateItemQuantity, window.getDailyOrdersDoc);
-                // Hide the milk options after selection
-                hideMilkTypeButtons();
-            }
+            });
         });
-    });
+    }
 
     // Add Takeaway button handler
     const takeawayBtn = milkButtonsContainer.querySelector('.takeaway-btn');

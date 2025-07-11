@@ -113,46 +113,72 @@ function addCustomItem() {
 
 function showDiscountModal() {
     const discountModal = document.getElementById('discountModal');
-    const discountAmountEl = document.getElementById('discountAmount');
-    const applyDiscountBtn = document.getElementById('applyDiscountBtn');
-    if (!discountModal || !discountAmountEl || !applyDiscountBtn) {
-        console.error('Discount modal or its elements not found');
-        if (typeof showCustomAlert === 'function') {
-            showCustomAlert('Discount modal is not available. Please refresh the page.', 'error');
-        }
+    if (!discountModal) {
+        console.error('Discount modal not found');
         return;
     }
+    
+    // Find or create the discountAmount element
+    let discountAmountEl = document.getElementById('discountAmount');
+    if (!discountAmountEl) {
+        // Create the span if it doesn't exist
+        discountAmountEl = document.createElement('span');
+        discountAmountEl.id = 'discountAmount';
+        discountAmountEl.textContent = '0';
+        
+        // Find the total-amount div and add the span
+        const totalAmountDiv = discountModal.querySelector('.total-amount');
+        if (totalAmountDiv) {
+            totalAmountDiv.innerHTML = 'Discount Amount: -¥<span id="discountAmount">0</span>';
+            discountAmountEl = document.getElementById('discountAmount');
+        }
+    }
+    
+    const applyDiscountBtn = document.getElementById('applyDiscountBtn');
+    if (!applyDiscountBtn) {
+        console.error('applyDiscountBtn not found');
+        return;
+    }
+    
+    // Reset discount amount
     window.discountAmount = '';
     discountAmountEl.textContent = '0';
+    
+    // Show the modal
     discountModal.style.display = 'flex';
+    
     // Remove any existing event listeners
     const numpadBtns = discountModal.querySelectorAll('.numpad-btn');
     numpadBtns.forEach(btn => {
         btn.replaceWith(btn.cloneNode(true));
     });
+    
+    // Add fresh event listeners
     discountModal.querySelectorAll('.numpad-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const value = this.textContent;
+            
             if (value === '⌫') {
+                // Backspace functionality
                 window.discountAmount = window.discountAmount.slice(0, -1);
             } else {
+                // Add digit
                 window.discountAmount += value;
             }
+            
+            // Update the discount amount display
             const amount = window.discountAmount ? parseInt(window.discountAmount) : 0;
             discountAmountEl.textContent = amount;
+            
+            // Enable/disable apply button based on amount
             applyDiscountBtn.disabled = amount <= 0;
         });
     });
+    
+    // Reset apply button state
     applyDiscountBtn.disabled = true;
 }
 window.showDiscountModal = showDiscountModal;
-// Diagnostic wrapper to trace all calls to showDiscountModal
-const originalShowDiscountModal = window.showDiscountModal;
-window.showDiscountModal = function(...args) {
-    console.log('showDiscountModal called. Modal:', document.getElementById('discountModal'), 'Amount:', document.getElementById('discountAmount'), 'Btn:', document.getElementById('applyDiscountBtn'));
-    console.trace();
-    return originalShowDiscountModal.apply(this, args);
-};
 
 // --- App Initialization and Event Listeners ---
 
