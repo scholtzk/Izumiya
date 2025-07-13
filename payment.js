@@ -38,20 +38,20 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
             const value = this.textContent;
             console.log('Numpad button clicked:', value, 'Current tenderedAmount:', tenderedAmount);
             
-            if (value === '⌫') {
+            if (this.id === 'payLaterBtn') {
+                processPayLater();
+                paymentModal.style.display = 'none';
+                return;
+            } else if (value === '⌫') {
                 // Backspace functionality
                 tenderedAmount = ensureString(tenderedAmount);
                 if (tenderedAmount && tenderedAmount.length > 0) {
                     tenderedAmount = tenderedAmount.slice(0, -1);
                     console.log('Backspace: new tenderedAmount:', tenderedAmount);
                 }
-            } else if (value === 'Pay Later') {
-                processPayLater();
-                paymentModal.style.display = 'none';
-                return;
             } else if (this.id === 'cashBtn') {
                 const totalAmountSpan = document.getElementById('totalAmount');
-                let val = totalAmountSpan ? totalAmountSpan.textContent.replace(/[^\d]/g, '') : '';
+                let val = totalAmountSpan ? totalAmountSpan.textContent.replace(/[^ -9]/g, '') : '';
                 console.log('Cash button value:', val);
                 if (!val || isNaN(Number(val))) {
                     val = (window.currentOrder && typeof window.currentOrder.total === 'number') ? String(window.currentOrder.total) : '0';

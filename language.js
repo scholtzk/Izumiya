@@ -13,6 +13,7 @@ export function toggleLanguage() {
     localStorage.setItem('currentLang', window.currentLang);
     updateLanguageButton();
     updateUILanguage();
+    window.dispatchEvent(new Event('languagechange'));
 }
 
 // Update the language toggle button text

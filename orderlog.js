@@ -377,7 +377,7 @@ export async function displayOrderLog(container, getDisplayName, t, updateOrderI
                         completed: newStatus
                     }));
                     
-                    await updateOrderInDaily(orderNumber, {
+                    await window.updateOrderInDaily(orderNumber, {
                         completed: newStatus,
                         items: updatedItems
                     });
@@ -418,7 +418,7 @@ export async function displayOrderLog(container, getDisplayName, t, updateOrderI
                         // Check if all items are completed
                         const allCompleted = updatedItems.every(item => item.completed);
                         
-                        await updateOrderInDaily(orderNumber, {
+                        await window.updateOrderInDaily(orderNumber, {
                             items: updatedItems,
                             completed: allCompleted
                         });
@@ -494,7 +494,7 @@ export async function processPayNow(orderNumber, showCustomAlert, getOrderByNumb
                     timestamp: window.firebaseServices.Timestamp.now()
                 };
                 
-                await updateOrderInDaily(parseInt(orderNumber), paymentDetails);
+                await window.updateOrderInDaily(parseInt(orderNumber), paymentDetails);
                 
                 // Close modal
                 document.getElementById('paymentModal').style.display = 'none';
@@ -892,7 +892,7 @@ export async function openEditOrderModal(orderNumber, getOrderByNumber, showCust
             if (saveBtn) saveBtn.onclick = async function() {
                 try {
                     const updatedTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                    await updateOrderInDaily(parseInt(order.orderNumber), {
+                    await window.updateOrderInDaily(parseInt(order.orderNumber), {
                         items: order.items,
                         total: updatedTotal,
                         completed: false
@@ -1369,7 +1369,41 @@ export async function processPayment(currentOrder, moveCurrentOrderToCompleted, 
         return;
     }
     
+    // Show processing indicator
+    const processingOverlay = document.createElement('div');
+    processingOverlay.style.position = 'fixed';
+    processingOverlay.style.top = '0';
+    processingOverlay.style.left = '0';
+    processingOverlay.style.width = '100%';
+    processingOverlay.style.height = '100%';
+    processingOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    processingOverlay.style.zIndex = '2000';
+    processingOverlay.style.display = 'flex';
+    processingOverlay.style.justifyContent = 'center';
+    processingOverlay.style.alignItems = 'center';
+    processingOverlay.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 10px; text-align: center;">
+            <div style="font-size: 18px; margin-bottom: 15px;">Processing Payment...</div>
+            <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #6F4E37; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+        </div>
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+    `;
+    document.body.appendChild(processingOverlay);
+    
     try {
+        // Check connection before processing
+        if (window.ensureFirestoreConnection) {
+            const isConnected = await window.ensureFirestoreConnection();
+            if (!isConnected) {
+                console.warn('Connection check failed, proceeding with retry logic');
+            }
+        }
+
         // Move current order to completed orders
         const completedOrder = { 
             ...currentOrder, 
@@ -1381,8 +1415,13 @@ export async function processPayment(currentOrder, moveCurrentOrderToCompleted, 
         };
         
         await moveCurrentOrderToCompleted(completedOrder);
+        
+        // Remove processing overlay
+        document.body.removeChild(processingOverlay);
+        
         // Immediately close modal and show success popup
         document.getElementById('paymentModal').style.display = 'none';
+        
         // Show success/change popup
         const overlay = document.createElement('div');
         overlay.style.position = 'fixed';
@@ -1412,6 +1451,7 @@ export async function processPayment(currentOrder, moveCurrentOrderToCompleted, 
         `;
         document.body.appendChild(overlay);
         document.body.appendChild(successMessage);
+        
         // Add click event to remove the message
         const dismissPopup = async () => {
             document.body.removeChild(overlay);
@@ -1424,28 +1464,88 @@ export async function processPayment(currentOrder, moveCurrentOrderToCompleted, 
         };
         overlay.addEventListener('click', dismissPopup);
         successMessage.addEventListener('click', dismissPopup);
-        // Do the rest in the background
+        
+        // Do the rest in the background with error handling
         (async () => {
-            if (window.stocktakeSystem && window.stocktakeSystem.processOrderForStock) {
-                await window.stocktakeSystem.processOrderForStock(completedOrder);
+            try {
+                if (window.stocktakeSystem && window.stocktakeSystem.processOrderForStock) {
+                    await window.stocktakeSystem.processOrderForStock(completedOrder);
+                }
+                await clearCurrentOrder();
+                const newOrder = await initializeOrder();
+                window.currentOrder = newOrder;
+            } catch (backgroundError) {
+                console.error('Background processing error:', backgroundError);
+                // Don't show error to user for background operations
             }
-            await clearCurrentOrder();
-            const newOrder = await initializeOrder();
-            window.currentOrder = newOrder;
         })();
     } catch (error) {
+        // Remove processing overlay
+        if (document.body.contains(processingOverlay)) {
+            document.body.removeChild(processingOverlay);
+        }
+        
         console.error('Error processing payment:', error);
-        showCustomAlert('Error processing payment. Please try again.', 'error');
+        
+        // Check if it's a connection-related error
+        const isConnectionError = error.message && (
+            error.message.includes('network') ||
+            error.message.includes('connection') ||
+            error.message.includes('timeout') ||
+            error.message.includes('quota') ||
+            error.message.includes('unavailable')
+        );
+        
+        if (isConnectionError) {
+            showCustomAlert('Connection issue detected. Please check your internet connection and try again. If the problem persists, please refresh the page.', 'error');
+        } else {
+            showCustomAlert('Error processing payment. Please try again.', 'error');
+        }
     }
 }
 
 export async function processPayLater(currentOrder, moveCurrentOrderToCompleted, clearCurrentOrder, initializeOrder, displayOrderLog, activeCategory, showCustomAlert) {
+    // Show processing indicator
+    const processingOverlay = document.createElement('div');
+    processingOverlay.style.position = 'fixed';
+    processingOverlay.style.top = '0';
+    processingOverlay.style.left = '0';
+    processingOverlay.style.width = '100%';
+    processingOverlay.style.height = '100%';
+    processingOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    processingOverlay.style.zIndex = '2000';
+    processingOverlay.style.display = 'flex';
+    processingOverlay.style.justifyContent = 'center';
+    processingOverlay.style.alignItems = 'center';
+    processingOverlay.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 10px; text-align: center;">
+            <div style="font-size: 18px; margin-bottom: 15px;">Saving Order...</div>
+            <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #6F4E37; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+        </div>
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+    `;
+    document.body.appendChild(processingOverlay);
+    
     try {
         // Check if we're in the order log view
         if (activeCategory === 'Order Log') {
             // If we're in order log, just close the modal
             document.getElementById('paymentModal').style.display = 'none';
+            document.body.removeChild(processingOverlay);
             return;
+        }
+
+        // Check connection before processing
+        if (window.ensureFirestoreConnection) {
+            const isConnected = await window.ensureFirestoreConnection();
+            if (!isConnected) {
+                console.warn('Connection check failed, proceeding with retry logic');
+            }
         }
 
         // Move current order to completed orders
@@ -1459,8 +1559,13 @@ export async function processPayLater(currentOrder, moveCurrentOrderToCompleted,
         };
         
         await moveCurrentOrderToCompleted(payLaterOrder);
+        
+        // Remove processing overlay
+        document.body.removeChild(processingOverlay);
+        
         // Immediately close modal and show order saved popup
         document.getElementById('paymentModal').style.display = 'none';
+        
         // Show order saved popup
         const overlay2 = document.createElement('div');
         overlay2.style.position = 'fixed';
@@ -1490,6 +1595,7 @@ export async function processPayLater(currentOrder, moveCurrentOrderToCompleted,
         `;
         document.body.appendChild(overlay2);
         document.body.appendChild(successMessage2);
+        
         // Add click event to remove the message
         const dismissPopup2 = async () => {
             document.body.removeChild(overlay2);
@@ -1502,18 +1608,43 @@ export async function processPayLater(currentOrder, moveCurrentOrderToCompleted,
         };
         overlay2.addEventListener('click', dismissPopup2);
         successMessage2.addEventListener('click', dismissPopup2);
-        // Do the rest in the background
+        
+        // Do the rest in the background with error handling
         (async () => {
-            if (window.stocktakeSystem && window.stocktakeSystem.processOrderForStock) {
-                await window.stocktakeSystem.processOrderForStock(payLaterOrder);
+            try {
+                if (window.stocktakeSystem && window.stocktakeSystem.processOrderForStock) {
+                    await window.stocktakeSystem.processOrderForStock(payLaterOrder);
+                }
+                await clearCurrentOrder();
+                const newOrder = await initializeOrder();
+                window.currentOrder = newOrder;
+            } catch (backgroundError) {
+                console.error('Background processing error:', backgroundError);
+                // Don't show error to user for background operations
             }
-            await clearCurrentOrder();
-            const newOrder = await initializeOrder();
-            window.currentOrder = newOrder;
         })();
     } catch (error) {
+        // Remove processing overlay
+        if (document.body.contains(processingOverlay)) {
+            document.body.removeChild(processingOverlay);
+        }
+        
         console.error('Error processing pay later:', error);
-        showCustomAlert('Error saving order. Please try again.', 'error');
+        
+        // Check if it's a connection-related error
+        const isConnectionError = error.message && (
+            error.message.includes('network') ||
+            error.message.includes('connection') ||
+            error.message.includes('timeout') ||
+            error.message.includes('quota') ||
+            error.message.includes('unavailable')
+        );
+        
+        if (isConnectionError) {
+            showCustomAlert('Connection issue detected. Please check your internet connection and try again. If the problem persists, please refresh the page.', 'error');
+        } else {
+            showCustomAlert('Error saving order. Please try again.', 'error');
+        }
     }
 }
 

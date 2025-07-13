@@ -75,6 +75,14 @@ window.processPayLater = processPayLater;
 window.updatePaymentModal = updatePaymentModal;
 window.getDailyOrdersDoc = getDailyOrdersDoc;
 
+// Robust fallback: ensure window.updateOrderInDaily is always set
+if (!window.updateOrderInDaily || typeof window.updateOrderInDaily !== 'function') {
+    window.updateOrderInDaily = updateOrderInDaily;
+    console.log('window.updateOrderInDaily set by fallback:', typeof window.updateOrderInDaily);
+} else {
+    console.log('window.updateOrderInDaily already set:', typeof window.updateOrderInDaily);
+}
+
 // Make language functions available globally
 window.initializeLanguage = initializeLanguage;
 window.toggleLanguage = toggleLanguage;
@@ -236,13 +244,24 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 
     // Add event delegation for Pay Now and Edit buttons in order log
+    // Add a check before using window.updateOrderInDaily
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('pay-now-btn')) {
             const orderNumber = e.target.dataset.orderNumber;
-            processPayNow(orderNumber, showCustomAlert, getOrderByNumber, updateOrderInDaily, displayOrderLog, t, window.activeCategory);
+            if (typeof window.updateOrderInDaily !== 'function') {
+                alert('Order update function is not available. Please refresh the page.');
+                console.error('window.updateOrderInDaily is not a function at pay-now-btn click:', window.updateOrderInDaily);
+                return;
+            }
+            processPayNow(orderNumber, showCustomAlert, getOrderByNumber, window.updateOrderInDaily, displayOrderLog, t, window.activeCategory);
         } else if (e.target.classList.contains('edit-order-btn')) {
             const orderNumber = e.target.dataset.orderNumber;
-            openEditOrderModal(orderNumber, getOrderByNumber, showCustomAlert, getDisplayName, t, updateOrderInDaily, deleteOrderFromDaily, displayOrderLog, window.activeCategory);
+            if (typeof window.updateOrderInDaily !== 'function') {
+                alert('Order update function is not available. Please refresh the page.');
+                console.error('window.updateOrderInDaily is not a function at edit-order-btn click:', window.updateOrderInDaily);
+                return;
+            }
+            openEditOrderModal(orderNumber, getOrderByNumber, showCustomAlert, getDisplayName, t, window.updateOrderInDaily, deleteOrderFromDaily, displayOrderLog, window.activeCategory);
         }
     });
 
@@ -406,6 +425,16 @@ function loadCategoryItems(category) {
         newStocktakeContainer.className = 'stocktake-container active';
         document.querySelector('.menu-panel').appendChild(newStocktakeContainer);
         if (window.stocktakeSystem) window.stocktakeSystem.renderStocktake(newStocktakeContainer);
+        return;
+    }
+    if (category === 'Task Manager') {
+        itemsGrid.style.display = 'none';
+        orderPanel.style.display = 'none';
+        analysisContainer.style.display = 'none';
+        signInContainer && (signInContainer.style.display = 'none');
+        // Show the task manager container
+        const taskManagerContainer = document.getElementById('task-manager-container');
+        if (taskManagerContainer) taskManagerContainer.style.display = 'block';
         return;
     }
     if (category === 'employee') {
