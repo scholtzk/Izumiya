@@ -1649,32 +1649,81 @@ export async function processPayLater(currentOrder, moveCurrentOrderToCompleted,
 }
 
 export function updatePaymentModal(currentOrder) {
-    const totalAmount = currentOrder.total;
-    
-    // Add null checks for all elements
-    const totalAmountEl = document.getElementById('totalAmount');
-    const tenderedAmountEl = document.getElementById('tenderedAmount');
-    const changeAmountEl = document.getElementById('changeAmount');
-    const processBtn = document.querySelector('.process-btn');
-    
-    if (totalAmountEl) {
-        totalAmountEl.textContent = totalAmount;
-    }
-    
-    if (tenderedAmountEl) {
-        tenderedAmountEl.textContent = '0';
-    }
-    
-    if (changeAmountEl) {
-        changeAmountEl.textContent = '0';
-    }
-    
-    // Reset numpad input
-    window.amountEntered = '';
-    
-    // Disable process button initially
-    if (processBtn) {
-        processBtn.disabled = true;
+    try {
+        // Validate currentOrder
+        if (!currentOrder || typeof currentOrder.total !== 'number') {
+            console.error('Invalid currentOrder in updatePaymentModal:', currentOrder);
+            return;
+        }
+
+        const totalAmount = currentOrder.total;
+        
+        // Add null checks for all elements
+        const totalAmountEl = document.getElementById('totalAmount');
+        const tenderedAmountEl = document.getElementById('tenderedAmount');
+        const changeAmountEl = document.getElementById('changeAmount');
+        const processBtn = document.querySelector('.process-btn');
+        
+        // Validate DOM elements are still connected
+        if (!totalAmountEl || !document.contains(totalAmountEl)) {
+            console.error('Total amount element not found or disconnected');
+            return;
+        }
+        
+        if (!tenderedAmountEl || !document.contains(tenderedAmountEl)) {
+            console.error('Tendered amount element not found or disconnected');
+            return;
+        }
+        
+        if (!changeAmountEl || !document.contains(changeAmountEl)) {
+            console.error('Change amount element not found or disconnected');
+            return;
+        }
+        
+        // Update total amount with validation
+        if (totalAmountEl) {
+            totalAmountEl.textContent = totalAmount;
+            console.log('Updated total amount to:', totalAmount);
+        }
+        
+        // Reset tendered amount with validation
+        if (tenderedAmountEl) {
+            tenderedAmountEl.textContent = '0';
+            console.log('Reset tendered amount to 0');
+        }
+        
+        // Reset change amount with validation
+        if (changeAmountEl) {
+            changeAmountEl.textContent = '0';
+            console.log('Reset change amount to 0');
+        }
+        
+        // Reset numpad input
+        if (typeof window.amountEntered !== 'undefined') {
+            window.amountEntered = '';
+        }
+        
+        // Disable process button initially
+        if (processBtn) {
+            processBtn.disabled = true;
+        }
+        
+        // Force a small delay to ensure DOM updates are complete
+        setTimeout(() => {
+            // Double-check the values were set correctly
+            if (totalAmountEl && totalAmountEl.textContent !== String(totalAmount)) {
+                console.warn('Total amount not set correctly, retrying...');
+                totalAmountEl.textContent = totalAmount;
+            }
+        }, 50);
+        
+    } catch (error) {
+        console.error('Error in updatePaymentModal:', error);
+        // Try to recover by refreshing the page if critical error
+        if (error.message && error.message.includes('disconnected')) {
+            console.warn('DOM elements disconnected, suggesting page refresh');
+            // Don't auto-refresh, just log the issue
+        }
     }
 } 
 

@@ -163,6 +163,16 @@ window.addEventListener('firebaseReady', function() {
         nameInput.style.borderRadius = '8px';
         nameInput.style.fontSize = '16px';
 
+        const wageInput = document.createElement('input');
+        wageInput.type = 'number';
+        wageInput.placeholder = 'Hourly Wage (円)';
+        wageInput.style.width = '100%';
+        wageInput.style.padding = '10px';
+        wageInput.style.marginBottom = '15px';
+        wageInput.style.border = '1px solid #e0e0e0';
+        wageInput.style.borderRadius = '8px';
+        wageInput.style.fontSize = '16px';
+
         const setupPinDisplayContainer = document.createElement('div');
         setupPinDisplayContainer.className = 'payment-details';
         setupPinDisplayContainer.style.background = 'var(--light)';
@@ -232,7 +242,8 @@ window.addEventListener('firebaseReady', function() {
                     setupPinDisplay.textContent = '----';
                 } else if (num === '✓') {
                     if (setupPin.length === 4 && nameInput.value.trim()) {
-                        saveEmployee(nameInput.value.trim(), setupPin);
+                        const wage = wageInput.value.trim() ? parseInt(wageInput.value.trim()) : 0;
+                        saveEmployee(nameInput.value.trim(), setupPin, wage);
                     }
                 } else if (setupPin.length < 4) {
                     setupPin += num;
@@ -273,6 +284,7 @@ window.addEventListener('firebaseReady', function() {
 
         modalContent.appendChild(modalTitle);
         modalContent.appendChild(nameInput);
+        modalContent.appendChild(wageInput);
         modalContent.appendChild(setupPinDisplayContainer);
         modalContent.appendChild(setupKeypad);
         modalContent.appendChild(setupStatus);
@@ -411,9 +423,12 @@ window.addEventListener('firebaseReady', function() {
     const { collection, addDoc, Timestamp, getDocs, query, where, orderBy, updateDoc, deleteDoc } = window.firebaseServices;
 
     // Function to format time duration
-    function formatDuration(startTime) {
-        const now = new Date();
-        const diff = now - startTime;
+    function formatDuration(startTime, endTime = null) {
+        const start = startTime instanceof Date ? startTime : startTime.toDate();
+        const end = endTime
+            ? (endTime instanceof Date ? endTime : endTime.toDate())
+            : new Date();
+        const diff = end - start;
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         return `${hours}h ${minutes}m`;
@@ -483,7 +498,7 @@ window.addEventListener('firebaseReady', function() {
                     <div style="font-size: 0.9em; color: #666;">
                         Started: ${signInTime.toLocaleTimeString()}
                         <br>
-                        Duration: ${formatDuration(signInTime)}
+                        Duration: ${formatDuration(signInTime, data.endTime)}
                         ${activeBreak ? `
                             <br>
                             <span style="color: #dc3545;">Currently on break${currentBreakDuration}</span>
@@ -924,7 +939,7 @@ window.addEventListener('firebaseReady', function() {
                         <strong>Start Time:</strong> ${signInTime.toLocaleTimeString()}
                     </div>
                     <div style="margin-bottom: 10px;">
-                        <strong>Duration:</strong> ${formatDuration(signInTime)}
+                        <strong>Duration:</strong> ${formatDuration(signInTime, shiftData.endTime)}
                     </div>
                     ${activeBreak ? `
                         <div style="color: #dc3545; margin-bottom: 10px;">
@@ -1089,7 +1104,7 @@ window.addEventListener('firebaseReady', function() {
     }
 
     // Save new employee
-    async function saveEmployee(name, pin) {
+    async function saveEmployee(name, pin, wage = 0) {
         try {
             // Check if PIN already exists
             const employeesRef = collection(db, 'employees');
@@ -1106,6 +1121,7 @@ window.addEventListener('firebaseReady', function() {
             await addDoc(collection(db, 'employees'), {
                 name: name,
                 pin: pin,
+                wage: wage,
                 createdAt: Timestamp.now()
             });
 
@@ -1532,7 +1548,7 @@ window.addEventListener('firebaseReady', function() {
                 <div style="font-size: 0.9em; color: #666;">
                     Started: ${signInTime.toLocaleTimeString()}
                     <br>
-                    Duration: ${formatDuration(signInTime)}
+                    Duration: ${formatDuration(signInTime, data.endTime)}
                     ${completedBreaks ? `
                         <br>
                         <span style="color: #666;">Breaks taken:<br>${completedBreaks}</span>
@@ -2027,6 +2043,13 @@ window.addEventListener('firebaseReady', function() {
                         `;
 
                         shiftDetails.appendChild(totalsDiv);
+                        
+                        // Add payslip generation button
+                        if (window.addPayslipButton) {
+                            const payslipButton = window.addPayslipButton(employeeName, currentYear, currentMonth);
+                            shiftDetails.appendChild(payslipButton);
+                        }
+                        
                         historyPopup.appendChild(shiftDetails);
                     };
 

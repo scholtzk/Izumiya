@@ -193,6 +193,101 @@ window.showDiscountModal = showDiscountModal;
 document.addEventListener('DOMContentLoaded', async function() {
     const t = (window.t || ((k) => k));
     
+    // Memory management and cleanup system
+    let paymentModalCleanup = null;
+    let memoryCheckInterval = null;
+    let sessionStartTime = Date.now();
+    
+    // Function to check for memory issues and state corruption
+    function checkSystemHealth() {
+        try {
+            // Check if critical global variables are still valid
+            if (!window.currentOrder || typeof window.currentOrder !== 'object') {
+                console.warn('window.currentOrder corrupted, attempting recovery');
+                window.currentOrder = {
+                    items: [],
+                    subtotal: 0,
+                    total: 0,
+                    orderNumber: 0
+                };
+            }
+            
+            // Check if DOM elements are still accessible
+            const criticalElements = [
+                'paymentModal',
+                'totalAmount',
+                'tenderedAmount',
+                'changeAmount'
+            ];
+            
+            const missingElements = criticalElements.filter(id => {
+                const element = document.getElementById(id);
+                return !element || !document.contains(element);
+            });
+            
+            if (missingElements.length > 0) {
+                console.warn('Critical DOM elements missing:', missingElements);
+                return false;
+            }
+            
+            // Check session duration (suggest refresh after 4 hours)
+            const sessionDuration = Date.now() - sessionStartTime;
+            const fourHours = 4 * 60 * 60 * 1000;
+            
+            if (sessionDuration > fourHours) {
+                console.warn('Long session detected, suggesting refresh for optimal performance');
+                // Show a subtle notification to the user
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #ff9800;
+                    color: white;
+                    padding: 10px 15px;
+                    border-radius: 5px;
+                    z-index: 10000;
+                    font-size: 14px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                `;
+                notification.textContent = 'Consider refreshing for best performance';
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 5000);
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Error in system health check:', error);
+            return false;
+        }
+    }
+    
+    // Function to perform cleanup
+    function performCleanup() {
+        try {
+            if (paymentModalCleanup && typeof paymentModalCleanup === 'function') {
+                paymentModalCleanup();
+            }
+            if (memoryCheckInterval) {
+                clearInterval(memoryCheckInterval);
+            }
+        } catch (error) {
+            console.error('Error during cleanup:', error);
+        }
+    }
+    
+    // Set up periodic health checks
+    memoryCheckInterval = setInterval(() => {
+        if (!checkSystemHealth()) {
+            console.warn('System health check failed');
+        }
+    }, 60000); // Check every minute
+    
     // Initialize language system
     initializeLanguage();
     
@@ -226,18 +321,33 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     });
 
-    // Set up checkout button
+    // Set up checkout button with enhanced error handling
     const checkoutBtn = document.querySelector('.checkout-btn');
     const paymentModal = document.getElementById('paymentModal');
     console.log('checkoutBtn:', checkoutBtn);
     console.log('paymentModal:', paymentModal);
     checkoutBtn.addEventListener('click', function() {
-        if (window.currentOrder.items.length > 0) {
-            // Show the modal and update it
-            paymentModal.style.display = 'flex';
-            setTimeout(() => {
-                updatePaymentModal(window.currentOrder);
-            }, 100);
+        try {
+            if (!checkSystemHealth()) {
+                showCustomAlert('System error detected. Please refresh the page.', 'error');
+                return;
+            }
+            
+            if (window.currentOrder.items.length > 0) {
+                // Show the modal and update it
+                paymentModal.style.display = 'flex';
+                setTimeout(() => {
+                    try {
+                        updatePaymentModal(window.currentOrder);
+                    } catch (error) {
+                        console.error('Error updating payment modal:', error);
+                        showCustomAlert('Payment system error. Please refresh the page.', 'error');
+                    }
+                }, 100);
+            }
+        } catch (error) {
+            console.error('Error in checkout button handler:', error);
+            showCustomAlert('Checkout error. Please refresh the page.', 'error');
         }
     });
 
@@ -339,7 +449,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     // Initialize payment modal keypad logic LAST, after everything else is ready
-    initPaymentModal({
+    const paymentModalResult = initPaymentModal({
         processPayment: async () => await processPayment(
             window.currentOrder,
             moveCurrentOrderToCompleted,
@@ -360,6 +470,30 @@ document.addEventListener('DOMContentLoaded', async function() {
         ),
         updatePaymentModal,
         showCustomAlert
+    });
+    
+    // Store cleanup function for memory management
+    if (paymentModalResult && paymentModalResult.cleanup) {
+        paymentModalCleanup = paymentModalResult.cleanup;
+    }
+    
+    // Set up page unload cleanup
+    window.addEventListener('beforeunload', performCleanup);
+    
+    // Set up visibility change handler for iPad backgrounding
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            // App is going to background, perform minimal cleanup
+            console.log('App going to background, performing cleanup');
+        } else {
+            // App is coming back to foreground, check system health
+            console.log('App returning to foreground, checking system health');
+            setTimeout(() => {
+                if (!checkSystemHealth()) {
+                    console.warn('System health check failed after returning to foreground');
+                }
+            }, 1000);
+        }
     });
 });
 
