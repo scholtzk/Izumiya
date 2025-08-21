@@ -58,9 +58,10 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                 return;
             }
 
-            const total = parseInt(totalAmountEl.textContent) || 0;
-            const tendered = tenderedAmount ? parseInt(tenderedAmount) : 0;
-            console.log('updateDisplay: tenderedAmount =', tenderedAmount, 'parsed =', tendered);
+            const totalTextRaw = totalAmountEl.textContent || '0';
+            const total = parseInt(String(totalTextRaw).replace(/[^0-9]/g, ''), 10) || 0;
+            const tendered = tenderedAmount ? (parseInt(String(tenderedAmount).replace(/[^0-9]/g, ''), 10) || 0) : 0;
+            console.log('updateDisplay: tenderedAmount =', tenderedAmount, 'parsed =', tendered, 'total parsed =', total);
             
             if (tenderedAmountEl) {
                 tenderedAmountEl.textContent = isNaN(tendered) ? 0 : tendered;
@@ -176,8 +177,8 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                     return;
                 }
 
-                const total = parseInt(totalAmountEl.textContent) || 0;
-                const tendered = tenderedAmount ? parseInt(tenderedAmount) : 0;
+                const total = parseInt(String(totalAmountEl.textContent || '0').replace(/[^0-9]/g, ''), 10) || 0;
+                const tendered = tenderedAmount ? (parseInt(String(tenderedAmount).replace(/[^0-9]/g, ''), 10) || 0) : 0;
                 
                 console.log('Payment validation - Total:', total, 'Tendered:', tendered, 'Raw tenderedAmount:', tenderedAmount);
                 

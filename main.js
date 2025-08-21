@@ -197,6 +197,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     let paymentModalCleanup = null;
     let memoryCheckInterval = null;
     let sessionStartTime = Date.now();
+    let sessionDayKey = null;
     
     // Function to check for memory issues and state corruption
     function checkSystemHealth() {
@@ -228,6 +229,23 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (missingElements.length > 0) {
                 console.warn('Critical DOM elements missing:', missingElements);
                 return false;
+            }
+            
+            // Day change detection to avoid stale dailyOrders key
+            if (typeof window.getTodayKey === 'function') {
+                const todayKey = window.getTodayKey();
+                if (!sessionDayKey) sessionDayKey = todayKey;
+                if (sessionDayKey !== todayKey) {
+                    console.warn('Detected calendar day change during long session. Suggesting refresh.');
+                    const notif = document.createElement('div');
+                    notif.style.cssText = `
+                    position: fixed; bottom: 20px; right: 20px; background: #dc3545; color: white; padding: 12px 16px; border-radius: 6px; z-index: 10001; font-size: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);`;
+                    notif.textContent = 'New day detected. Please refresh to ensure orders update correctly.';
+                    document.body.appendChild(notif);
+                    setTimeout(() => { if (notif.parentNode) notif.parentNode.removeChild(notif); }, 8000);
+                    // Update sessionDayKey so we don't spam notifications
+                    sessionDayKey = todayKey;
+                }
             }
             
             // Check session duration (suggest refresh after 4 hours)

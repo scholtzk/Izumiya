@@ -6,6 +6,12 @@ export function getTodayKey() {
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 }
 
+export function getYesterdayKey() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export async function getDailyOrdersDoc() {
     const todayKey = getTodayKey();
     const dailyOrdersRef = window.firebaseServices.doc(window.firebaseDb, 'dailyOrders', todayKey);
@@ -76,25 +82,42 @@ export async function updateOrderInDaily(orderNumber, updates) {
         const doc = await window.firebaseServices.getDoc(dailyOrdersRef);
         const data = doc.data();
         
-        if (!data.orders[orderNumber]) {
-            throw new Error('Order not found');
+        if (data.orders && data.orders[orderNumber]) {
+            const updatedOrders = {
+                ...data.orders,
+                [orderNumber]: {
+                    ...data.orders[orderNumber],
+                    ...updates
+                }
+            };
+            await window.firebaseServices.updateDoc(dailyOrdersRef, {
+                orders: updatedOrders,
+                lastUpdated: window.firebaseServices.Timestamp.now()
+            });
+            return true;
         }
         
-        // Update the specific order
-        const updatedOrders = {
-            ...data.orders,
-            [orderNumber]: {
-                ...data.orders[orderNumber],
-                ...updates
-            }
-        };
+        // Fallback to yesterday's document (handles midnight rollover on long-running sessions)
+        const yesterdayKey = getYesterdayKey();
+        const yesterdayRef = window.firebaseServices.doc(window.firebaseDb, 'dailyOrders', yesterdayKey);
+        const yDoc = await window.firebaseServices.getDoc(yesterdayRef);
+        const yData = yDoc.exists() ? yDoc.data() : null;
+        if (yData && yData.orders && yData.orders[orderNumber]) {
+            const updatedOrders = {
+                ...yData.orders,
+                [orderNumber]: {
+                    ...yData.orders[orderNumber],
+                    ...updates
+                }
+            };
+            await window.firebaseServices.updateDoc(yesterdayRef, {
+                orders: updatedOrders,
+                lastUpdated: window.firebaseServices.Timestamp.now()
+            });
+            return true;
+        }
         
-        await window.firebaseServices.updateDoc(dailyOrdersRef, {
-            orders: updatedOrders,
-            lastUpdated: window.firebaseServices.Timestamp.now()
-        });
-        
-        return true;
+        throw new Error('Order not found');
     } catch (error) {
         console.error('Error updating order in daily:', error);
         return false;
@@ -107,20 +130,32 @@ export async function deleteOrderFromDaily(orderNumber) {
         const doc = await window.firebaseServices.getDoc(dailyOrdersRef);
         const data = doc.data();
         
-        if (!data.orders[orderNumber]) {
-            throw new Error('Order not found');
+        if (data.orders && data.orders[orderNumber]) {
+            const updatedOrders = { ...data.orders };
+            delete updatedOrders[orderNumber];
+            await window.firebaseServices.updateDoc(dailyOrdersRef, {
+                orders: updatedOrders,
+                lastUpdated: window.firebaseServices.Timestamp.now()
+            });
+            return true;
         }
         
-        // Remove the order from the map
-        const updatedOrders = { ...data.orders };
-        delete updatedOrders[orderNumber];
+        // Fallback to yesterday's document
+        const yesterdayKey = getYesterdayKey();
+        const yesterdayRef = window.firebaseServices.doc(window.firebaseDb, 'dailyOrders', yesterdayKey);
+        const yDoc = await window.firebaseServices.getDoc(yesterdayRef);
+        const yData = yDoc.exists() ? yDoc.data() : null;
+        if (yData && yData.orders && yData.orders[orderNumber]) {
+            const updatedOrders = { ...yData.orders };
+            delete updatedOrders[orderNumber];
+            await window.firebaseServices.updateDoc(yesterdayRef, {
+                orders: updatedOrders,
+                lastUpdated: window.firebaseServices.Timestamp.now()
+            });
+            return true;
+        }
         
-        await window.firebaseServices.updateDoc(dailyOrdersRef, {
-            orders: updatedOrders,
-            lastUpdated: window.firebaseServices.Timestamp.now()
-        });
-        
-        return true;
+        throw new Error('Order not found');
     } catch (error) {
         console.error('Error deleting order from daily:', error);
         return false;
@@ -152,7 +187,20 @@ export async function getOrderByNumber(orderNumber) {
         const doc = await window.firebaseServices.getDoc(dailyOrdersRef);
         const data = doc.data();
         
-        return data.orders[orderNumber] || null;
+        if (data.orders && data.orders[orderNumber]) {
+            return data.orders[orderNumber];
+        }
+        
+        // Fallback to yesterday's document
+        const yesterdayKey = getYesterdayKey();
+        const yesterdayRef = window.firebaseServices.doc(window.firebaseDb, 'dailyOrders', yesterdayKey);
+        const yDoc = await window.firebaseServices.getDoc(yesterdayRef);
+        const yData = yDoc.exists() ? yDoc.data() : null;
+        if (yData && yData.orders && yData.orders[orderNumber]) {
+            return yData.orders[orderNumber];
+        }
+        
+        return null;
     } catch (error) {
         console.error('Error getting order by number:', error);
         return null;
@@ -377,10 +425,14 @@ export async function displayOrderLog(container, getDisplayName, t, updateOrderI
                         completed: newStatus
                     }));
                     
-                    await window.updateOrderInDaily(orderNumber, {
+                    const ok = await window.updateOrderInDaily(orderNumber, {
                         completed: newStatus,
                         items: updatedItems
                     });
+                    if (!ok) {
+                        showCustomAlert('Could not update order. It may belong to yesterday. Please refresh the page.', 'warning');
+                        return;
+                    }
                     
                     // Toggle the completed class for the entire order-log-item
                     orderLogItem.classList.toggle('completed');
@@ -477,7 +529,8 @@ export async function processPayNow(orderNumber, showCustomAlert, getOrderByNumb
         
         // Add new click handler
         newProcessBtn.addEventListener('click', async () => {
-            const tenderedAmount = parseInt(document.getElementById('tenderedAmount').textContent);
+            const tenderedText = (document.getElementById('tenderedAmount').textContent || '0');
+            const tenderedAmount = parseInt(tenderedText.replace(/[^0-9]/g, ''), 10) || 0;
             
             if (tenderedAmount < totalAmount) {
                 showCustomAlert('Insufficient payment amount', 'warning');
@@ -1361,8 +1414,10 @@ export async function startNewOrder(generateOrderNumber, showCustomAlert) {
 
 // Payment Functions
 export async function processPayment(currentOrder, moveCurrentOrderToCompleted, clearCurrentOrder, initializeOrder, displayOrderLog, activeCategory, showCustomAlert) {
-    const tenderedAmount = parseInt(document.getElementById('tenderedAmount').textContent);
-    const totalAmount = parseInt(document.getElementById('totalAmount').textContent);
+    const tenderedText = (document.getElementById('tenderedAmount').textContent || '0');
+    const totalText = (document.getElementById('totalAmount').textContent || '0');
+    const tenderedAmount = parseInt(String(tenderedText).replace(/[^0-9]/g, ''), 10) || 0;
+    const totalAmount = parseInt(String(totalText).replace(/[^0-9]/g, ''), 10) || 0;
     
     if (tenderedAmount < totalAmount) {
         showCustomAlert('Insufficient payment amount', 'warning');
