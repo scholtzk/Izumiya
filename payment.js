@@ -15,37 +15,41 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
         const debugPanel = document.createElement('div');
         debugPanel.className = 'debug-panel';
         debugPanel.style.cssText = `
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.8);
+            position: fixed;
+            top: 50px;
+            right: 20px;
+            background: #dc3545;
             color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            font-family: monospace;
-            z-index: 1000;
-            max-width: 200px;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            z-index: 10000;
+            min-width: 250px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            border: 2px solid #fff;
         `;
         
         const debugTitle = document.createElement('div');
-        debugTitle.textContent = 'Debug Info';
-        debugTitle.style.cssText = 'font-weight: bold; margin-bottom: 5px; border-bottom: 1px solid #ccc; padding-bottom: 3px;';
+        debugTitle.textContent = '🔍 Payment Debug Panel';
+        debugTitle.style.cssText = 'font-weight: bold; margin-bottom: 8px; border-bottom: 2px solid #fff; padding-bottom: 5px; font-size: 16px;';
         
         const debugContent = document.createElement('div');
         debugContent.id = 'debugContent';
+        debugContent.style.cssText = 'line-height: 1.4; margin-bottom: 10px;';
         
         const resetBtn = document.createElement('button');
-        resetBtn.textContent = 'Reset Payment';
+        resetBtn.textContent = '🔄 Reset Payment State';
         resetBtn.style.cssText = `
-            background: #dc3545;
-            color: white;
+            background: #fff;
+            color: #dc3545;
             border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 11px;
-            margin-top: 5px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
             cursor: pointer;
+            width: 100%;
         `;
         resetBtn.onclick = () => {
             tenderedAmount = '';
@@ -56,7 +60,25 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
         debugPanel.appendChild(debugTitle);
         debugPanel.appendChild(debugContent);
         debugPanel.appendChild(resetBtn);
-        paymentModal.appendChild(debugPanel);
+        document.body.appendChild(debugPanel); // Append to body instead of modal
+        
+        // Auto-hide after 30 seconds of inactivity
+        let hideTimeout;
+        const resetHideTimeout = () => {
+            clearTimeout(hideTimeout);
+            hideTimeout = setTimeout(() => {
+                if (debugPanel.parentNode) {
+                    debugPanel.style.opacity = '0.3';
+                }
+            }, 30000);
+        };
+        
+        debugPanel.addEventListener('mouseenter', () => {
+            debugPanel.style.opacity = '1';
+            resetHideTimeout();
+        });
+        
+        resetHideTimeout();
     }
     
     // Update debug panel with current state
