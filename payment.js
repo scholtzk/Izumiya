@@ -181,6 +181,11 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
     paymentModal.querySelectorAll('.numpad-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             try {
+                // Ensure debug panel is visible
+                if (!paymentModal.querySelector('.debug-panel')) {
+                    addDebugPanel();
+                }
+                
                 if (!validatePaymentState()) {
                     console.warn('Payment state invalid during numpad input');
                     return;
@@ -290,6 +295,23 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
         }
     });
 
+    // Also add debug panel when modal becomes visible (more reliable)
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                const modal = mutation.target;
+                if (modal.style.display === 'flex' || modal.style.display === 'block') {
+                    setTimeout(() => {
+                        addDebugPanel();
+                        updateDebugPanel();
+                    }, 100);
+                }
+            }
+        });
+    });
+    
+    observer.observe(paymentModal, { attributes: true, attributeFilter: ['style'] });
+
     // Add periodic state validation for long-running sessions
     const validationInterval = setInterval(() => {
         if (paymentModal.style.display === 'flex' || paymentModal.style.display === 'block') {
@@ -298,12 +320,18 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                 tenderedAmount = '';
                 updateDisplay();
             }
+            // Ensure debug panel is visible
+            if (!paymentModal.querySelector('.debug-panel')) {
+                addDebugPanel();
+            }
+            updateDebugPanel();
         }
     }, 30000); // Check every 30 seconds
 
     // Cleanup function
     const cleanup = () => {
         clearInterval(validationInterval);
+        observer.disconnect();
     };
 
     // Expose a reset function
