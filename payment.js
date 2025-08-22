@@ -78,6 +78,14 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
         document.body.appendChild(debugPanel);
     }
     
+    // Hide debug panel
+    function hideDebugPanel() {
+        const debugPanel = document.getElementById('paymentDebugPanel');
+        if (debugPanel) {
+            debugPanel.remove();
+        }
+    }
+    
     // Update debug panel with current state
     function updateDebugPanel() {
         const debugContent = document.getElementById('debugContent');
@@ -211,6 +219,7 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                 if (this.id === 'payLaterBtn') {
                     processPayLater();
                     paymentModal.style.display = 'none';
+                    hideDebugPanel();
                     return;
                 } else if (value === '⌫') {
                     // Backspace functionality
@@ -253,9 +262,11 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                 paymentModal.style.display = 'none';
                 tenderedAmount = '';
                 updateDisplay();
+                hideDebugPanel();
             } catch (error) {
                 console.error('Error in cancel button handler:', error);
                 paymentModal.style.display = 'none';
+                hideDebugPanel();
             }
         });
     }
@@ -290,6 +301,7 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                 paymentModal.style.display = 'none';
                 tenderedAmount = '';
                 updateDisplay();
+                hideDebugPanel();
             } catch (error) {
                 console.error('Error in complete payment handler:', error);
                 showCustomAlert('Payment processing error. Please try again.', 'error');
@@ -319,6 +331,8 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                         addDebugPanel();
                         updateDebugPanel();
                     }, 100);
+                } else if (modal.style.display === 'none') {
+                    hideDebugPanel();
                 }
             }
         });
