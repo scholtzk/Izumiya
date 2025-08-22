@@ -8,6 +8,10 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
     const totalAmountEl = document.getElementById('totalAmount');
     let tenderedAmount = '';
     
+    // Remove any existing debug panels first
+    const existingPanels = document.querySelectorAll('.payment-debug-panel, .debug-panel');
+    existingPanels.forEach(panel => panel.remove());
+    
     // Global flag to prevent multiple debug panels
     if (window.paymentDebugPanelExists) {
         console.log('Payment debug panel already exists, skipping initialization');
@@ -17,10 +21,15 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
     
     // Add debug panel to payment modal
     function addDebugPanel() {
-        if (document.querySelector('.payment-debug-panel')) return; // Already exists
+        // Remove any existing panels first
+        const existing = document.querySelector('.payment-debug-panel');
+        if (existing) {
+            existing.remove();
+        }
         
         const debugPanel = document.createElement('div');
         debugPanel.className = 'payment-debug-panel';
+        debugPanel.id = 'paymentDebugPanel';
         debugPanel.style.cssText = `
             position: fixed;
             top: 60px;
@@ -67,24 +76,6 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
         debugPanel.appendChild(debugContent);
         debugPanel.appendChild(resetBtn);
         document.body.appendChild(debugPanel);
-        
-        // Auto-hide after 30 seconds of inactivity
-        let hideTimeout;
-        const resetHideTimeout = () => {
-            clearTimeout(hideTimeout);
-            hideTimeout = setTimeout(() => {
-                if (debugPanel.parentNode) {
-                    debugPanel.style.opacity = '0.3';
-                }
-            }, 30000);
-        };
-        
-        debugPanel.addEventListener('mouseenter', () => {
-            debugPanel.style.opacity = '1';
-            resetHideTimeout();
-        });
-        
-        resetHideTimeout();
     }
     
     // Update debug panel with current state
@@ -102,7 +93,7 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
             Tendered: ${tendered}<br>
             Change: ${change}<br>
             Variable: ${tenderedVar}<br>
-            <small style="color: #aaa;">${new Date().toLocaleTimeString()}</small>
+            <small style="color: #666;">${new Date().toLocaleTimeString()}</small>
         `;
     }
     
@@ -209,11 +200,6 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
     paymentModal.querySelectorAll('.numpad-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             try {
-                // Ensure debug panel is visible
-                if (!document.querySelector('.payment-debug-panel')) {
-                    addDebugPanel();
-                }
-                
                 if (!validatePaymentState()) {
                     console.warn('Payment state invalid during numpad input');
                     return;
@@ -348,10 +334,6 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                 tenderedAmount = '';
                 updateDisplay();
             }
-            // Ensure debug panel is visible
-            if (!document.querySelector('.payment-debug-panel')) {
-                addDebugPanel();
-            }
             updateDebugPanel();
         }
     }, 30000); // Check every 30 seconds
@@ -360,6 +342,9 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
     const cleanup = () => {
         clearInterval(validationInterval);
         observer.disconnect();
+        // Remove debug panel on cleanup
+        const debugPanel = document.getElementById('paymentDebugPanel');
+        if (debugPanel) debugPanel.remove();
     };
 
     // Expose a reset function
