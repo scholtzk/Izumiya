@@ -8,6 +8,76 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
     const totalAmountEl = document.getElementById('totalAmount');
     let tenderedAmount = '';
     
+    // Add debug panel to payment modal
+    function addDebugPanel() {
+        if (paymentModal.querySelector('.debug-panel')) return; // Already exists
+        
+        const debugPanel = document.createElement('div');
+        debugPanel.className = 'debug-panel';
+        debugPanel.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-family: monospace;
+            z-index: 1000;
+            max-width: 200px;
+        `;
+        
+        const debugTitle = document.createElement('div');
+        debugTitle.textContent = 'Debug Info';
+        debugTitle.style.cssText = 'font-weight: bold; margin-bottom: 5px; border-bottom: 1px solid #ccc; padding-bottom: 3px;';
+        
+        const debugContent = document.createElement('div');
+        debugContent.id = 'debugContent';
+        
+        const resetBtn = document.createElement('button');
+        resetBtn.textContent = 'Reset Payment';
+        resetBtn.style.cssText = `
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-top: 5px;
+            cursor: pointer;
+        `;
+        resetBtn.onclick = () => {
+            tenderedAmount = '';
+            updateDisplay();
+            showCustomAlert('Payment state reset', 'info');
+        };
+        
+        debugPanel.appendChild(debugTitle);
+        debugPanel.appendChild(debugContent);
+        debugPanel.appendChild(resetBtn);
+        paymentModal.appendChild(debugPanel);
+    }
+    
+    // Update debug panel with current state
+    function updateDebugPanel() {
+        const debugContent = document.getElementById('debugContent');
+        if (!debugContent) return;
+        
+        const total = totalAmountEl ? totalAmountEl.textContent : 'N/A';
+        const tendered = tenderedAmountEl ? tenderedAmountEl.textContent : 'N/A';
+        const change = changeAmountEl ? changeAmountEl.textContent : 'N/A';
+        const tenderedVar = tenderedAmount || 'empty';
+        
+        debugContent.innerHTML = `
+            Total: ${total}<br>
+            Tendered: ${tendered}<br>
+            Change: ${change}<br>
+            Variable: ${tenderedVar}<br>
+            <small style="color: #aaa;">${new Date().toLocaleTimeString()}</small>
+        `;
+    }
+    
     // Ensure tenderedAmount is always a string
     function ensureString(value) {
         return String(value || '');
@@ -55,6 +125,7 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                 tenderedAmount = '';
                 if (tenderedAmountEl) tenderedAmountEl.textContent = '0';
                 if (changeAmountEl) changeAmountEl.textContent = '0';
+                updateDebugPanel();
                 return;
             }
 
@@ -70,12 +141,15 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
             if (changeAmountEl) {
                 changeAmountEl.textContent = change >= 0 ? change : 0;
             }
+            
+            updateDebugPanel();
         } catch (error) {
             console.error('Error in updateDisplay:', error);
             // Reset to safe state
             tenderedAmount = '';
             if (tenderedAmountEl) tenderedAmountEl.textContent = '0';
             if (changeAmountEl) changeAmountEl.textContent = '0';
+            updateDebugPanel();
         }
     }
 
@@ -204,11 +278,12 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
         });
     }
 
-    // When modal opens, reset tendered amount
+    // When modal opens, reset tendered amount and add debug panel
     paymentModal.addEventListener('show', () => {
         try {
             tenderedAmount = '';
             updateDisplay();
+            addDebugPanel();
         } catch (error) {
             console.error('Error in modal show handler:', error);
             tenderedAmount = '';
