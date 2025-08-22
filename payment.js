@@ -8,46 +8,52 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
     const totalAmountEl = document.getElementById('totalAmount');
     let tenderedAmount = '';
     
+    // Global flag to prevent multiple debug panels
+    if (window.paymentDebugPanelExists) {
+        console.log('Payment debug panel already exists, skipping initialization');
+        return;
+    }
+    window.paymentDebugPanelExists = true;
+    
     // Add debug panel to payment modal
     function addDebugPanel() {
-        if (paymentModal.querySelector('.debug-panel')) return; // Already exists
+        if (document.querySelector('.payment-debug-panel')) return; // Already exists
         
         const debugPanel = document.createElement('div');
-        debugPanel.className = 'debug-panel';
+        debugPanel.className = 'payment-debug-panel';
         debugPanel.style.cssText = `
             position: fixed;
-            top: 50px;
-            right: 20px;
-            background: #dc3545;
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: Arial, sans-serif;
+            top: 60px;
+            right: 15px;
+            background: #000;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-family: monospace;
             z-index: 10000;
-            min-width: 250px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            border: 2px solid #fff;
+            min-width: 180px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            border: 1px solid #333;
         `;
         
         const debugTitle = document.createElement('div');
-        debugTitle.textContent = '🔍 Payment Debug Panel';
-        debugTitle.style.cssText = 'font-weight: bold; margin-bottom: 8px; border-bottom: 2px solid #fff; padding-bottom: 5px; font-size: 16px;';
+        debugTitle.textContent = 'Debug';
+        debugTitle.style.cssText = 'font-weight: bold; margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 3px; font-size: 12px;';
         
         const debugContent = document.createElement('div');
         debugContent.id = 'debugContent';
-        debugContent.style.cssText = 'line-height: 1.4; margin-bottom: 10px;';
+        debugContent.style.cssText = 'line-height: 1.3; margin-bottom: 8px;';
         
         const resetBtn = document.createElement('button');
-        resetBtn.textContent = '🔄 Reset Payment State';
+        resetBtn.textContent = 'Reset';
         resetBtn.style.cssText = `
-            background: #fff;
-            color: #dc3545;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            font-size: 12px;
-            font-weight: bold;
+            background: #333;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 10px;
             cursor: pointer;
             width: 100%;
         `;
@@ -60,7 +66,7 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
         debugPanel.appendChild(debugTitle);
         debugPanel.appendChild(debugContent);
         debugPanel.appendChild(resetBtn);
-        document.body.appendChild(debugPanel); // Append to body instead of modal
+        document.body.appendChild(debugPanel);
         
         // Auto-hide after 30 seconds of inactivity
         let hideTimeout;
@@ -204,7 +210,7 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
         btn.addEventListener('click', function() {
             try {
                 // Ensure debug panel is visible
-                if (!paymentModal.querySelector('.debug-panel')) {
+                if (!document.querySelector('.payment-debug-panel')) {
                     addDebugPanel();
                 }
                 
@@ -343,7 +349,7 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                 updateDisplay();
             }
             // Ensure debug panel is visible
-            if (!paymentModal.querySelector('.debug-panel')) {
+            if (!document.querySelector('.payment-debug-panel')) {
                 addDebugPanel();
             }
             updateDebugPanel();
