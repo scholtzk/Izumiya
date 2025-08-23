@@ -1,0 +1,22 @@
+{
+  "appId": "com.izumiya.pos",
+  "appName": "Izumiya POS",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "always"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#6F4E37",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "dark",
+      "backgroundColor": "#6F4E37"
+    }
+  }
+}

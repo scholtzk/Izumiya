@@ -1,0 +1,2060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Izumiya POS">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#6F4E37">
+    <meta name="apple-mobile-web-app-orientations" content="portrait">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-tap-highlight" content="no">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
+    <title>Izumiya POS</title>
+       <!-- TEST CURSOR SERVER 2025-07-10 -->
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, updateDoc, doc, deleteDoc, getDoc, Timestamp, setDoc, where, connectFirestoreEmulator, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD8nS3tRM8e6eeztv0l7XK9nyjsB9vjRTs",
+            authDomain: "izumiya-pos.firebaseapp.com",
+            projectId: "izumiya-pos",
+            storageBucket: "izumiya-pos.firebasestorage.app",
+            messagingSenderId: "548021570883",
+            appId: "1:548021570883:web:0c9e5057613edd9067f3f6",
+            measurementId: "G-H7F3BEJRQ8"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+
+        // Connection management
+        let connectionRetryCount = 0;
+        const MAX_RETRY_ATTEMPTS = 3;
+        const RETRY_DELAY = 2000; // 2 seconds
+
+        // Function to check and restore Firestore connection
+        async function ensureFirestoreConnection() {
+            try {
+                // Try a simple operation to test connection
+                const testDoc = doc(db, '_connection_test', 'test');
+                await getDoc(testDoc);
+                connectionRetryCount = 0; // Reset retry count on success
+                return true;
+            } catch (error) {
+                console.warn('Firestore connection test failed:', error);
+                return false;
+            }
+        }
+
+        // Function to retry Firestore operations with connection management
+        async function retryFirestoreOperation(operation, maxRetries = MAX_RETRY_ATTEMPTS) {
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    // Check connection before each attempt
+                    if (attempt > 0) {
+                        const isConnected = await ensureFirestoreConnection();
+                        if (!isConnected) {
+                            console.log(`Attempting to reconnect to Firestore (attempt ${attempt + 1})`);
+                            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+                        }
+                    }
+                    
+                    // Add timeout to prevent hanging operations
+                    const timeoutPromise = new Promise((_, reject) => {
+                        setTimeout(() => reject(new Error('Operation timeout')), 10000); // 10 second timeout
+                    });
+                    
+                    const operationPromise = operation();
+                    return await Promise.race([operationPromise, timeoutPromise]);
+                } catch (error) {
+                    console.error(`Firestore operation failed (attempt ${attempt + 1}):`, error);
+                    
+                    if (attempt === maxRetries) {
+                        throw error; // Re-throw on final attempt
+                    }
+                    
+                    // Wait before retry
+                    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (attempt + 1)));
+                }
+            }
+        }
+
+        // Enhanced Firebase services with retry logic
+        const enhancedFirebaseServices = {
+            collection,
+            doc,
+            addDoc: async (...args) => await retryFirestoreOperation(() => addDoc(...args)),
+            setDoc: async (...args) => await retryFirestoreOperation(() => setDoc(...args)),
+            updateDoc: async (...args) => await retryFirestoreOperation(() => updateDoc(...args)),
+            deleteDoc: async (...args) => await retryFirestoreOperation(() => deleteDoc(...args)),
+            getDoc: async (...args) => await retryFirestoreOperation(() => getDoc(...args)),
+            getDocs: async (...args) => await retryFirestoreOperation(() => getDocs(...args)),
+            query,
+            where,
+            orderBy,
+            Timestamp
+        };
+
+        // Make Firebase services available globally
+        window.firebaseApp = app;
+        window.firebaseDb = db;
+        window.firebaseServices = enhancedFirebaseServices;
+        window.ensureFirestoreConnection = ensureFirestoreConnection;
+        window.retryFirestoreOperation = retryFirestoreOperation;
+
+        // Connection monitoring
+        let connectionCheckInterval;
+        let connectionStatus = 'connected';
+        
+        function updateConnectionStatus(status) {
+            connectionStatus = status;
+            const statusIndicator = document.getElementById('connection-status');
+            if (statusIndicator) {
+                statusIndicator.className = `connection-status ${status}`;
+                const dot = statusIndicator.querySelector('.connection-dot');
+                if (dot) {
+                    dot.className = `connection-dot ${status}`;
+                }
+            }
+        }
+        
+        function startConnectionMonitoring() {
+            // Check connection every 30 seconds
+            connectionCheckInterval = setInterval(async () => {
+                const isConnected = await ensureFirestoreConnection();
+                if (!isConnected) {
+                    console.warn('Firestore connection lost, attempting to reconnect...');
+                    updateConnectionStatus('disconnected');
+                    // The next operation will trigger a retry
+                } else {
+                    updateConnectionStatus('connected');
+                }
+            }, 30000);
+        }
+
+        function stopConnectionMonitoring() {
+            if (connectionCheckInterval) {
+                clearInterval(connectionCheckInterval);
+            }
+        }
+
+        // Start monitoring when page loads
+        startConnectionMonitoring();
+
+        // Add click handler for manual connection refresh
+        document.addEventListener('DOMContentLoaded', () => {
+            const connectionStatus = document.getElementById('connection-status');
+            if (connectionStatus) {
+                connectionStatus.addEventListener('click', async () => {
+                    updateConnectionStatus('connecting');
+                    try {
+                        const isConnected = await ensureFirestoreConnection();
+                        if (isConnected) {
+                            updateConnectionStatus('connected');
+                            console.log('Manual connection test successful');
+                        } else {
+                            updateConnectionStatus('disconnected');
+                            console.warn('Manual connection test failed');
+                        }
+                    } catch (error) {
+                        updateConnectionStatus('disconnected');
+                        console.error('Manual connection test error:', error);
+                    }
+                });
+            }
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            stopConnectionMonitoring();
+        });
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                console.log('Page hidden, reducing connection monitoring frequency');
+                // Could implement more aggressive connection management here
+            } else {
+                console.log('Page visible, resuming normal connection monitoring');
+                // Test connection when page becomes visible again
+                setTimeout(async () => {
+                    const isConnected = await ensureFirestoreConnection();
+                    updateConnectionStatus(isConnected ? 'connected' : 'disconnected');
+                }, 1000);
+            }
+        });
+
+        // Dispatch firebaseReady event
+        window.dispatchEvent(new Event('firebaseReady'));
+    </script>
+
+    <!-- SheetJS Library for Excel file manipulation -->
+    <!-- SheetJS Library for Excel file manipulation -->
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    
+    <!-- jsPDF Library for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- Custom Modal Functions -->
+    <script>
+        // Function to create a custom alert modal
+        function showCustomAlert(message, type = 'info') {
+            // Create modal overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'custom-alert-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            overlay.style.zIndex = '2000';
+            overlay.style.display = 'flex';
+            overlay.style.justifyContent = 'center';
+            overlay.style.alignItems = 'center';
+
+            // Create modal content
+            const modal = document.createElement('div');
+            modal.className = 'custom-alert-modal';
+            modal.style.backgroundColor = 'white';
+            modal.style.padding = '30px';
+            modal.style.borderRadius = '10px';
+            modal.style.minWidth = '300px';
+            modal.style.maxWidth = '400px';
+            modal.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+            modal.style.textAlign = 'center';
+            modal.style.position = 'relative';
+
+            // Set color based on type
+            let color = 'var(--primary)';
+            if (type === 'error') color = '#dc3545';
+            if (type === 'warning') color = '#ffc107';
+            if (type === 'success') color = '#28a745';
+
+            // Create message
+            const messageElement = document.createElement('div');
+            messageElement.textContent = message;
+            messageElement.style.marginBottom = '25px';
+            messageElement.style.color = '#333';
+            messageElement.style.fontSize = '16px';
+            messageElement.style.lineHeight = '1.5';
+
+            // Create OK button
+            const okButton = document.createElement('button');
+            okButton.textContent = 'OK';
+            okButton.style.padding = '12px 30px';
+            okButton.style.border = 'none';
+            okButton.style.borderRadius = '8px';
+            okButton.style.backgroundColor = color;
+            okButton.style.color = 'white';
+            okButton.style.cursor = 'pointer';
+            okButton.style.fontSize = '16px';
+            okButton.style.fontWeight = 'bold';
+            okButton.style.minWidth = '100px';
+            okButton.onclick = () => {
+                document.body.removeChild(overlay);
+            };
+
+            // Assemble modal
+            modal.appendChild(messageElement);
+            modal.appendChild(okButton);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // Close modal when clicking outside
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            });
+
+            // Focus on button for keyboard navigation
+            okButton.focus();
+        }
+
+        // Function to create a custom confirm modal
+        function showCustomConfirm(message, onConfirm, onCancel) {
+            // Create modal overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'custom-confirm-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            overlay.style.zIndex = '2000';
+            overlay.style.display = 'flex';
+            overlay.style.justifyContent = 'center';
+            overlay.style.alignItems = 'center';
+
+            // Create modal content
+            const modal = document.createElement('div');
+            modal.className = 'custom-confirm-modal';
+            modal.style.backgroundColor = 'white';
+            modal.style.padding = '30px';
+            modal.style.borderRadius = '10px';
+            modal.style.minWidth = '300px';
+            modal.style.maxWidth = '400px';
+            modal.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+            modal.style.textAlign = 'center';
+            modal.style.position = 'relative';
+
+            // Create message
+            const messageElement = document.createElement('div');
+            messageElement.textContent = message;
+            messageElement.style.marginBottom = '25px';
+            messageElement.style.color = '#333';
+            messageElement.style.fontSize = '16px';
+            messageElement.style.lineHeight = '1.5';
+
+            // Create buttons container
+            const buttonsContainer = document.createElement('div');
+            buttonsContainer.style.display = 'flex';
+            buttonsContainer.style.gap = '15px';
+            buttonsContainer.style.justifyContent = 'center';
+
+            // Create Cancel button
+            const cancelButton = document.createElement('button');
+            cancelButton.textContent = 'Cancel';
+            cancelButton.style.padding = '12px 25px';
+            cancelButton.style.border = '1px solid #e0e0e0';
+            cancelButton.style.borderRadius = '8px';
+            cancelButton.style.backgroundColor = 'white';
+            cancelButton.style.color = '#666';
+            cancelButton.style.cursor = 'pointer';
+            cancelButton.style.fontSize = '16px';
+            cancelButton.style.fontWeight = 'bold';
+            cancelButton.style.minWidth = '80px';
+            cancelButton.onclick = () => {
+                document.body.removeChild(overlay);
+                if (onCancel) onCancel();
+            };
+
+            // Create Confirm button
+            const confirmButton = document.createElement('button');
+            confirmButton.textContent = 'Confirm';
+            confirmButton.style.padding = '12px 25px';
+            confirmButton.style.border = 'none';
+            confirmButton.style.borderRadius = '8px';
+            confirmButton.style.backgroundColor = '#dc3545';
+            confirmButton.style.color = 'white';
+            confirmButton.style.cursor = 'pointer';
+            confirmButton.style.fontSize = '16px';
+            confirmButton.style.fontWeight = 'bold';
+            confirmButton.style.minWidth = '80px';
+            confirmButton.onclick = () => {
+                document.body.removeChild(overlay);
+                if (onConfirm) onConfirm();
+            };
+
+            // Assemble modal
+            buttonsContainer.appendChild(cancelButton);
+            buttonsContainer.appendChild(confirmButton);
+            modal.appendChild(messageElement);
+            modal.appendChild(buttonsContainer);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // Close modal when clicking outside
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                    if (onCancel) onCancel();
+                }
+            });
+
+            // Focus on cancel button for keyboard navigation
+            cancelButton.focus();
+        }
+    </script>
+    <style>
+        :root {
+            --primary: #6F4E37;
+            --secondary: #A67C52;
+            --accent: #D4A76A;
+            --light: #F9F3EE;
+            --dark: #2A2118;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            position: fixed;
+            background-color: var(--light);
+            /* Add padding for safe areas */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
+        
+        /* Hide home indicator */
+        @supports (padding: max(0px)) {
+            body {
+                padding-bottom: max(env(safe-area-inset-bottom), 0px);
+            }
+        }
+        
+        /* Hide status bar */
+        @supports (-webkit-touch-callout: none) {
+            body {
+                padding-top: env(safe-area-inset-top);
+            }
+        }
+        
+        body {
+            color: var(--dark);
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            height: 100vh;
+            height: -webkit-fill-available;
+            height: fill-available;
+        }
+        
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Left Panel - Menu Items */
+        .menu-panel {
+            flex: 3;
+            background-color: white;
+            border-right: 1px solid #e0e0e0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+            padding-top: 60px;
+        }
+        
+        .category-tabs {
+            display: flex;
+            overflow-x: auto;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 10px;
+            flex-shrink: 0;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .category-tab {
+            padding: 8px 15px;
+            background-color: var(--light);
+            border: none;
+            border-radius: 20px;
+            margin-right: 10px;
+            cursor: pointer;
+            white-space: nowrap;
+            font-weight: bold;
+            color: var(--dark);
+            font-size: 14px;
+        }
+        
+        .category-tab.active {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .category-divider {
+            width: 100%;
+            height: 2px;
+            background-color: var(--primary);
+            margin: 12px 0;
+            opacity: 0.2;
+            grid-column: 1 / -1;
+        }
+        
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 10px;
+        }
+        
+        .item-card {
+            background-color: var(--light);
+            border-radius: 12px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            height: 100px; /* Increased height for better two-line text fit */
+            min-width: 44px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .item-card[data-milk-addon="true"] {
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .item-card[data-milk-addon="true"] .item-name {
+            margin: 0;
+        }
+        
+        .item-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .item-name {
+            font-size: 15px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-height: 42px; /* Increased to better fit two lines */
+        }
+        
+        .item-price {
+            font-size: 13px;
+            color: var(--secondary);
+        }
+        
+        /* Right Panel - Order Details */
+        .order-panel {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            background-color: #f5f5f5;
+            padding: 15px;
+            overflow: hidden;
+            height: 100%;
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .order-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .new-order-btn {
+            padding: 8px 15px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            min-height: 44px;
+            min-width: 44px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .order-items {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background-color: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .order-item.selected {
+            background-color: var(--light);
+            border: 2px solid var(--primary);
+        }
+        
+        .item-info {
+            flex: 1;
+        }
+        
+        .item-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        
+        .item-options {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .item-quantity {
+            display: flex;
+            align-items: center;
+            margin: 0 15px;
+        }
+        
+        .quantity-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 1px solid #ddd;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            min-height: 44px;
+            min-width: 44px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .quantity-value {
+            margin: 0 8px;
+            font-weight: bold;
+        }
+        
+        .item-total {
+            font-weight: bold;
+        }
+        
+        .order-summary {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 10px;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .checkout-btn {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background-color 0.2s;
+            min-height: 44px;
+            min-width: 44px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .checkout-btn:hover {
+            background-color: var(--secondary);
+        }
+        
+        .checkout-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .pay-later-btn {
+            width: 100%;
+            padding: 15px;
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            min-height: 44px;
+            min-width: 44px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .pay-later-btn:hover {
+            background-color: #f57c00;
+        }
+        
+        /* Payment Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+        
+        .modal-content {
+            background-color: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            padding: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+        
+        .payment-options {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .payment-option {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            min-height: 44px;
+            min-width: 44px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .payment-option.selected {
+            border-color: var(--primary);
+            background-color: var(--light);
+        }
+        
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .numpad-btn {
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .cash-btn {
+            background-color: white;
+            color: var(--dark);
+            font-weight: bold;
+            grid-column: span 1.5;
+        }
+        
+        .pay-later-modal-btn {
+            background-color: white;
+            color: var(--dark);
+            font-weight: bold;
+            grid-column: span 1.5;
+        }
+        
+        .backspace-btn {
+            background-color: #f8f9fa;
+            color: var(--dark);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            min-height: 44px;
+            min-width: 44px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .cancel-btn {
+            background-color: #f0f0f0;
+            color: var(--dark);
+        }
+        
+        .process-btn {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--primary);
+            color: white;
+            padding: 10px 15px;
+            flex-shrink: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+        
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .user-controls {
+            display: flex;
+            align-items: center;
+        }
+        
+        .user-info {
+            margin-right: 15px;
+        }
+        
+        .time {
+            font-size: 14px;
+        }
+        
+        /* Add new styles for order log */
+        .order-log-container {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 20px;
+            width: 100%;
+        }
+        
+        .order-log-container.active {
+            display: block;
+        }
+
+        .order-log-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            align-items: start;
+        }
+        
+        .order-log-item {
+            background: white;
+            padding: 0;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .order-log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 32px 12px 32px;
+            border-radius: 16px 16px 0 0;
+            background-color: #ffebee;
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .order-log-header.completed {
+            background-color: #e8f5e9;
+        }
+        
+        .order-number {
+            font-size: 22px;
+            font-weight: bold;
+            color: var(--primary);
+            white-space: nowrap;
+        }
+        
+        .order-time {
+            color: #666;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .edit-order-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            color: var(--primary);
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+
+        .edit-order-btn:hover {
+            color: var(--secondary);
+        }
+
+        /* Edit Order Modal */
+        .edit-order-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-order-content {
+            background-color: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            padding: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .edit-order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .edit-order-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .edit-order-items {
+            margin-bottom: 20px;
+        }
+
+        .edit-order-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .edit-order-item-info {
+            flex: 1;
+        }
+
+        .edit-order-item-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .edit-order-item-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .edit-order-item-btn.edit {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .edit-order-item-btn.delete {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .edit-order-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .edit-order-actions button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .save-order-btn {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .delete-order-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .cancel-edit-btn {
+            background-color: #f0f0f0;
+            color: var(--dark);
+        }
+        
+        .order-log-items {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            background: #ffebee;
+        }
+        .order-log-header.completed + .order-log-items {
+            background: #e8f5e9;
+        }
+        .order-log-item-row {
+            display: flex;
+            align-items: center;
+            padding: 10px 32px;
+            border-bottom: none;
+            width: 100%;
+            background: transparent;
+        }
+        .order-log-item-row.completed {
+            background: #e8f5e9;
+        }
+        
+        .order-log-item-name {
+            flex: 1;
+            margin: 0 20px;
+            word-break: break-word;
+            font-size: 17px;
+        }
+        
+        .order-log-item-options {
+            color: #666;
+            font-size: 15px;
+            margin-left: 15px;
+            word-break: break-word;
+            flex: 1;
+        }
+        
+        .order-log-item-quantity {
+            color: #666;
+            min-width: 60px;
+            text-align: center;
+            flex-shrink: 0;
+            font-size: 17px;
+            font-weight: bold;
+        }
+        
+        .order-log-item-price {
+            display: none;
+        }
+        
+        .order-log-item-unit-price {
+            color: #666;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+        
+        .order-log-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 16px 32px 8px 32px;
+            border-radius: 0;
+            font-weight: bold;
+            font-size: 22px;
+            width: 100%;
+            background-color: #ffebee;
+            box-shadow: none;
+            margin-top: 0;
+            border-top: none;
+        }
+        .order-log-total.completed {
+            background-color: #e8f5e9;
+        }
+        .order-log-total .total-label {
+            font-size: 1.1em;
+            color: var(--dark);
+        }
+        .order-log-total .total-amount {
+            font-size: 1.3em;
+            color: var(--primary);
+            margin-top: 0;
+        }
+        .order-log-payment {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 0 32px 20px 32px;
+            background-color: #ffebee;
+            border-radius: 0 0 16px 16px;
+            box-shadow: none;
+            margin-top: 0;
+            font-size: 1em;
+        }
+        .order-log-payment.completed {
+            background-color: #e8f5e9;
+        }
+        .order-log-payment .payment-status {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: bold;
+            background: #ffebee;
+            color: #e53935;
+            margin-right: 16px;
+        }
+        .order-log-payment .payment-status.paid {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+        .order-log-payment .payment-details-right {
+            display: flex;
+            gap: 18px;
+            align-items: center;
+            color: #333;
+            font-size: 1em;
+            font-weight: normal;
+        }
+        .order-log-payment .payment-detail-label {
+            color: #888;
+            margin-right: 2px;
+        }
+        .order-log-payment .payment-detail-value {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .payment-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+        
+        .payment-status {
+            font-weight: bold;
+        }
+        
+        .payment-status.unpaid {
+            color: #f44336;
+        }
+        
+        .pay-now-btn {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        
+        .pay-now-btn:hover {
+            background-color: #45a049;
+        }
+        
+        .custom-options {
+            display: none;
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        
+        .custom-option {
+            padding: 8px 15px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        .custom-option:hover {
+            background: var(--light);
+        }
+        
+        .temperature-options {
+            display: none;
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        
+        .temperature-option {
+            padding: 8px 15px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        .temperature-option:hover {
+            background: var(--light);
+        }
+        
+        /* Add new styles for payment modal */
+        .payment-details {
+            background: var(--light);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .total-amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+        
+        .amount-tendered, .change-amount {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        
+        .amount-display {
+            font-weight: bold;
+        }
+        
+        .change-amount {
+            color: var(--primary);
+            font-weight: bold;
+        }
+        
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .numpad-btn {
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            min-height: 44px;
+            min-width: 44px;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
+        }
+        
+        .numpad-btn:hover {
+            background-color: var(--light);
+        }
+        
+        .process-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Add new styles for settings */
+        .settings-container {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 20px;
+            width: 100%;
+        }
+        
+        .settings-container.active {
+            display: block;
+        }
+        
+        .settings-panel {
+            display: block;
+            padding: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .settings-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            width: 100%;
+        }
+        
+        .settings-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+        
+        .float-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .float-input input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+            font-size: 14px;
+        }
+        
+        .revenue-display {
+            background: var(--light);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+            width: 100%;
+        }
+        
+        .revenue-display.active {
+            display: block;
+        }
+        
+        .revenue-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+        
+        .revenue-row.total {
+            font-weight: bold;
+            font-size: 16px;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+        
+        .settings-button {
+            padding: 12px 20px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            transition: background-color 0.2s;
+        }
+        
+        .settings-button:hover {
+            background-color: var(--secondary);
+        }
+        
+        .settings-button.danger {
+            background-color: #dc3545;
+        }
+        
+        .settings-button.danger:hover {
+            background-color: #c82333;
+        }
+        
+        .settings-info {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        /* Add styles for custom item modal */
+        .custom-item-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .custom-item-content {
+            background-color: white;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 400px;
+            padding: 20px;
+        }
+        
+        .custom-item-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .form-group label {
+            font-weight: bold;
+            color: var(--dark);
+        }
+        
+        .form-group input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .custom-item-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .custom-item-buttons button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .add-custom-item {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .cancel-custom-item {
+            background-color: #f0f0f0;
+            color: var(--dark);
+        }
+        
+        .category-label {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 20px 0 10px 0;
+            padding-left: 10px;
+        }
+
+        .milk-type-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: var(--light);
+            border-radius: 8px;
+        }
+
+        .milk-type-btn {
+            padding: 8px 15px;
+            background-color: white;
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            color: var(--primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .milk-type-btn:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .milk-type-btn.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .takeaway-btn {
+            padding: 8px 15px;
+            background-color: white;
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            color: var(--primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .takeaway-btn:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .takeaway-btn.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        /* Add styles for selected menu items */
+        .item-card.selected {
+            background-color: var(--light);
+            border: 2px solid var(--primary);
+        }
+
+        .payment-buttons-row {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .cash-btn {
+            background-color: white;
+            color: var(--dark);
+            font-weight: bold;
+        }
+        
+        .pay-later-modal-btn {
+            background-color: white;
+            color: var(--dark);
+            font-weight: bold;
+        }
+
+        /* Add styles for add item modal */
+        .add-item-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1001;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-item-modal .add-item-content .add-item-tabs {
+            margin-top: 18px;
+        }
+
+        .add-item-content {
+            background-color: white;
+            border-radius: 10px;
+            width: 95%;
+            max-width: 1200px;
+            padding: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .add-item-list {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .add-item-divider {
+            grid-column: 1 / -1;
+            border-top: 2px solid #a97c50;
+            margin: 10px 0 5px 0;
+            height: 1px;
+            background: none;
+        }
+
+        .add-item-category {
+            grid-column: 1 / -1;
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 12px 0 8px 0;
+            padding-bottom: 5px;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .add-item-option {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .add-item-option:hover {
+            background-color: var(--light);
+        }
+
+        .add-item-option .item-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .add-item-option .item-price {
+            color: var(--primary);
+        }
+
+        .add-item-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .add-item-btn {
+            background-color: var(--primary);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .cancel-add-item-btn {
+            background-color: #f0f0f0;
+            color: var(--dark);
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .order-log-header,
+        .order-log-items,
+        .order-log-total,
+        .order-log-payment {
+            background-color: #ffebee;
+        }
+        .order-log-item.completed .order-log-header,
+        .order-log-item.completed .order-log-items,
+        .order-log-item.completed .order-log-total,
+        .order-log-item.completed .order-log-payment {
+            background-color: #e8f5e9;
+        }
+        .analysis-container {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            height: 100%;
+        }
+        .analysis-container.active {
+            display: block;
+        }
+        /* Add styles for discount modal */
+        #discountModal {
+            z-index: 1002; /* Higher than add item modal */
+        }
+
+        .discount-modal-content {
+            background-color: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            padding: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .sign-in-form {
+            max-width: 300px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--dark);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .sign-in-button {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .sign-in-button:hover {
+            background-color: var(--secondary);
+        }
+
+        .status-message {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        /* Connection Status Styles */
+        .connection-status {
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+        .connection-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            background: #4CAF50;
+            box-shadow: 0 0 2px rgba(0,0,0,0.15);
+        }
+        .connection-dot.connected {
+            background: #4CAF50;
+        }
+        .connection-dot.connecting {
+            background: #FFC107;
+        }
+        .connection-dot.disconnected {
+            background: #F44336;
+        }
+        .connection-status.connected,
+        .connection-status.connecting,
+        .connection-status.disconnected {
+            color: inherit;
+            background: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">Izumiya</div>
+        <div id="upcoming-task-banner" style="flex:1; text-align:center; color:white; font-size:20px; font-weight:bold; letter-spacing:0.5px;"></div>
+        <div class="user-controls">
+            <span id="connection-status" class="connection-status connected" style="margin-right: 15px; cursor: pointer; display: inline-flex; align-items: center;" title="Click to manually refresh connection">
+                <span class="connection-dot connected"></span>
+            </span>
+            <div class="time">10:30 AM</div>
+            <button id="langToggleBtn" style="margin-left:20px; font-size:16px; background:none; border:none; color:white; cursor:pointer;">日本語</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Left Panel - Menu Items -->
+        <div class="menu-panel">
+            <div class="category-tabs">
+                <button class="category-tab active" data-category="Drinks">Drinks</button>
+                <button class="category-tab" data-category="Food">Food</button>
+                <button class="category-tab" data-category="Order Log">Order Log</button>
+                <button class="category-tab" data-category="Analysis">Analysis</button>
+                <button class="category-tab" data-category="Stocktake">Stocktake</button>
+                <button class="category-tab" data-category="employee">Sign-in</button>
+                <button class="category-tab" data-category="Task Manager">Task Manager</button>
+            </div>
+            
+            <div class="items-grid">
+                <!-- Items will be loaded dynamically via JavaScript -->
+            </div>
+            <div class="analysis-container" style="display:none;"></div>
+            <div id="task-manager-container" style="display:none; max-width:2000px; margin:20px auto; padding:20px; background:white; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.08); min-height:600px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span id="tm-calendar-icon" style="color:var(--primary); display:flex; align-items:center;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/></svg>
+      </span>
+      <h2 style="margin:0; color:var(--primary);">Task Manager</h2>
+    </div>
+    <button id="tm-today-btn" style="background:var(--primary); color:white; border:none; border-radius:6px; padding:10px 22px; font-weight:bold; font-size:16px; cursor:pointer;">Today</button>
+  </div>
+  <div id="tm-calendar" style="min-width:1200px;"></div>
+  <div id="tm-task-list" style="margin-top:32px;"></div>
+  <button id="add-task-btn" style="position:fixed; bottom:40px; right:60px; background:var(--primary); color:white; border:none; border-radius:50%; width:60px; height:60px; font-size:32px; box-shadow:0 2px 8px rgba(0,0,0,0.15); cursor:pointer; z-index:1001;">+</button>
+  <div id="add-task-form" style="display:none; position:fixed; bottom:120px; right:60px; background:white; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.15); padding:24px; min-width:340px; z-index:1002;">
+    <input type="text" id="task-title" placeholder="Task Title (English)" style="width:100%; padding:10px; margin-bottom:12px; border:1px solid #e0e0e0; border-radius:6px; font-size:16px;" />
+    <input type="text" id="task-title-ja" placeholder="タイトル (日本語)" style="width:100%; padding:10px; margin-bottom:12px; border:1px solid #e0e0e0; border-radius:6px; font-size:16px;" />
+    <input type="date" id="task-date" style="width:100%; padding:10px; margin-bottom:12px; border:1px solid #e0e0e0; border-radius:6px; font-size:16px;" />
+    <input type="time" id="task-time" style="width:100%; padding:10px; margin-bottom:12px; border:1px solid #e0e0e0; border-radius:6px; font-size:16px;" />
+    <textarea id="task-desc" placeholder="Description (English)" style="width:100%; padding:10px; margin-bottom:12px; border:1px solid #e0e0e0; border-radius:6px; font-size:16px;"></textarea>
+    <textarea id="task-desc-ja" placeholder="説明 (日本語)" style="width:100%; padding:10px; margin-bottom:12px; border:1px solid #e0e0e0; border-radius:6px; font-size:16px;"></textarea>
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <button id="save-task-btn" style="background:var(--primary); color:white; border:none; border-radius:6px; padding:10px 18px; font-weight:bold;">Save</button>
+      <button id="cancel-task-btn" style="background:#f0f0f0; color:#333; border:none; border-radius:6px; padding:10px 18px;">Cancel</button>
+    </div>
+  </div>
+  <div id="tm-day-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.25); z-index:2000; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:12px; box-shadow:0 2px 16px rgba(0,0,0,0.18); padding:32px; min-width:400px; max-width:95vw; max-height:90vh; overflow-y:auto;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+        <h3 id="tm-day-modal-title" style="margin:0; color:var(--primary);"></h3>
+        <button id="tm-day-modal-close" style="background:none; border:none; font-size:28px; color:#888; cursor:pointer;">&times;</button>
+      </div>
+      <div id="tm-day-modal-tasks"></div>
+      <button id="tm-day-modal-add" style="margin-top:18px; background:var(--primary); color:white; border:none; border-radius:6px; padding:10px 18px; font-weight:bold; font-size:16px; cursor:pointer; width:100%;">Add Task</button>
+    </div>
+  </div>
+</div>
+
+        </div>
+        
+        <!-- Right Panel - Order Details -->
+        <div class="order-panel">
+            <div class="order-header">
+                <div class="order-title">Current Order #042</div>
+            </div>
+            
+            <div class="order-items">
+                <!-- Order items will be loaded dynamically via JavaScript -->
+            </div>
+            
+            <div class="order-summary">
+                <div class="summary-row">
+                    <div>Subtotal</div>
+                    <div>$0.00</div>
+                </div>
+                <div class="total-row">
+                    <div>Total</div>
+                    <div>$0.00</div>
+                </div>
+                
+                <button class="checkout-btn">Checkout</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Payment Modal -->
+    <div class="modal" id="paymentModal">
+        <div class="modal-content">
+            <h2>Cash Payment</h2>
+            
+            <div class="payment-details">
+                <div class="total-amount">Total: ¥<span id="totalAmount">0</span></div>
+                <div class="amount-tendered">
+                    <div>Tendered Amount:</div>
+                    <div class="amount-display">¥<span id="tenderedAmount">0</span></div>
+                </div>
+                <div class="change-amount">
+                    <div>Change:</div>
+                    <div class="amount-display">¥<span id="changeAmount">0</span></div>
+                </div>
+            </div>
+            
+            <div class="numpad">
+                <button class="numpad-btn">1</button>
+                <button class="numpad-btn">2</button>
+                <button class="numpad-btn">3</button>
+                <button class="numpad-btn">4</button>
+                <button class="numpad-btn">5</button>
+                <button class="numpad-btn">6</button>
+                <button class="numpad-btn">7</button>
+                <button class="numpad-btn">8</button>
+                <button class="numpad-btn">9</button>
+                <button class="numpad-btn">0</button>
+                <button class="numpad-btn">00</button>
+                <button class="numpad-btn backspace-btn">⌫</button>
+                <div class="payment-buttons-row">
+                    <button class="numpad-btn pay-later-modal-btn" id="payLaterBtn">Pay Later</button>
+                    <button class="numpad-btn cash-btn" id="cashBtn">Cash</button>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="action-btn cancel-btn" id="cancelPaymentBtn">Cancel</button>
+                <button class="action-btn process-btn" id="completePaymentBtn">Complete Payment</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Custom Item Modal -->
+    <div class="custom-item-modal" id="customItemModal">
+        <div class="custom-item-content">
+            <h2>Add Custom Item</h2>
+            <div class="custom-item-form">
+                <div class="form-group">
+                    <label for="customItemName">Item Name</label>
+                    <input type="text" id="customItemName" placeholder="Enter item name">
+                </div>
+                <div class="form-group">
+                    <label for="customItemPrice">Price (¥)</label>
+                    <input type="number" id="customItemPrice" placeholder="Enter price" min="0">
+                </div>
+                <div class="custom-item-buttons">
+                    <button class="cancel-custom-item" id="cancelCustomItem">Cancel</button>
+                    <button class="add-custom-item" id="addCustomItem">Add Item</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Order Modal -->
+    <div class="edit-order-modal" id="editOrderModal">
+        <div class="edit-order-content">
+            <div class="edit-order-header">
+                <div class="edit-order-title">Edit Order #<span id="editOrderNumber"></span></div>
+            </div>
+            <div class="edit-order-items" id="editOrderItems">
+                <!-- Order items will be loaded here -->
+            </div>
+            <div class="edit-order-actions">
+                <button class="cancel-edit-btn">Cancel</button>
+                <button class="delete-order-btn">Delete Order</button>
+                <button class="save-order-btn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Discount Modal -->
+    <div class="modal" id="discountModal">
+        <div class="modal-content">
+            <h2>Local Discount</h2>
+            <div class="payment-details">
+                <div class="total-amount">
+                    Discount Amount: -¥<span id="discountAmount">0</span>
+                </div>
+            </div>
+            <div class="numpad">
+                <button class="numpad-btn">1</button>
+                <button class="numpad-btn">2</button>
+                <button class="numpad-btn">3</button>
+                <button class="numpad-btn">4</button>
+                <button class="numpad-btn">5</button>
+                <button class="numpad-btn">6</button>
+                <button class="numpad-btn">7</button>
+                <button class="numpad-btn">8</button>
+                <button class="numpad-btn">9</button>
+                <button class="numpad-btn">0</button>
+                <button class="numpad-btn">00</button>
+                <button class="numpad-btn backspace-btn">⌫</button>
+            </div>
+            <div class="action-buttons">
+                <button class="action-btn cancel-btn" id="cancelDiscountBtn">Cancel</button>
+                <button class="action-btn process-btn" id="applyDiscountBtn">Apply Discount</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add this before the closing body tag -->
+    <div id="employeeSignInPanel" class="panel" style="display: none;">
+        <div class="panel-content">
+            <h2>Employee Sign-in</h2>
+            <form id="employeeSignInForm" class="sign-in-form">
+                <div class="form-group">
+                    <label for="employeePin">Enter 4-digit PIN:</label>
+                    <input type="password" id="employeePin" maxlength="4" pattern="\d{4}" required>
+                </div>
+                <button type="submit" class="sign-in-button">Sign In</button>
+                <div id="signInStatus" class="status-message"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Remove all inline import statements from <script> tags -->
+    <!-- Add main.js as a module entry point -->
+    <script type="module" src="main.js"></script>
+    <script type="module" src="menu.js"></script>
+    <script type="module" src="orderlog.js"></script>
+    <script type="module" src="language.js"></script>
+    <script type="module" src="analysis.js"></script>
+    <script type="module" src="stocktake.js"></script>
+    <script src="employee-signin.js"></script>
+    <script src="task-manager.js"></script>
+    <script src="./connection-test.js"></script>
+    <script src="payslip-generator.js"></script>
+    <!-- Capacitor App Integration -->
+    <script type="module" src="capacitor-app.js"></script>
+    <!-- <script type="module" src="debug-payment.js"></script> -->
+</body>
+</html>
