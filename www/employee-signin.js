@@ -11,96 +11,149 @@ window.addEventListener('firebaseReady', function() {
     container.style.backgroundColor = 'white';
     container.style.borderRadius = '10px';
     container.style.display = 'none';
-    container.style.gap = '40px';
     container.style.width = '100%';
     container.style.height = '100%';
     container.style.overflowY = 'auto';
-    container.style.justifyContent = 'center';
-    container.style.alignItems = 'flex-start';
 
-    // Create left side container for sign-in form
-    const signInFormContainer = document.createElement('div');
-    signInFormContainer.style.flex = '0 0 400px';
-    signInFormContainer.style.minWidth = '300px';
-    signInFormContainer.style.maxWidth = '400px';
+    // Create main content container
+    const mainContent = document.createElement('div');
+    mainContent.style.display = 'flex';
+    mainContent.style.flexDirection = 'column';
+    mainContent.style.gap = '20px';
+    mainContent.style.width = '100%';
 
-    // Create sign-in log container
-    const signInLogContainer = document.createElement('div');
-    signInLogContainer.className = 'sign-in-log-container';
-    signInLogContainer.style.flex = '0 0 400px';
-    signInLogContainer.style.minWidth = '300px';
-    signInLogContainer.style.padding = '15px';
-    signInLogContainer.style.backgroundColor = 'var(--light)';
-    signInLogContainer.style.borderRadius = '8px';
-    signInLogContainer.style.maxHeight = '600px';
-    signInLogContainer.style.overflowY = 'auto';
+    // Create header with title and buttons
+    const header = document.createElement('div');
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.marginBottom = '20px';
 
-    // Create title container
-    const titleContainer = document.createElement('div');
-    titleContainer.style.display = 'flex';
-    titleContainer.style.justifyContent = 'space-between';
-    titleContainer.style.alignItems = 'center';
-    titleContainer.style.marginBottom = '20px';
+    const title = document.createElement('h2');
+    title.textContent = 'Employee Sign-in';
+    title.style.margin = '0';
+    title.style.color = 'var(--primary)';
 
-    // Create title with calendar icon
-    const titleWrapper = document.createElement('div');
-    titleWrapper.style.display = 'flex';
-    titleWrapper.style.alignItems = 'center';
-    titleWrapper.style.gap = '10px';
+    // Create button container
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.display = 'flex';
+    buttonContainer.style.gap = '15px';
+    buttonContainer.style.alignItems = 'center';
 
-    const signInLogTitle = document.createElement('h2');
-    signInLogTitle.textContent = "Today:";
-    signInLogTitle.style.marginBottom = '0';
-    signInLogTitle.style.color = 'var(--primary)';
+    // Add new employee button
+    const addEmployeeBtn = document.createElement('button');
+    addEmployeeBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" stroke-width="2"/>
+            <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        Add Employee
+    `;
+    addEmployeeBtn.style.display = 'flex';
+    addEmployeeBtn.style.alignItems = 'center';
+    addEmployeeBtn.style.gap = '8px';
+    addEmployeeBtn.style.padding = '10px 16px';
+    addEmployeeBtn.style.border = '1px solid var(--primary)';
+    addEmployeeBtn.style.borderRadius = '6px';
+    addEmployeeBtn.style.backgroundColor = 'white';
+    addEmployeeBtn.style.color = 'var(--primary)';
+    addEmployeeBtn.style.cursor = 'pointer';
+    addEmployeeBtn.style.fontSize = '14px';
+    addEmployeeBtn.style.fontWeight = 'bold';
+    addEmployeeBtn.onclick = () => {
+        showAddEmployeeModal();
+    };
 
-    // Create calendar icon
-    const calendarIcon = document.createElement('div');
-    calendarIcon.innerHTML = `
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    // Calendar view button
+    const calendarBtn = document.createElement('button');
+    calendarBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
             <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
             <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/>
             <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
         </svg>
+        Calendar
     `;
-    calendarIcon.style.cursor = 'pointer';
-    calendarIcon.style.color = 'var(--primary)';
-    calendarIcon.style.transition = 'transform 0.2s, color 0.2s';
-    calendarIcon.style.marginLeft = 'auto';
-    calendarIcon.style.padding = '8px';
-    calendarIcon.style.borderRadius = '4px';
-    calendarIcon.onmouseover = () => {
-        calendarIcon.style.transform = 'scale(1.1)';
-        calendarIcon.style.color = 'var(--primary-dark)';
-    };
-    calendarIcon.onmouseout = () => {
-        calendarIcon.style.transform = 'scale(1)';
-        calendarIcon.style.color = 'var(--primary)';
-    };
-    calendarIcon.onclick = () => {
+    calendarBtn.style.display = 'flex';
+    calendarBtn.style.alignItems = 'center';
+    calendarBtn.style.gap = '8px';
+    calendarBtn.style.padding = '10px 16px';
+    calendarBtn.style.border = '1px solid var(--primary)';
+    calendarBtn.style.borderRadius = '6px';
+    calendarBtn.style.backgroundColor = 'white';
+    calendarBtn.style.color = 'var(--primary)';
+    calendarBtn.style.cursor = 'pointer';
+    calendarBtn.style.fontSize = '14px';
+    calendarBtn.style.fontWeight = 'bold';
+    calendarBtn.onclick = () => {
         const today = new Date();
         displayWeekView(today.getMonth(), today.getFullYear());
     };
 
-    titleWrapper.appendChild(signInLogTitle);
-    titleContainer.appendChild(titleWrapper);
-    titleContainer.appendChild(calendarIcon);
+    // Unscheduled shift button
+    const unscheduledBtn = document.createElement('button');
+    unscheduledBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2"/>
+            <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        Unscheduled
+    `;
+    unscheduledBtn.style.display = 'flex';
+    unscheduledBtn.style.alignItems = 'center';
+    unscheduledBtn.style.gap = '8px';
+    unscheduledBtn.style.padding = '10px 16px';
+    unscheduledBtn.style.border = '1px solid #28a745';
+    unscheduledBtn.style.borderRadius = '6px';
+    unscheduledBtn.style.backgroundColor = '#28a745';
+    unscheduledBtn.style.color = 'white';
+    unscheduledBtn.style.cursor = 'pointer';
+    unscheduledBtn.style.fontSize = '14px';
+    unscheduledBtn.style.fontWeight = 'bold';
+    unscheduledBtn.onclick = () => {
+        showUnscheduledShiftKeypad();
+    };
 
-    // Add title container to sign-in log container
-    signInLogContainer.appendChild(titleContainer);
+    buttonContainer.appendChild(addEmployeeBtn);
+    buttonContainer.appendChild(calendarBtn);
+    buttonContainer.appendChild(unscheduledBtn);
 
-    const signInLogList = document.createElement('div');
-    signInLogList.id = 'signInLogList';
-    signInLogContainer.appendChild(signInLogList);
+    header.appendChild(title);
+    header.appendChild(buttonContainer);
 
-    // Create title
-    const title = document.createElement('h2');
-    title.textContent = 'Employee Sign-in';
-    title.style.marginBottom = '20px';
-    title.style.color = 'var(--primary)';
-    title.style.display = 'flex';
-    title.style.alignItems = 'center';
-    title.style.justifyContent = 'space-between';
+    // Create today's shifts container
+    const todayShiftsContainer = document.createElement('div');
+    todayShiftsContainer.style.backgroundColor = 'var(--light)';
+    todayShiftsContainer.style.borderRadius = '10px';
+    todayShiftsContainer.style.padding = '20px';
+    todayShiftsContainer.style.minHeight = '400px';
+
+    // Create today's shifts title
+    const todayTitle = document.createElement('h3');
+    todayTitle.textContent = `Today's Shifts - ${new Date().toLocaleDateString()}`;
+    todayTitle.style.marginBottom = '20px';
+    todayTitle.style.color = 'var(--primary)';
+    todayTitle.style.display = 'flex';
+    todayTitle.style.alignItems = 'center';
+    todayTitle.style.gap = '10px';
+
+    todayShiftsContainer.appendChild(todayTitle);
+
+    // Create shifts list container
+    const shiftsList = document.createElement('div');
+    shiftsList.id = 'todayShiftsList';
+    shiftsList.style.display = 'flex';
+    shiftsList.style.flexDirection = 'column';
+    shiftsList.style.gap = '15px';
+
+    todayShiftsContainer.appendChild(shiftsList);
+
+    // Add all elements to main content
+    mainContent.appendChild(header);
+    mainContent.appendChild(todayShiftsContainer);
+    container.appendChild(mainContent);
 
     // Create setup icon
     const setupIcon = document.createElement('div');
@@ -294,114 +347,9 @@ window.addEventListener('firebaseReady', function() {
         document.body.appendChild(setupModal);
     };
 
-    title.appendChild(setupIcon);
 
-    // Create PIN display container
-    const pinDisplayContainer = document.createElement('div');
-    pinDisplayContainer.className = 'payment-details';
-    pinDisplayContainer.style.background = 'var(--light)';
-    pinDisplayContainer.style.padding = '15px';
-    pinDisplayContainer.style.borderRadius = '8px';
-    pinDisplayContainer.style.margin = '20px 0';
 
-    // Create PIN display
-    const pinDisplay = document.createElement('div');
-    pinDisplay.id = 'pinDisplay';
-    pinDisplay.className = 'total-amount';
-    pinDisplay.style.fontSize = '24px';
-    pinDisplay.style.fontWeight = 'bold';
-    pinDisplay.style.color = 'var(--primary)';
-    pinDisplay.style.marginBottom = '15px';
-    pinDisplay.style.textAlign = 'center';
-    pinDisplay.style.letterSpacing = '5px';
-    pinDisplay.textContent = '----';
 
-    pinDisplayContainer.appendChild(pinDisplay);
-
-    // Create keypad
-    const keypad = document.createElement('div');
-    keypad.className = 'numpad';
-    keypad.style.display = 'grid';
-    keypad.style.gridTemplateColumns = 'repeat(3, 1fr)';
-    keypad.style.gap = '10px';
-    keypad.style.margin = '20px 0';
-    keypad.style.marginTop = '30px'; // Increased top margin to compensate for removed button
-
-    // Create number buttons
-    const numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '✓'];
-    let currentPin = '';
-
-    numbers.forEach(num => {
-        const button = document.createElement('button');
-        button.className = 'numpad-btn';
-        button.textContent = num;
-        button.style.padding = '18px'; // Increased from 15px
-        button.style.border = '1px solid #e0e0e0';
-        button.style.borderRadius = '8px';
-        button.style.backgroundColor = 'white';
-        button.style.fontSize = '18px';
-        button.style.cursor = 'pointer';
-        button.style.transition = 'background-color 0.2s';
-        button.style.color = '#333';
-        button.style.webkitAppearance = 'none';
-        button.style.appearance = 'none';
-        button.style.textDecoration = 'none';
-        
-        if (num === 'C') {
-            button.classList.add('backspace-btn');
-            button.style.backgroundColor = '#f8f9fa';
-            button.style.color = 'var(--dark)';
-        } else if (num === '✓') {
-            button.classList.add('process-btn');
-            button.style.backgroundColor = 'var(--primary)';
-            button.style.color = 'white';
-        }
-
-        button.addEventListener('mouseover', () => {
-            if (num !== 'C' && num !== '✓') {
-                button.style.backgroundColor = 'var(--light)';
-            }
-        });
-
-        button.addEventListener('mouseout', () => {
-            if (num !== 'C' && num !== '✓') {
-                button.style.backgroundColor = 'white';
-            }
-        });
-
-        button.addEventListener('click', () => {
-            if (num === 'C') {
-                currentPin = '';
-                pinDisplay.textContent = '----';
-            } else if (num === '✓') {
-                if (currentPin.length === 4) {
-                    handleSignIn();
-                }
-            } else if (currentPin.length < 4) {
-                currentPin += num;
-                pinDisplay.textContent = currentPin.padEnd(4, '-');
-            }
-        });
-
-        keypad.appendChild(button);
-    });
-
-    // Create status message element
-    const signInStatus = document.createElement('div');
-    signInStatus.id = 'signInStatus';
-    signInStatus.style.marginTop = '10px';
-    signInStatus.style.textAlign = 'center';
-    signInStatus.style.color = '#666';
-
-    // Assemble the form
-    signInFormContainer.appendChild(title);
-    signInFormContainer.appendChild(pinDisplayContainer);
-    signInFormContainer.appendChild(keypad);
-    signInFormContainer.appendChild(signInStatus);
-
-    // Add both containers to main container
-    container.appendChild(signInFormContainer);
-    container.appendChild(signInLogContainer);
 
     // Remove the old employee sign-in panel if it exists
     const oldPanel = document.getElementById('employeeSignInPanel');
@@ -420,7 +368,7 @@ window.addEventListener('firebaseReady', function() {
 
     // Initialize Firebase services
     const db = window.firebaseDb;
-    const { collection, addDoc, Timestamp, getDocs, query, where, orderBy, updateDoc, deleteDoc } = window.firebaseServices;
+    const { collection, addDoc, Timestamp, getDocs, query, where, orderBy, updateDoc, deleteDoc, doc, getDoc, setDoc } = window.firebaseServices;
 
     // Function to format time duration
     function formatDuration(startTime, endTime = null) {
@@ -1532,25 +1480,1136 @@ window.addEventListener('firebaseReady', function() {
         document.body.appendChild(calendar);
     }
 
-    // Function to display week view
-    function displayWeekView(month, year, targetWeekStart = null) {
-        // Calculate the week start and end dates
-        let weekStart, weekEnd;
+    // Helper function to refresh shift data for a specific date without changing calendar position
+    async function refreshShiftDataForDate(firestoreDate) {
+        try {
+            const shifts = await getShiftsForDate(firestoreDate);
+            
+            // Find all shift slots for this date and update them
+            const shiftSlots = document.querySelectorAll('.shift-slot');
+            shiftSlots.forEach(slot => {
+                const slotDate = slot.getAttribute('data-date');
+                const slotCategory = slot.getAttribute('data-category');
+                
+                if (slotDate === firestoreDate) {
+                    // Find shifts for this category
+                    const categoryShifts = shifts.filter(shift => 
+                        shift.shiftClassification === slotCategory
+                    );
+                    
+                    // Clear the slot
+                    slot.innerHTML = '';
+                    
+                    if (categoryShifts.length > 0) {
+                        // Display each shift
+                        categoryShifts.forEach((shift, shiftIndex) => {
+                            const shiftDisplay = document.createElement('div');
+                            shiftDisplay.style.width = '100%';
+                            shiftDisplay.style.height = '100%';
+                            shiftDisplay.style.display = 'flex';
+                            shiftDisplay.style.flexDirection = 'column';
+                            shiftDisplay.style.justifyContent = 'center';
+                            shiftDisplay.style.alignItems = 'center';
+                            shiftDisplay.style.padding = '5px';
+                            shiftDisplay.style.boxSizing = 'border-box';
+                            shiftDisplay.style.cursor = 'pointer';
+                            
+                            // Set background color based on shift status
+                            if (shift.isCompleted) {
+                                shiftDisplay.style.backgroundColor = '#d4edda'; // Light green for completed
+                            } else if (shift.isCurrent) {
+                                shiftDisplay.style.backgroundColor = '#fff3cd'; // Light yellow for current
+                            } else {
+                                shiftDisplay.style.backgroundColor = '#d1ecf1'; // Light blue for scheduled
+                            }
+                            
+                            // Employee name
+                            const employeeName = document.createElement('div');
+                            employeeName.textContent = shift.employeeName;
+                            employeeName.style.fontWeight = 'bold';
+                            employeeName.style.fontSize = '11px';
+                            employeeName.style.textAlign = 'center';
+                            employeeName.style.marginBottom = '2px';
+                            
+                            // Time range
+                            const timeRange = document.createElement('div');
+                            const startTime = shift.shiftStartTime.toDate();
+                            const endTime = shift.shiftFinishTime.toDate();
+                            timeRange.textContent = `${startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+                            timeRange.style.fontSize = '10px';
+                            timeRange.style.color = '#666';
+                            timeRange.style.textAlign = 'center';
+                            
+                            // Status indicator
+                            const statusIndicator = document.createElement('div');
+                            if (shift.isCompleted) {
+                                statusIndicator.textContent = '✓';
+                                statusIndicator.style.color = '#28a745';
+                            } else if (shift.isCurrent) {
+                                statusIndicator.textContent = '●';
+                                statusIndicator.style.color = '#ffc107';
+                            } else {
+                                statusIndicator.textContent = '○';
+                                statusIndicator.style.color = '#17a2b8';
+                            }
+                            statusIndicator.style.fontSize = '12px';
+                            statusIndicator.style.fontWeight = 'bold';
+                            statusIndicator.style.marginTop = '2px';
+                            
+                            shiftDisplay.appendChild(employeeName);
+                            shiftDisplay.appendChild(timeRange);
+                            shiftDisplay.appendChild(statusIndicator);
+                            
+                            // Click handler to edit shift
+                            shiftDisplay.onclick = (e) => {
+                                e.stopPropagation();
+                                const dateStr = slot.getAttribute('data-original-date');
+                                const year = parseInt(slot.getAttribute('data-year'));
+                                const month = parseInt(slot.getAttribute('data-month'));
+                                const day = parseInt(slot.getAttribute('data-day'));
+                                showShiftDetailsModal(shift, dateStr, year, month, day);
+                            };
+                            
+                            slot.appendChild(shiftDisplay);
+                        });
+                    } else {
+                        // No shifts for this category, show add button
+                        const addButton = document.createElement('div');
+                        addButton.innerHTML = '+';
+                        addButton.style.position = 'absolute';
+                        addButton.style.top = '50%';
+                        addButton.style.left = '50%';
+                        addButton.style.transform = 'translate(-50%, -50%)';
+                        addButton.style.fontSize = '24px';
+                        addButton.style.color = '#ccc';
+                        addButton.style.fontWeight = 'bold';
+                        addButton.style.cursor = 'pointer';
+                        addButton.onclick = (e) => {
+                            e.stopPropagation();
+                            storeCurrentCalendarState();
+                            const dateStr = slot.getAttribute('data-original-date');
+                            const year = parseInt(slot.getAttribute('data-year'));
+                            const month = parseInt(slot.getAttribute('data-month'));
+                            const day = parseInt(slot.getAttribute('data-day'));
+                            const category = slot.getAttribute('data-category');
+                            openShiftSchedulingModal(dateStr, year, month, day, category);
+                        };
+                        slot.appendChild(addButton);
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error refreshing shift data:', error);
+        }
+    }
+
+    // Global variables for bulk scheduling
+    let selectedEmployee = null;
+    let selectedShifts = [];
+    let isBulkSchedulingMode = false;
+
+    // Function to open bulk employee dropdown
+    async function openBulkEmployeeDropdown() {
+        // Remove any existing dropdown
+        const existingDropdown = document.querySelector('.bulk-employee-dropdown');
+        if (existingDropdown) {
+            existingDropdown.remove();
+        }
+
+        // Create dropdown container
+        const dropdown = document.createElement('div');
+        dropdown.className = 'bulk-employee-dropdown';
+        dropdown.style.position = 'absolute';
+        dropdown.style.top = '100%';
+        dropdown.style.left = '0';
+        dropdown.style.backgroundColor = 'white';
+        dropdown.style.border = '1px solid #e0e0e0';
+        dropdown.style.borderRadius = '6px';
+        dropdown.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+        dropdown.style.zIndex = '1000';
+        dropdown.style.minWidth = '200px';
+        dropdown.style.maxHeight = '300px';
+        dropdown.style.overflowY = 'auto';
+
+        // Get the bulk schedule button to position the dropdown
+        const bulkBtn = document.getElementById('bulkScheduleBtn');
+        bulkBtn.style.position = 'relative';
+        bulkBtn.appendChild(dropdown);
+
+        // Fetch employees and create list
+        try {
+            const employeesSnapshot = await getDocs(collection(db, 'employees'));
+            employeesSnapshot.forEach(doc => {
+                const employeeData = doc.data();
+                const employeeItem = document.createElement('div');
+                employeeItem.style.padding = '10px 15px';
+                employeeItem.style.cursor = 'pointer';
+                employeeItem.style.borderBottom = '1px solid #f0f0f0';
+                employeeItem.style.fontSize = '14px';
+                employeeItem.style.color = '#333';
+                employeeItem.style.backgroundColor = 'white';
+                employeeItem.textContent = employeeData.name;
+
+                employeeItem.onmouseover = () => {
+                    employeeItem.style.backgroundColor = '#f8f9fa';
+                    employeeItem.style.color = '#333';
+                };
+                employeeItem.onmouseout = () => {
+                    employeeItem.style.backgroundColor = 'white';
+                    employeeItem.style.color = '#333';
+                };
+                employeeItem.onclick = () => {
+                    selectEmployeeForBulk(doc.id, employeeData.name);
+                    dropdown.remove();
+                };
+
+                dropdown.appendChild(employeeItem);
+            });
+        } catch (error) {
+            console.error('Error fetching employees:', error);
+        }
+
+        // Close dropdown when clicking outside
+        setTimeout(() => {
+            document.addEventListener('click', function closeDropdown(e) {
+                if (!dropdown.contains(e.target) && !bulkBtn.contains(e.target)) {
+                    dropdown.remove();
+                    document.removeEventListener('click', closeDropdown);
+                }
+            });
+        }, 100);
+    }
+
+    // Function to select employee for bulk scheduling
+    function selectEmployeeForBulk(employeeId, employeeName) {
+        selectedEmployee = { id: employeeId, name: employeeName };
+        isBulkSchedulingMode = true;
+        console.log('Employee selected for bulk scheduling:', { selectedEmployee, isBulkSchedulingMode });
         
-        if (targetWeekStart) {
-            // Use the provided target week start
-            weekStart = new Date(targetWeekStart);
-            weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekStart.getDate() + 6);
+        // Update button text and style (but don't trigger the action)
+        const bulkBtn = document.getElementById('bulkScheduleBtn');
+        bulkBtn.textContent = 'Confirm Selection';
+        bulkBtn.style.backgroundColor = '#28a745';
+        bulkBtn.style.borderColor = '#28a745';
+        
+        // Set the click handler for later use
+        bulkBtn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Confirm Selection button clicked');
+            confirmBulkSelections();
+        };
+
+        // Show employee name
+        const employeeDisplay = document.getElementById('selectedEmployeeDisplay');
+        employeeDisplay.textContent = employeeName;
+        employeeDisplay.style.display = 'block';
+    }
+
+    // Function to restore bulk scheduling state
+    function restoreBulkSchedulingState() {
+        console.log('Restoring bulk scheduling state:', { isBulkSchedulingMode, selectedEmployee });
+        
+        if (isBulkSchedulingMode && selectedEmployee) {
+            const bulkBtn = document.getElementById('bulkScheduleBtn');
+            console.log('Bulk button found:', !!bulkBtn);
+            if (bulkBtn) {
+                bulkBtn.textContent = 'Confirm Selection';
+                bulkBtn.style.backgroundColor = '#28a745';
+                bulkBtn.style.borderColor = '#28a745';
+                bulkBtn.onclick = () => {
+                    confirmBulkSelections();
+                };
+            }
+
+            const employeeDisplay = document.getElementById('selectedEmployeeDisplay');
+            console.log('Employee display found:', !!employeeDisplay);
+            if (employeeDisplay) {
+                employeeDisplay.textContent = selectedEmployee.name;
+                employeeDisplay.style.display = 'block';
+            }
+        }
+    }
+
+    // Function to remove selected shift (simplified for new UI)
+    window.removeSelectedShift = function(index) {
+        selectedShifts.splice(index, 1);
+        updateCalendarSelectionDisplay();
+    };
+
+    // Function to handle shift slot selection in bulk mode
+    function handleBulkShiftSelection(dateStr, category, year, month, day) {
+        if (!isBulkSchedulingMode || !selectedEmployee) {
+            showCustomAlert('Please select an employee first.', 'warning');
+            return;
+        }
+
+        const shiftKey = `${dateStr}-${category}`;
+        const existingIndex = selectedShifts.findIndex(shift => shift.key === shiftKey);
+
+        if (existingIndex !== -1) {
+            // Remove if already selected
+            selectedShifts.splice(existingIndex, 1);
         } else {
-            // Calculate the current week start and end dates
-            const today = new Date();
-            weekStart = new Date(today);
-            weekStart.setDate(today.getDate() - today.getDay());
-            weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekStart.getDate() + 6);
+            // Add new selection
+            selectedShifts.push({
+                key: shiftKey,
+                date: dateStr,
+                category: category,
+                year: year,
+                month: month,
+                day: day
+            });
+        }
+
+        updateCalendarSelectionDisplay();
+    }
+
+    // Function to update calendar selection display
+    function updateCalendarSelectionDisplay() {
+        if (!isBulkSchedulingMode) return;
+        
+        const shiftSlots = document.querySelectorAll('.shift-slot');
+        shiftSlots.forEach(slot => {
+            const dateStr = slot.getAttribute('data-original-date');
+            const category = slot.getAttribute('data-category');
+            const shiftKey = `${dateStr}-${category}`;
+            
+            const isSelected = selectedShifts.some(shift => shift.key === shiftKey);
+            
+            if (isSelected) {
+                slot.style.border = '3px solid #6f42c1';
+                slot.style.backgroundColor = '#f3e5f5';
+            } else {
+                slot.style.border = '1px solid #e0e0e0';
+                slot.style.backgroundColor = 'white';
+            }
+        });
+    }
+
+    // Function to refresh all shift data
+    async function refreshAllShiftData() {
+        console.log('refreshAllShiftData called');
+        const shiftSlots = document.querySelectorAll('.shift-slot');
+        console.log('Found shift slots:', shiftSlots.length);
+        
+        for (const slot of shiftSlots) {
+            const dateStr = slot.getAttribute('data-original-date');
+            const category = slot.getAttribute('data-category');
+            const year = parseInt(slot.getAttribute('data-year'));
+            const month = parseInt(slot.getAttribute('data-month'));
+            const day = parseInt(slot.getAttribute('data-day'));
+            
+            const firestoreDate = convertToFirestoreDate(dateStr);
+            
+            try {
+                const shifts = await getShiftsForDate(firestoreDate);
+                console.log(`Shifts for date ${firestoreDate}:`, shifts);
+                const categoryShifts = shifts.filter(shift => 
+                    shift.shiftClassification === category
+                );
+                console.log(`Category shifts for ${category}:`, categoryShifts);
+                
+                // Clear the slot
+                slot.innerHTML = '';
+                
+                if (categoryShifts.length > 0) {
+                    // Display each shift
+                    categoryShifts.forEach((shift, shiftIndex) => {
+                        const shiftDisplay = document.createElement('div');
+                        shiftDisplay.style.width = '100%';
+                        shiftDisplay.style.height = '100%';
+                        shiftDisplay.style.display = 'flex';
+                        shiftDisplay.style.flexDirection = 'column';
+                        shiftDisplay.style.justifyContent = 'center';
+                        shiftDisplay.style.alignItems = 'center';
+                        shiftDisplay.style.padding = '5px';
+                        shiftDisplay.style.boxSizing = 'border-box';
+                        shiftDisplay.style.cursor = 'pointer';
+                        
+                        // Set background color based on shift status
+                        if (shift.isCompleted) {
+                            shiftDisplay.style.backgroundColor = '#d4edda'; // Light green for completed
+                        } else if (shift.isCurrent) {
+                            shiftDisplay.style.backgroundColor = '#fff3cd'; // Light yellow for current
+                        } else {
+                            shiftDisplay.style.backgroundColor = '#d1ecf1'; // Light blue for scheduled
+                        }
+                        
+                        // Employee name
+                        const employeeName = document.createElement('div');
+                        employeeName.textContent = shift.employeeName;
+                        employeeName.style.fontWeight = 'bold';
+                        employeeName.style.fontSize = '11px';
+                        employeeName.style.textAlign = 'center';
+                        employeeName.style.marginBottom = '2px';
+                        
+                        // Time range
+                        const timeRange = document.createElement('div');
+                        const startTime = shift.shiftStartTime.toDate();
+                        const endTime = shift.shiftFinishTime.toDate();
+                        timeRange.textContent = `${startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+                        timeRange.style.fontSize = '10px';
+                        timeRange.style.color = '#666';
+                        timeRange.style.textAlign = 'center';
+                        
+                        // Status indicator
+                        const statusIndicator = document.createElement('div');
+                        if (shift.isCompleted) {
+                            statusIndicator.textContent = '✓';
+                            statusIndicator.style.color = '#28a745';
+                        } else if (shift.isCurrent) {
+                            statusIndicator.textContent = '●';
+                            statusIndicator.style.color = '#ffc107';
+                        } else {
+                            statusIndicator.textContent = '○';
+                            statusIndicator.style.color = '#17a2b8';
+                        }
+                        statusIndicator.style.fontSize = '12px';
+                        statusIndicator.style.fontWeight = 'bold';
+                        statusIndicator.style.marginTop = '2px';
+                        
+                        shiftDisplay.appendChild(employeeName);
+                        shiftDisplay.appendChild(timeRange);
+                        shiftDisplay.appendChild(statusIndicator);
+                        
+                        // Click handler to edit shift
+                        shiftDisplay.onclick = (e) => {
+                            e.stopPropagation();
+                            showShiftDetailsModal(shift, dateStr, year, month, day);
+                        };
+                        
+                        slot.appendChild(shiftDisplay);
+                    });
+                } else {
+                    // No shifts for this category, show add button
+                    const addButton = document.createElement('div');
+                    addButton.innerHTML = '+';
+                    addButton.style.position = 'absolute';
+                    addButton.style.top = '50%';
+                    addButton.style.left = '50%';
+                    addButton.style.transform = 'translate(-50%, -50%)';
+                    addButton.style.fontSize = '24px';
+                    addButton.style.color = '#ccc';
+                    addButton.style.fontWeight = 'bold';
+                    addButton.style.cursor = 'pointer';
+                    addButton.onclick = (e) => {
+                        e.stopPropagation();
+                        // Check if bulk scheduling is active
+                        if (isBulkSchedulingMode && selectedEmployee) {
+                            // In bulk mode - handle selection
+                            handleBulkShiftSelection(dateStr, category, year, month, day);
+                        } else {
+                            // Normal mode - open individual shift modal
+                            storeCurrentCalendarState();
+                            openShiftSchedulingModal(dateStr, year, month, day, category);
+                        }
+                    };
+                    slot.appendChild(addButton);
+                }
+            } catch (error) {
+                console.error('Error refreshing shift data for slot:', error);
+            }
+        }
+    }
+
+    // Function to confirm bulk selections
+    async function confirmBulkSelections() {
+        console.log('confirmBulkSelections called with:', { selectedEmployee, selectedShifts: selectedShifts.length });
+        
+        // Prevent execution if no shifts are selected (likely an accidental trigger)
+        if (selectedShifts.length === 0) {
+            console.log('No shifts selected - ignoring accidental trigger');
+            return;
         }
         
+        if (!selectedEmployee || selectedShifts.length === 0) {
+            console.log('Validation failed - no employee or no shifts selected');
+            showCustomAlert('Please select an employee and at least one shift.', 'warning');
+            return;
+        }
+
+        try {
+            const employeeName = selectedEmployee.name;
+            const shiftCount = selectedShifts.length;
+            console.log('Starting bulk selection with:', {
+                employeeName,
+                shiftCount,
+                selectedShifts: selectedShifts
+            });
+
+            for (const shift of selectedShifts) {
+                const { date: dateStr, category, year, month, day } = shift;
+                console.log('Processing shift:', { dateStr, category, year, month, day });
+                
+                // Get shift times based on category
+                const shiftTimes = getShiftTimesForCategory(category);
+                console.log('Shift times for category:', category, shiftTimes);
+                
+                // Create shift start and end times
+                const [startHour, startMinute] = shiftTimes.startTime.split(':').map(Number);
+                const [endHour, endMinute] = shiftTimes.endTime.split(':').map(Number);
+                
+                const shiftStartTime = new Date(year, month, day, startHour, startMinute);
+                const shiftFinishTime = new Date(year, month, day, endHour, endMinute);
+
+                // Create new shift
+                await createNewShift(
+                    convertToFirestoreDate(dateStr),
+                    category,
+                    selectedEmployee.id,
+                    selectedEmployee.name,
+                    shiftStartTime,
+                    shiftFinishTime
+                );
+            }
+
+            // Clear selections and reset UI
+            selectedShifts = [];
+            selectedEmployee = null;
+            isBulkSchedulingMode = false;
+            
+            // Clear all selection highlighting
+            const shiftSlots = document.querySelectorAll('.shift-slot');
+            shiftSlots.forEach(slot => {
+                slot.style.border = '1px solid #e0e0e0';
+                slot.style.backgroundColor = 'white';
+            });
+
+            // Reset button and hide employee display
+            const bulkBtn = document.getElementById('bulkScheduleBtn');
+            bulkBtn.textContent = 'Bulk Schedule';
+            bulkBtn.style.backgroundColor = '#6f42c1';
+            bulkBtn.style.borderColor = '#6f42c1';
+            bulkBtn.onclick = () => {
+                openBulkEmployeeDropdown();
+            };
+
+            const employeeDisplay = document.getElementById('selectedEmployeeDisplay');
+            employeeDisplay.style.display = 'none';
+
+            // Refresh all shift data to show the newly created shifts
+            console.log('About to refresh shift data...');
+            await refreshAllShiftData();
+            console.log('Shift data refresh completed');
+
+            showCustomAlert(`Successfully scheduled ${shiftCount} shifts for ${employeeName}!`, 'success');
+        } catch (error) {
+            console.error('Error confirming bulk selections:', error);
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                selectedEmployee,
+                selectedShifts: selectedShifts.length
+            });
+            showCustomAlert('Error scheduling shifts. Please try again.', 'error');
+        }
+    }
+
+    // Helper function to get shift times for category
+    function getShiftTimesForCategory(category) {
+        const shiftClassifications = [
+            { name: 'Cafe Open', startTime: '07:30', endTime: '11:30' },
+            { name: 'Cafe Morning', startTime: '09:00', endTime: '13:00' },
+            { name: 'Cafe Afternoon', startTime: '13:00', endTime: '16:00' },
+            { name: 'Cafe Close', startTime: '14:00', endTime: '18:00' },
+            { name: 'TEN Cleaning 1', startTime: '10:00', endTime: '14:00' },
+            { name: 'TEN Cleaning 2', startTime: '10:00', endTime: '14:00' }
+        ];
+
+        const found = shiftClassifications.find(s => s.name === category);
+        return found || { startTime: '09:00', endTime: '17:00' };
+    }
+
+    // Helper function to store current calendar state
+    function storeCurrentCalendarState() {
+        const currentWeekDisplay = document.querySelector('.calendar .week-display');
+        if (currentWeekDisplay) {
+            const weekDisplayText = currentWeekDisplay.textContent;
+            const weekStartMatch = weekDisplayText.match(/Week View - (.+?) to/);
+            if (weekStartMatch) {
+                const weekStartDate = new Date(weekStartMatch[1]);
+                window.currentCalendarState = {
+                    month: weekStartDate.getMonth(),
+                    year: weekStartDate.getFullYear(),
+                    weekStart: weekStartDate
+                };
+            }
+        }
+    }
+
+    // Function to display week view
+    function displayWeekView(month, year, startDate = null) {
+        // Calculate week start (Sunday)
+            const today = new Date();
+        const weekStart = startDate || new Date(year, month, today.getDate() - today.getDay());
+        const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+
+        // Remove any existing calendar elements and overlays
+        const existingCalendar = document.querySelector('.calendar');
+        if (existingCalendar) {
+            existingCalendar.remove();
+        }
+        
+        const existingOverlay = document.querySelector('.calendar-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+        
+        // Clean up any other modal overlays that might be lingering
+        const allOverlays = document.querySelectorAll('.shift-details-overlay, .shift-edit-overlay');
+        allOverlays.forEach(overlay => {
+            if (overlay && overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        });
+
+        // Create calendar overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'calendar-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'white';
+        overlay.style.zIndex = '900';
+        document.body.appendChild(overlay);
+
+        // Create calendar container
+        const calendar = document.createElement('div');
+        calendar.className = 'calendar';
+        calendar.style.position = 'fixed';
+        calendar.style.top = '0';
+        calendar.style.left = '0';
+        calendar.style.width = '100%';
+        calendar.style.height = '100%';
+        calendar.style.backgroundColor = 'white';
+        calendar.style.padding = '10px';
+        calendar.style.paddingTop = '50px';
+        calendar.style.borderRadius = '0';
+        calendar.style.boxShadow = 'none';
+        calendar.style.zIndex = '901';
+        calendar.style.overflowY = 'auto';
+
+        // Create header
+        const header = document.createElement('div');
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'center';
+        header.style.marginBottom = '10px';
+        header.style.position = 'relative';
+
+        // Create person icon for employee history
+        const personIcon = document.createElement('div');
+        personIcon.innerHTML = `
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
+                <path d="M5 20c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="currentColor" stroke-width="2"/>
+            </svg>
+        `;
+        personIcon.style.position = 'absolute';
+        personIcon.style.left = '0';
+        personIcon.style.top = '0';
+        personIcon.style.cursor = 'pointer';
+        personIcon.style.color = 'var(--primary)';
+        personIcon.style.transition = 'transform 0.2s, color 0.2s';
+        personIcon.style.padding = '8px';
+        personIcon.style.borderRadius = '4px';
+        personIcon.onmouseover = () => {
+            personIcon.style.transform = 'scale(1.1)';
+            personIcon.style.color = 'var(--primary-dark)';
+        };
+        personIcon.onmouseout = () => {
+            personIcon.style.transform = 'scale(1)';
+            personIcon.style.color = 'var(--primary)';
+        };
+        personIcon.onclick = () => {
+            fetchEmployeeHistory(year, month);
+        };
+        header.appendChild(personIcon);
+
+        // Add close button
+        const closeButton = document.createElement('button');
+        closeButton.innerHTML = '×';
+        closeButton.style.position = 'absolute';
+        closeButton.style.top = '0';
+        closeButton.style.right = '0';
+        closeButton.style.border = 'none';
+        closeButton.style.background = 'none';
+        closeButton.style.fontSize = '24px';
+        closeButton.style.cursor = 'pointer';
+        closeButton.style.color = 'var(--primary)';
+        closeButton.onclick = () => {
+            cleanupAllModals();
+        };
+        header.appendChild(closeButton);
+
+        // Create navigation container
+        const navContainer = document.createElement('div');
+        navContainer.style.display = 'flex';
+        navContainer.style.alignItems = 'center';
+        navContainer.style.gap = '20px';
+        navContainer.style.margin = '0 auto';
+
+        // Add navigation arrows
+        const prevWeek = document.createElement('button');
+        prevWeek.innerHTML = '←';
+        prevWeek.style.border = 'none';
+        prevWeek.style.background = 'none';
+        prevWeek.style.fontSize = '20px';
+        prevWeek.style.cursor = 'pointer';
+        prevWeek.style.color = 'var(--primary)';
+        prevWeek.onclick = () => {
+            const previousWeekStart = new Date(weekStart);
+            previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+            displayWeekView(previousWeekStart.getMonth(), previousWeekStart.getFullYear(), previousWeekStart);
+        };
+        navContainer.appendChild(prevWeek);
+
+        // Add week display
+        const weekDisplay = document.createElement('div');
+        weekDisplay.className = 'week-display';
+        weekDisplay.textContent = `Week View - ${weekStart.toLocaleDateString()} to ${weekEnd.toLocaleDateString()}`;
+        weekDisplay.style.fontWeight = 'bold';
+        weekDisplay.style.fontSize = '16px';
+        navContainer.appendChild(weekDisplay);
+
+        const nextWeek = document.createElement('button');
+        nextWeek.innerHTML = '→';
+        nextWeek.style.border = 'none';
+        nextWeek.style.background = 'none';
+        nextWeek.style.fontSize = '20px';
+        nextWeek.style.cursor = 'pointer';
+        nextWeek.style.color = 'var(--primary)';
+        nextWeek.onclick = () => {
+            const nextWeekStart = new Date(weekStart);
+            nextWeekStart.setDate(nextWeekStart.getDate() + 7);
+            displayWeekView(nextWeekStart.getMonth(), nextWeekStart.getFullYear(), nextWeekStart);
+        };
+        navContainer.appendChild(nextWeek);
+
+        // Add view toggle container
+        const viewToggleContainer = document.createElement('div');
+        viewToggleContainer.style.display = 'flex';
+        viewToggleContainer.style.gap = '10px';
+
+        const monthBtn = document.createElement('button');
+        monthBtn.textContent = 'Month';
+        monthBtn.style.padding = '8px 16px';
+        monthBtn.style.border = '1px solid var(--primary)';
+        monthBtn.style.borderRadius = '6px';
+        monthBtn.style.backgroundColor = 'white';
+        monthBtn.style.color = 'var(--primary)';
+        monthBtn.style.cursor = 'pointer';
+        monthBtn.style.fontSize = '14px';
+        monthBtn.style.fontWeight = 'bold';
+        monthBtn.onclick = () => {
+            displayMonthView(month, year);
+        };
+        viewToggleContainer.appendChild(monthBtn);
+
+        const weekBtn = document.createElement('button');
+        weekBtn.textContent = 'Week';
+        weekBtn.style.padding = '8px 16px';
+        weekBtn.style.border = '1px solid var(--primary)';
+        weekBtn.style.borderRadius = '6px';
+        weekBtn.style.backgroundColor = 'var(--primary)';
+        weekBtn.style.color = 'white';
+        weekBtn.style.cursor = 'pointer';
+        weekBtn.style.fontSize = '14px';
+        weekBtn.style.fontWeight = 'bold';
+        viewToggleContainer.appendChild(weekBtn);
+
+        const todayBtn = document.createElement('button');
+        todayBtn.textContent = 'Today';
+        todayBtn.style.padding = '8px 16px';
+        todayBtn.style.border = '1px solid #28a745';
+        todayBtn.style.borderRadius = '6px';
+        todayBtn.style.backgroundColor = '#28a745';
+        todayBtn.style.color = 'white';
+        todayBtn.style.cursor = 'pointer';
+        todayBtn.style.fontSize = '14px';
+        todayBtn.style.fontWeight = 'bold';
+        todayBtn.onclick = () => {
+            displayWeekView(today.getMonth(), today.getFullYear());
+        };
+        viewToggleContainer.appendChild(todayBtn);
+
+        // Add bulk scheduling button
+        const bulkBtn = document.createElement('button');
+        bulkBtn.id = 'bulkScheduleBtn';
+        
+        // Check if we're in bulk scheduling mode and set initial state
+        if (isBulkSchedulingMode && selectedEmployee) {
+            bulkBtn.textContent = 'Confirm Selection';
+            bulkBtn.style.backgroundColor = '#28a745';
+            bulkBtn.style.borderColor = '#28a745';
+            bulkBtn.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Confirm Selection button clicked (from initialization)');
+                confirmBulkSelections();
+            };
+        } else {
+            bulkBtn.textContent = 'Bulk Schedule';
+            bulkBtn.style.backgroundColor = '#6f42c1';
+            bulkBtn.style.borderColor = '#6f42c1';
+            bulkBtn.onclick = function() {
+                console.log('Bulk Schedule button clicked');
+                openBulkEmployeeDropdown();
+            };
+        }
+        
+        bulkBtn.style.padding = '8px 16px';
+        bulkBtn.style.border = '1px solid';
+        bulkBtn.style.borderRadius = '6px';
+        bulkBtn.style.color = 'white';
+        bulkBtn.style.cursor = 'pointer';
+        bulkBtn.style.fontSize = '14px';
+        bulkBtn.style.fontWeight = 'bold';
+        viewToggleContainer.appendChild(bulkBtn);
+
+        // Add employee name display
+        const employeeDisplay = document.createElement('div');
+        employeeDisplay.id = 'selectedEmployeeDisplay';
+        
+        // Check if we should show employee name immediately
+        if (isBulkSchedulingMode && selectedEmployee) {
+            employeeDisplay.textContent = selectedEmployee.name;
+            employeeDisplay.style.display = 'block';
+        } else {
+            employeeDisplay.style.display = 'none';
+        }
+        
+        employeeDisplay.style.padding = '8px 12px';
+        employeeDisplay.style.backgroundColor = '#f8f9fa';
+        employeeDisplay.style.border = '1px solid #e9ecef';
+        employeeDisplay.style.borderRadius = '6px';
+        employeeDisplay.style.fontSize = '14px';
+        employeeDisplay.style.fontWeight = 'bold';
+        employeeDisplay.style.color = '#6f42c1';
+        viewToggleContainer.appendChild(employeeDisplay);
+        
+        navContainer.appendChild(viewToggleContainer);
+        header.appendChild(navContainer);
+        calendar.appendChild(header);
+
+        // Create week view container with shift categories
+        const weekContainer = document.createElement('div');
+        weekContainer.style.display = 'flex';
+        weekContainer.style.marginTop = '0';
+        weekContainer.style.border = '1px solid #e0e0e0';
+        weekContainer.style.borderRadius = '0';
+        weekContainer.style.overflow = 'hidden';
+        weekContainer.style.backgroundColor = 'white';
+        weekContainer.style.flex = '1';
+        weekContainer.style.height = 'calc(100vh - 120px)';
+
+        // Create shift categories column
+        const categoriesColumn = document.createElement('div');
+        categoriesColumn.style.width = '200px';
+        categoriesColumn.style.backgroundColor = '#f8f9fa';
+        categoriesColumn.style.borderRight = '2px solid #e0e0e0';
+        categoriesColumn.style.display = 'flex';
+        categoriesColumn.style.flexDirection = 'column';
+
+        // Add categories header
+        const categoriesHeader = document.createElement('div');
+        categoriesHeader.style.backgroundColor = 'var(--primary)';
+        categoriesHeader.style.color = 'white';
+        categoriesHeader.style.padding = '15px 10px';
+        categoriesHeader.style.textAlign = 'center';
+        categoriesHeader.style.fontWeight = 'bold';
+        categoriesHeader.style.fontSize = '14px';
+        categoriesHeader.style.height = '60px';
+        categoriesHeader.style.display = 'flex';
+        categoriesHeader.style.alignItems = 'center';
+        categoriesHeader.style.justifyContent = 'center';
+        categoriesHeader.textContent = 'Shift Categories';
+        categoriesColumn.appendChild(categoriesHeader);
+
+        // Define shift categories
+        const shiftCategories = [
+            { name: 'Cafe Open', time: '7:30-11:30am', color: '#e3f2fd' },
+            { name: 'Cafe Morning', time: '9:00-1:00pm', color: '#f3e5f5' },
+            { name: 'Cafe Afternoon', time: '1:00pm-4:00pm', color: '#e8f5e8' },
+            { name: 'Cafe Close', time: '2:00pm-6:00pm', color: '#fff3e0' },
+            { name: 'TEN Cleaning 1', time: '10:00am-2:00pm', color: '#fce4ec' },
+            { name: 'TEN Cleaning 2', time: '10:00am-2:00pm', color: '#f1f8e9' }
+        ];
+
+        // Create category rows
+        shiftCategories.forEach((category, index) => {
+            const categoryRow = document.createElement('div');
+            categoryRow.style.display = 'flex';
+            categoryRow.style.flexDirection = 'column';
+            categoryRow.style.justifyContent = 'center';
+            categoryRow.style.alignItems = 'center';
+            categoryRow.style.height = '80px';
+            categoryRow.style.borderBottom = '1px solid #e0e0e0';
+            categoryRow.style.backgroundColor = category.color;
+            categoryRow.style.padding = '10px';
+            categoryRow.style.boxSizing = 'border-box';
+
+            const categoryName = document.createElement('div');
+            categoryName.textContent = category.name;
+            categoryName.style.fontWeight = 'bold';
+            categoryName.style.fontSize = '12px';
+            categoryName.style.textAlign = 'center';
+            categoryName.style.marginBottom = '4px';
+
+            const categoryTime = document.createElement('div');
+            categoryTime.textContent = category.time;
+            categoryTime.style.fontSize = '10px';
+            categoryTime.style.color = '#666';
+            categoryTime.style.textAlign = 'center';
+
+            categoryRow.appendChild(categoryName);
+            categoryRow.appendChild(categoryTime);
+            categoriesColumn.appendChild(categoryRow);
+        });
+        
+        weekContainer.appendChild(categoriesColumn);
+
+        // Create day columns
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const japanesedays = ['日', '月', '火', '水', '木', '金', '土'];
+        
+        // Get today's date for comparison
+        const currentToday = new Date();
+        
+        days.forEach((day, dayIndex) => {
+            const dayColumn = document.createElement('div');
+            dayColumn.style.flex = '1';
+            dayColumn.style.position = 'relative';
+            dayColumn.style.borderRight = dayIndex < 6 ? '1px solid #e0e0e0' : 'none';
+            
+            // Calculate the date for this day
+            const currentDate = new Date(weekStart);
+            currentDate.setDate(weekStart.getDate() + dayIndex);
+            const dayNumber = currentDate.getDate();
+            
+            // Check if this is actually today's date
+            const isToday = currentDate.toDateString() === currentToday.toDateString();
+            
+            // Day header
+            const dayHeader = document.createElement('div');
+            dayHeader.innerHTML = `${day} ${japanesedays[dayIndex]} ${dayNumber}`;
+            dayHeader.style.backgroundColor = isToday ? '#28a745' : 'var(--primary)';
+            dayHeader.style.color = 'white';
+            dayHeader.style.padding = '15px 10px';
+            dayHeader.style.textAlign = 'center';
+            dayHeader.style.fontWeight = 'bold';
+            dayHeader.style.fontSize = '14px';
+            dayHeader.style.height = '60px';
+            dayHeader.style.display = 'flex';
+            dayHeader.style.alignItems = 'center';
+            dayHeader.style.justifyContent = 'center';
+            dayColumn.appendChild(dayHeader);
+
+            // Create shift slots for each category
+            const shiftSlotsContainer = document.createElement('div');
+            shiftSlotsContainer.style.display = 'flex';
+            shiftSlotsContainer.style.flexDirection = 'column';
+            shiftSlotsContainer.style.height = 'calc(100vh - 180px)';
+
+            // Create shift slots for each category
+            shiftCategories.forEach((category, categoryIndex) => {
+                const shiftSlot = document.createElement('div');
+                shiftSlot.className = 'shift-slot';
+                shiftSlot.style.height = '80px';
+                shiftSlot.style.borderBottom = '1px solid #e0e0e0';
+                shiftSlot.style.backgroundColor = 'white';
+                shiftSlot.style.cursor = 'pointer';
+                shiftSlot.style.display = 'flex';
+                shiftSlot.style.alignItems = 'center';
+                shiftSlot.style.justifyContent = 'center';
+                shiftSlot.style.padding = '10px';
+                shiftSlot.style.boxSizing = 'border-box';
+                shiftSlot.style.position = 'relative';
+                
+                // Add click handler to open shift scheduling modal
+                const dateStr = currentDate.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                });
+                
+                shiftSlot.onclick = () => {
+                    // Check if bulk scheduling is active
+                    if (isBulkSchedulingMode && selectedEmployee) {
+                        // In bulk mode - handle selection
+                        handleBulkShiftSelection(dateStr, category.name, year, month, currentDate.getDate());
+                    } else {
+                        // Normal mode - open individual shift modal
+                        storeCurrentCalendarState();
+                        openShiftSchedulingModal(dateStr, year, month, currentDate.getDate(), category.name);
+                    }
+                };
+                
+                // Fetch and display shifts for this category and date
+                const firestoreDate = convertToFirestoreDate(dateStr);
+                
+                // Set data attributes for refresh functionality
+                shiftSlot.setAttribute('data-date', firestoreDate);
+                shiftSlot.setAttribute('data-category', category.name);
+                shiftSlot.setAttribute('data-original-date', dateStr);
+                shiftSlot.setAttribute('data-year', year);
+                shiftSlot.setAttribute('data-month', month);
+                shiftSlot.setAttribute('data-day', currentDate.getDate());
+                getShiftsForDate(firestoreDate).then(shifts => {
+                    // Find shifts for this specific category
+                    const categoryShifts = shifts.filter(shift => 
+                        shift.shiftClassification === category.name
+                    );
+                    
+                    if (categoryShifts.length > 0) {
+                        // Clear the add button since we have shifts
+                        shiftSlot.innerHTML = '';
+                        
+                        // Display each shift
+                        categoryShifts.forEach((shift, shiftIndex) => {
+                            const shiftDisplay = document.createElement('div');
+                            shiftDisplay.style.width = '100%';
+                            shiftDisplay.style.height = '100%';
+                            shiftDisplay.style.display = 'flex';
+                            shiftDisplay.style.flexDirection = 'column';
+                            shiftDisplay.style.justifyContent = 'center';
+                            shiftDisplay.style.alignItems = 'center';
+                            shiftDisplay.style.padding = '5px';
+                            shiftDisplay.style.boxSizing = 'border-box';
+                            shiftDisplay.style.cursor = 'pointer';
+                            
+                            // Set background color based on shift status
+                            if (shift.isCompleted) {
+                                shiftDisplay.style.backgroundColor = '#d4edda'; // Light green for completed
+                            } else if (shift.isCurrent) {
+                                shiftDisplay.style.backgroundColor = '#fff3cd'; // Light yellow for current
+                            } else {
+                                shiftDisplay.style.backgroundColor = '#d1ecf1'; // Light blue for scheduled
+                            }
+                            
+                            // Employee name
+                            const employeeName = document.createElement('div');
+                            employeeName.textContent = shift.employeeName;
+                            employeeName.style.fontWeight = 'bold';
+                            employeeName.style.fontSize = '11px';
+                            employeeName.style.textAlign = 'center';
+                            employeeName.style.marginBottom = '2px';
+                            
+                            // Time range
+                            const timeRange = document.createElement('div');
+                            const startTime = shift.shiftStartTime.toDate();
+                            const endTime = shift.shiftFinishTime.toDate();
+                            timeRange.textContent = `${startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+                            timeRange.style.fontSize = '10px';
+                            timeRange.style.color = '#666';
+                            timeRange.style.textAlign = 'center';
+                            
+                            // Status indicator
+                            const statusIndicator = document.createElement('div');
+                            if (shift.isCompleted) {
+                                statusIndicator.textContent = '✓';
+                                statusIndicator.style.color = '#28a745';
+                            } else if (shift.isCurrent) {
+                                statusIndicator.textContent = '●';
+                                statusIndicator.style.color = '#ffc107';
+                            } else {
+                                statusIndicator.textContent = '○';
+                                statusIndicator.style.color = '#17a2b8';
+                            }
+                            statusIndicator.style.fontSize = '12px';
+                            statusIndicator.style.fontWeight = 'bold';
+                            statusIndicator.style.marginTop = '2px';
+                            
+                            shiftDisplay.appendChild(employeeName);
+                            shiftDisplay.appendChild(timeRange);
+                            shiftDisplay.appendChild(statusIndicator);
+                            
+                            // Click handler to edit shift
+                            shiftDisplay.onclick = (e) => {
+                                e.stopPropagation();
+                                showShiftDetailsModal(shift, dateStr, year, month, currentDate.getDate());
+                            };
+                            
+                            shiftSlot.appendChild(shiftDisplay);
+                        });
+                    } else {
+                        // No shifts for this category, show add button
+                        const addButton = document.createElement('div');
+                        addButton.innerHTML = '+';
+                        addButton.style.position = 'absolute';
+                        addButton.style.top = '50%';
+                        addButton.style.left = '50%';
+                        addButton.style.transform = 'translate(-50%, -50%)';
+                        addButton.style.fontSize = '24px';
+                        addButton.style.color = '#ccc';
+                        addButton.style.fontWeight = 'bold';
+                        addButton.style.cursor = 'pointer';
+                        addButton.onclick = (e) => {
+                            e.stopPropagation();
+                            // Check if bulk scheduling is active
+                            if (isBulkSchedulingMode && selectedEmployee) {
+                                // In bulk mode - handle selection
+                                handleBulkShiftSelection(dateStr, category.name, year, month, currentDate.getDate());
+                            } else {
+                                // Normal mode - open individual shift modal
+                                storeCurrentCalendarState();
+                                openShiftSchedulingModal(dateStr, year, month, currentDate.getDate(), category.name);
+                            }
+                        };
+                        shiftSlot.appendChild(addButton);
+                    }
+                }).catch(error => {
+                    console.error('Error fetching shifts:', error);
+                    // Show add button on error
+                    const addButton = document.createElement('div');
+                    addButton.innerHTML = '+';
+                    addButton.style.position = 'absolute';
+                    addButton.style.top = '50%';
+                    addButton.style.left = '50%';
+                    addButton.style.transform = 'translate(-50%, -50%)';
+                    addButton.style.fontSize = '24px';
+                    addButton.style.color = '#ccc';
+                    addButton.style.fontWeight = 'bold';
+                    addButton.style.cursor = 'pointer';
+                    addButton.onclick = (e) => {
+                        e.stopPropagation();
+                        // Check if bulk scheduling is active
+                        if (isBulkSchedulingMode && selectedEmployee) {
+                            // In bulk mode - handle selection
+                            handleBulkShiftSelection(dateStr, category.name, year, month, currentDate.getDate());
+                        } else {
+                            // Normal mode - open individual shift modal
+                            storeCurrentCalendarState();
+                            openShiftSchedulingModal(dateStr, year, month, currentDate.getDate(), category.name);
+                        }
+                    };
+                    shiftSlot.appendChild(addButton);
+                });
+                
+                shiftSlotsContainer.appendChild(shiftSlot);
+            });
+
+            dayColumn.appendChild(shiftSlotsContainer);
+            weekContainer.appendChild(dayColumn);
+        });
+
+        calendar.appendChild(weekContainer);
+        document.body.appendChild(calendar);
+        
+        // Update calendar selection display if in bulk mode
+        if (isBulkSchedulingMode && selectedEmployee) {
+            setTimeout(() => {
+                updateCalendarSelectionDisplay();
+            }, 50);
+        }
+    }
+
+    // Function to display month view
+    function displayMonthView(month, year) {
         // If employee history modal is open, close it first
         const employeeHistoryModal = document.querySelector('.employee-history-modal');
         if (employeeHistoryModal && employeeHistoryModal.style.display === 'flex') {
@@ -1597,7 +2656,7 @@ window.addEventListener('firebaseReady', function() {
         calendar.style.borderRadius = '8px';
         calendar.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
         calendar.style.zIndex = '901';
-        calendar.style.minWidth = '1200px';
+        calendar.style.minWidth = '1020px';
         calendar.style.maxHeight = '85vh';
         calendar.style.overflowY = 'auto';
 
@@ -1670,43 +2729,44 @@ window.addEventListener('firebaseReady', function() {
         navContainer.style.margin = '0 auto';
 
         // Add navigation arrows
-        const prevWeek = document.createElement('button');
-        prevWeek.innerHTML = '←';
-        prevWeek.style.border = 'none';
-        prevWeek.style.background = 'none';
-        prevWeek.style.fontSize = '20px';
-        prevWeek.style.cursor = 'pointer';
-        prevWeek.style.color = 'var(--primary)';
-        prevWeek.onclick = () => {
-            // Navigate to previous week
-            const previousWeekStart = new Date(weekStart);
-            previousWeekStart.setDate(previousWeekStart.getDate() - 7);
-            displayWeekView(previousWeekStart.getMonth(), previousWeekStart.getFullYear(), previousWeekStart);
+        const prevMonth = document.createElement('button');
+        prevMonth.innerHTML = '←';
+        prevMonth.style.border = 'none';
+        prevMonth.style.background = 'none';
+        prevMonth.style.fontSize = '20px';
+        prevMonth.style.cursor = 'pointer';
+        prevMonth.style.color = 'var(--primary)';
+        prevMonth.onclick = () => {
+            if (month === 0) {
+                displayCalendar(11, year - 1);
+                    } else {
+                displayCalendar(month - 1, year);
+            }
         };
-        navContainer.appendChild(prevWeek);
+        navContainer.appendChild(prevMonth);
 
-        // Add week display with date range
-        const weekDisplay = document.createElement('div');
-        weekDisplay.textContent = `Week View - ${weekStart.toLocaleDateString()} to ${weekEnd.toLocaleDateString()}`;
-        weekDisplay.style.fontWeight = 'bold';
-        weekDisplay.style.color = 'var(--primary)';
-        weekDisplay.style.fontSize = '14px';
-        navContainer.appendChild(weekDisplay);
+        // Add month/year display
+        const monthYear = document.createElement('div');
+        monthYear.textContent = `${new Date(year, month).toLocaleString('default', { month: 'long' })} ${year}`;
+        monthYear.style.fontWeight = 'bold';
+        monthYear.style.color = 'var(--primary)';
+        navContainer.appendChild(monthYear);
 
-        const nextWeek = document.createElement('button');
-        nextWeek.innerHTML = '→';
-        nextWeek.style.border = 'none';
-        nextWeek.style.background = 'none';
-        nextWeek.style.fontSize = '20px';
-        nextWeek.style.cursor = 'pointer';
-        nextWeek.style.color = 'var(--primary)';
-        nextWeek.onclick = () => {
-            // Navigate to next week
-            const nextWeekStart = new Date(weekStart);
-            nextWeekStart.setDate(nextWeekStart.getDate() + 7);
-            displayWeekView(nextWeekStart.getMonth(), nextWeekStart.getFullYear(), nextWeekStart);
+        const nextMonth = document.createElement('button');
+        nextMonth.innerHTML = '→';
+        nextMonth.style.border = 'none';
+        nextMonth.style.background = 'none';
+        nextMonth.style.fontSize = '20px';
+        nextMonth.style.cursor = 'pointer';
+        nextMonth.style.color = 'var(--primary)';
+        nextMonth.onclick = () => {
+            if (month === 11) {
+                displayCalendar(0, year + 1);
+            } else {
+                displayCalendar(month + 1, year);
+            }
         };
-        navContainer.appendChild(nextWeek);
+        navContainer.appendChild(nextMonth);
 
         // Add view toggle buttons
         const viewToggleContainer = document.createElement('div');
@@ -1719,8 +2779,8 @@ window.addEventListener('firebaseReady', function() {
         monthViewBtn.style.padding = '8px 16px';
         monthViewBtn.style.border = '1px solid var(--primary)';
         monthViewBtn.style.borderRadius = '6px';
-        monthViewBtn.style.backgroundColor = 'white';
-        monthViewBtn.style.color = 'var(--primary)';
+        monthViewBtn.style.backgroundColor = 'var(--primary)';
+        monthViewBtn.style.color = 'white';
         monthViewBtn.style.cursor = 'pointer';
         monthViewBtn.style.fontSize = '14px';
         monthViewBtn.style.fontWeight = 'bold';
@@ -1733,8 +2793,8 @@ window.addEventListener('firebaseReady', function() {
         weekViewBtn.style.padding = '8px 16px';
         weekViewBtn.style.border = '1px solid var(--primary)';
         weekViewBtn.style.borderRadius = '6px';
-        weekViewBtn.style.backgroundColor = 'var(--primary)';
-        weekViewBtn.style.color = 'white';
+        weekViewBtn.style.backgroundColor = 'white';
+        weekViewBtn.style.color = 'var(--primary)';
         weekViewBtn.style.cursor = 'pointer';
         weekViewBtn.style.fontSize = '14px';
         weekViewBtn.style.fontWeight = 'bold';
@@ -1757,7 +2817,8 @@ window.addEventListener('firebaseReady', function() {
         todayBtn.style.fontSize = '14px';
         todayBtn.style.fontWeight = 'bold';
         todayBtn.onclick = () => {
-            displayWeekView(today.getMonth(), today.getFullYear());
+            const today = new Date();
+            displayCalendar(today.getMonth(), today.getFullYear());
         };
         viewToggleContainer.appendChild(todayBtn);
         
@@ -1766,332 +2827,134 @@ window.addEventListener('firebaseReady', function() {
         header.appendChild(navContainer);
         calendar.appendChild(header);
 
-        // Create week view container with new structure
-        const weekContainer = document.createElement('div');
-        weekContainer.style.display = 'flex';
-        weekContainer.style.marginTop = '20px';
-        weekContainer.style.border = '1px solid #e0e0e0';
-        weekContainer.style.borderRadius = '8px';
-        weekContainer.style.overflow = 'hidden';
-        weekContainer.style.backgroundColor = 'white';
+        // Create calendar grid
+        const grid = document.createElement('div');
+        grid.style.display = 'grid';
+        grid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+        grid.style.gap = '10px';
+        grid.style.marginTop = '20px';
 
-        // Create time column
-        const timeColumn = document.createElement('div');
-        timeColumn.style.width = '120px';
-        timeColumn.style.backgroundColor = '#f8f9fa';
-        timeColumn.style.borderRight = '2px solid #e0e0e0';
-        timeColumn.style.display = 'flex';
-        timeColumn.style.flexDirection = 'column';
-
-        // Add time column header
-        const timeHeader = document.createElement('div');
-        timeHeader.style.backgroundColor = 'var(--primary)';
-        timeHeader.style.color = 'white';
-        timeHeader.style.padding = '15px 10px';
-        timeHeader.style.textAlign = 'center';
-        timeHeader.style.fontWeight = 'bold';
-        timeHeader.style.fontSize = '14px';
-        timeHeader.style.height = '60px';
-        timeHeader.style.display = 'flex';
-        timeHeader.style.alignItems = 'center';
-        timeHeader.style.justifyContent = 'center';
-        timeHeader.textContent = 'Time';
-        timeColumn.appendChild(timeHeader);
-
-        // Create time grid container to match day column height
-        const timeGridContainer = document.createElement('div');
-        timeGridContainer.style.position = 'relative';
-        timeGridContainer.style.height = '720px'; // 12 hours * 60px each (7:00 to 18:00)
-        timeGridContainer.style.backgroundColor = '#f8f9fa';
-
-        // Add time labels (8:00 to 18:00 in 1-hour intervals)
-        for (let hour = 8; hour <= 18; hour++) {
-            const slotIndex = hour - 7; // Start from 7:00 slot index so 8:00 appears at second grid line
-            const timeLabel = document.createElement('div');
-            timeLabel.style.position = 'absolute';
-            timeLabel.style.top = `${slotIndex * 60}px`; // Position at start of hour (on grid line)
-            timeLabel.style.transform = 'translateY(-50%)'; // Center vertically on the grid line
-            timeLabel.style.left = '0';
-            timeLabel.style.right = '0';
-            timeLabel.style.height = '60px';
-            timeLabel.style.padding = '0 10px';
-            timeLabel.style.textAlign = 'center';
-            timeLabel.style.fontSize = '12px';
-            timeLabel.style.fontWeight = 'bold';
-            timeLabel.style.color = '#666';
-            timeLabel.style.display = 'flex';
-            timeLabel.style.alignItems = 'center';
-            timeLabel.style.justifyContent = 'center';
-            timeLabel.style.boxSizing = 'border-box';
-            timeLabel.style.backgroundColor = '#f8f9fa';
-            timeLabel.style.zIndex = '1';
-            timeLabel.textContent = `${hour.toString().padStart(2, '0')}:00`;
-            timeGridContainer.appendChild(timeLabel);
-        }
-        
-        timeColumn.appendChild(timeGridContainer);
-        weekContainer.appendChild(timeColumn);
-
-        // Create day columns
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const japanesedays = ['日', '月', '火', '水', '木', '金', '土'];
-        
-        // Calculate which day of the week is today (0-6, where 0 is Sunday)
-        const currentToday = new Date();
-        const todayDay = currentToday.getDay();
-        
-        days.forEach((day, dayIndex) => {
-            const dayColumn = document.createElement('div');
-            dayColumn.style.flex = '1';
-            dayColumn.style.position = 'relative';
-            dayColumn.style.borderRight = dayIndex < 6 ? '1px solid #e0e0e0' : 'none';
-            
-            // Calculate the date for this day
-            const currentDate = new Date(weekStart);
-            currentDate.setDate(weekStart.getDate() + dayIndex);
-            const dayNumber = currentDate.getDate();
-            
-            // Day header
+        // Add day headers
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        days.forEach(day => {
             const dayHeader = document.createElement('div');
-            dayHeader.innerHTML = `${day} ${japanesedays[dayIndex]} ${dayNumber}`;
-            dayHeader.style.backgroundColor = dayIndex === todayDay ? '#28a745' : 'var(--primary)';
-            dayHeader.style.color = 'white';
-            dayHeader.style.padding = '15px 10px';
+            dayHeader.textContent = day;
             dayHeader.style.textAlign = 'center';
             dayHeader.style.fontWeight = 'bold';
-            dayHeader.style.fontSize = '14px';
-            dayHeader.style.height = '60px';
-            dayHeader.style.display = 'flex';
-            dayHeader.style.alignItems = 'center';
-            dayHeader.style.justifyContent = 'center';
-            dayColumn.appendChild(dayHeader);
+            dayHeader.style.padding = '8px';
+            dayHeader.style.color = 'var(--primary)';
+            dayHeader.style.fontSize = '16px';
+            grid.appendChild(dayHeader);
+        });
 
-            // Create time grid background for this day
-            const timeGrid = document.createElement('div');
-            timeGrid.style.position = 'relative';
-            timeGrid.style.height = '720px'; // 12 hours * 60px each (7:00 to 18:00)
-            timeGrid.style.backgroundColor = dayIndex === todayDay ? '#f8f9fa' : 'white';
+        // Get first day of month and total days
+        const firstDay = new Date(year, month, 1).getDay();
+        const totalDays = new Date(year, month + 1, 0).getDate();
 
-            // Add time slot backgrounds
-            for (let hour = 7; hour <= 18; hour++) {
-                const slotIndex = hour - 7;
-                const slot = document.createElement('div');
-                slot.style.position = 'absolute';
-                slot.style.top = `${slotIndex * 60}px`;
-                slot.style.left = '0';
-                slot.style.right = '0';
-                slot.style.height = '60px';
-                slot.style.borderBottom = '1px solid #e0e0e0';
-                slot.style.cursor = 'pointer';
+        // Add empty cells for days before first of month
+        for (let i = 0; i < firstDay; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.style.height = '100px';
+            emptyCell.style.backgroundColor = '#f8f9fa';
+            emptyCell.style.borderRadius = '4px';
+            grid.appendChild(emptyCell);
+        }
+
+                    // Add days
+            for (let day = 1; day <= totalDays; day++) {
+                const cell = document.createElement('div');
+                cell.style.height = '100px';
+                cell.style.backgroundColor = 'white';
+                cell.style.border = '1px solid #e0e0e0';
+                cell.style.borderRadius = '4px';
+                cell.style.padding = '8px';
+                cell.style.position = 'relative';
+                cell.style.overflow = 'hidden';
+                cell.style.cursor = 'pointer';
+                cell.style.transition = 'background-color 0.2s';
+
+                const dayNumber = document.createElement('div');
+                dayNumber.textContent = day;
+                dayNumber.style.fontWeight = 'bold';
+                dayNumber.style.marginBottom = '5px';
+                dayNumber.style.fontSize = '16px';
+                dayNumber.style.textAlign = 'center';
                 
-                // Add click handler to open shift scheduling modal
-                const dateStr = currentDate.toLocaleDateString('en-US', {
+                cell.onmouseover = () => {
+                    cell.style.backgroundColor = '#f8f9fa';
+                };
+                cell.onmouseout = () => {
+                    cell.style.backgroundColor = 'white';
+                };
+                
+                cell.appendChild(dayNumber);
+
+                // Fetch and display employee records for this day
+                const dateStr = new Date(year, month, day).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit'
                 });
-                
-                slot.onclick = () => {
-                    openShiftSchedulingModal(dateStr, year, month, currentDate.getDate());
-                };
-                
-                timeGrid.appendChild(slot);
-            }
 
-            // Fetch and display employee shifts for this day
-            const dateStr = currentDate.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-            });
+                // Fetch employee records for this day
+                getDocs(query(
+                    collection(db, 'employeeSignIns'),
+                    where('date', '==', dateStr)
+                )).then(querySnapshot => {
+                        querySnapshot.forEach(doc => {
+                            const data = doc.data();
+                            const record = document.createElement('div');
+                        record.style.marginBottom = '5px';
+                        record.style.padding = '5px';
+                            record.style.backgroundColor = '#f8f9fa';
+                        record.style.borderRadius = '4px';
+                        record.style.fontSize = '12px';
+                        record.innerHTML = `
+                            <div style="font-weight: bold; font-size: 12px;">${data.employeeName}</div>
+                            <div style="color: #666; font-size: 11px;">
+                                ${data.signInTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                ${data.endTime ? ` - ${data.endTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ' - Present'}
+                        </div>
+                        `;
+                        cell.appendChild(record);
+                    });
+                });
 
-            // Fetch employee records for this day
-            getDocs(query(
-                collection(db, 'employeeSignIns'),
-                where('date', '==', dateStr)
-            )).then(querySnapshot => {
-                const shifts = [];
-                querySnapshot.forEach(doc => {
-                    const data = doc.data();
-                    const signInTime = data.signInTime.toDate();
-                    const endTime = data.endTime ? data.endTime.toDate() : new Date();
-                    
-                    // Calculate position and height
-                    const startMinutes = signInTime.getHours() * 60 + signInTime.getMinutes();
-                    const endMinutes = endTime.getHours() * 60 + endTime.getMinutes();
-                    
-                    // Convert to grid position (7:00 = 0, 7:30 = 30px, etc.)
-                    const startPosition = startMinutes - (7 * 60); // Convert to minutes from 7:00
-                    const duration = endMinutes - startMinutes;
-                    const height = duration;
-                    
-                    // Only show if within business hours (include shifts that start before 8:00 but extend into business hours)
-                    if (startMinutes < (18 * 60) && endMinutes > (8 * 60)) {
-                        shifts.push({
-                            doc,
-                            data,
-                            signInTime,
-                            endTime,
-                            startPosition,
-                            height
-                        });
-                    }
-                });
-                
-                // Create shift blocks with side-by-side layout for multiple employees
-                shifts.forEach((shift, index) => {
-                    const shiftBlock = document.createElement('div');
-                    shiftBlock.style.position = 'absolute';
-                    shiftBlock.style.top = `${shift.startPosition}px`;
-                    shiftBlock.style.height = `${shift.height}px`;
-                    shiftBlock.style.backgroundColor = '#e8f5e8';
-                    shiftBlock.style.border = '2px solid #4caf50';
-                    shiftBlock.style.borderRadius = '6px';
-                    shiftBlock.style.padding = '6px';
-                    shiftBlock.style.fontSize = '10px';
-                    shiftBlock.style.cursor = 'pointer';
-                    shiftBlock.style.zIndex = '10';
-                    shiftBlock.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                    
-                    // Calculate width and position for side-by-side layout
-                    if (shifts.length === 1) {
-                        // Single employee - full width
-                        shiftBlock.style.left = '4px';
-                        shiftBlock.style.right = '4px';
-                    } else {
-                        // Multiple employees - side by side
-                        const width = 'calc(50% - 6px)';
-                        if (index % 2 === 0) {
-                            // Left side
-                            shiftBlock.style.left = '4px';
-                            shiftBlock.style.right = 'auto';
-                            shiftBlock.style.width = width;
-                        } else {
-                            // Right side
-                            shiftBlock.style.left = 'auto';
-                            shiftBlock.style.right = '4px';
-                            shiftBlock.style.width = width;
-                        }
-                    }
-                    
-                    shiftBlock.innerHTML = `
-                        <div style="font-weight: bold; color: #2e7d32; margin-bottom: 2px; font-size: 9px;">${shift.data.employeeName}</div>
-                        <div style="color: #4caf50; font-size: 8px;">
-                            ${shift.signInTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            ${shift.data.endTime ? ` - ${shift.endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ' - Present'}
+                // Fetch scheduled shifts for this day
+                getDocs(query(
+                    collection(db, 'scheduledShifts'),
+                    where('date', '==', dateStr)
+                )).then(querySnapshot => {
+                    querySnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const record = document.createElement('div');
+                        record.style.marginBottom = '5px';
+                        record.style.padding = '5px';
+                        record.style.backgroundColor = '#e3f2fd';
+                        record.style.borderRadius = '4px';
+                        record.style.fontSize = '12px';
+                        record.style.border = '1px solid #2196f3';
+                        record.style.position = 'relative';
+                        record.style.cursor = 'pointer';
+                        record.innerHTML = `
+                            <div style="font-weight: bold; font-size: 12px; color: #1976d2;">${data.employeeName}</div>
+                            <div style="color: #1976d2; font-size: 11px;">
+                                Scheduled: ${data.startTime}
                         </div>
-                        <div style="color: #4caf50; font-size: 7px; margin-top: 1px;">
-                            ${Math.floor(shift.height / 60)}h ${shift.height % 60}m
-                        </div>
-                    `;
-                    
-                    shiftBlock.onclick = () => {
-                        openShiftSchedulingModal(dateStr, year, month, currentDate.getDate());
-                    };
-                    
-                    timeGrid.appendChild(shiftBlock);
-                });
-            });
-
-            // Fetch scheduled shifts for this day
-            getDocs(query(
-                collection(db, 'scheduledShifts'),
-                where('date', '==', dateStr)
-            )).then(querySnapshot => {
-                const scheduledShifts = [];
-                querySnapshot.forEach(doc => {
-                    const data = doc.data();
-                    const timeParts = data.startTime.split(':');
-                    const scheduledHour = parseInt(timeParts[0]);
-                    const scheduledMinute = parseInt(timeParts[1]);
-                    const scheduledMinutes = scheduledHour * 60 + scheduledMinute;
-                    
-                    // For scheduled shifts, use actual end time or default to 8 hours
-                    let scheduledEndMinutes, duration;
-                    if (data.endTime) {
-                        const endTimeParts = data.endTime.split(':');
-                        const endHour = parseInt(endTimeParts[0]);
-                        const endMinute = parseInt(endTimeParts[1]);
-                        scheduledEndMinutes = endHour * 60 + endMinute;
-                        duration = scheduledEndMinutes - scheduledMinutes;
-                    } else {
-                        // Fallback to 8-hour duration for existing records
-                        scheduledEndMinutes = scheduledMinutes + (8 * 60);
-                        duration = 8 * 60;
-                    }
-                    
-                    // Convert to grid position
-                    const startPosition = scheduledMinutes - (7 * 60); // Convert to minutes from 7:00
-                    const height = duration;
-                    
-                    // Only show if within business hours (include shifts that start before 8:00 but extend into business hours)
-                    if (scheduledMinutes < (18 * 60) && (scheduledMinutes + duration) > (8 * 60)) {
-                        scheduledShifts.push({
-                            doc,
-                            data,
-                            startPosition,
-                            height
-                        });
-                    }
-                });
-                
-                // Create scheduled shift blocks with side-by-side layout
-                scheduledShifts.forEach((shift, index) => {
-                    const scheduledBlock = document.createElement('div');
-                    scheduledBlock.style.position = 'absolute';
-                    scheduledBlock.style.top = `${shift.startPosition}px`;
-                    scheduledBlock.style.height = `${shift.height}px`;
-                    scheduledBlock.style.backgroundColor = '#e3f2fd';
-                    scheduledBlock.style.border = '2px solid #2196f3';
-                    scheduledBlock.style.borderRadius = '6px';
-                    scheduledBlock.style.padding = '6px';
-                    scheduledBlock.style.fontSize = '10px';
-                    scheduledBlock.style.cursor = 'pointer';
-                    scheduledBlock.style.zIndex = '5';
-                    scheduledBlock.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                    
-                    // Calculate width and position for side-by-side layout
-                    if (scheduledShifts.length === 1) {
-                        // Single scheduled shift - full width
-                        scheduledBlock.style.left = '4px';
-                        scheduledBlock.style.right = '4px';
-                    } else {
-                        // Multiple scheduled shifts - side by side
-                        const width = 'calc(50% - 6px)';
-                        if (index % 2 === 0) {
-                            // Left side
-                            scheduledBlock.style.left = '4px';
-                            scheduledBlock.style.right = 'auto';
-                            scheduledBlock.style.width = width;
-                        } else {
-                            // Right side
-                            scheduledBlock.style.left = 'auto';
-                            scheduledBlock.style.right = '4px';
-                            scheduledBlock.style.width = width;
-                        }
-                    }
-                    
-                    scheduledBlock.innerHTML = `
-                        <div style="font-weight: bold; color: #1976d2; margin-bottom: 2px; font-size: 9px;">${shift.data.employeeName}</div>
-                        <div style="color: #1976d2; font-size: 8px;">
-                            Scheduled: ${shift.data.startTime}${shift.data.endTime ? ` - ${shift.data.endTime}` : ''}
-                        </div>
-                        <div style="color: #1976d2; font-size: 7px; margin-top: 1px;">
-                            ${Math.floor(shift.height / 60)}h ${shift.height % 60}m
-                        </div>
-                        <div style="position: absolute; top: 2px; right: 2px; font-size: 10px; color: #f44336; cursor: pointer; background: white; border-radius: 50%; width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;" title="Delete scheduled shift">×</div>
+                            <div style="position: absolute; top: 2px; right: 2px; font-size: 10px; color: #f44336; cursor: pointer;" title="Delete scheduled shift">×</div>
                     `;
                     
                     // Add click handler to delete scheduled shift
-                    scheduledBlock.onclick = async (e) => {
-                        if (e.target.title === 'Delete scheduled shift') {
+                        record.onclick = async (e) => {
+                            // Don't trigger if clicking the delete button
+                            if (e.target.style.position === 'absolute') {
                             e.stopPropagation();
                             showCustomConfirm(
-                                `Delete scheduled shift for ${shift.data.employeeName}?`,
+                                    `Delete scheduled shift for ${data.employeeName}?`,
                                 async () => {
                                     try {
-                                        await deleteDoc(shift.doc.ref);
-                                        displayWeekView(month, year);
+                                            await deleteDoc(doc.ref);
+                                            displayCalendar(month, year);
                                     } catch (error) {
                                         console.error('Error deleting scheduled shift:', error);
                                         showCustomAlert('Error deleting scheduled shift. Please try again.', 'error');
@@ -2102,15 +2965,19 @@ window.addEventListener('firebaseReady', function() {
                         }
                     };
                     
-                    timeGrid.appendChild(scheduledBlock);
+                        cell.appendChild(record);
                 });
             });
 
-            dayColumn.appendChild(timeGrid);
-            weekContainer.appendChild(dayColumn);
-        });
+                // Add click handler to open shift scheduling modal
+                cell.onclick = () => {
+                    openShiftSchedulingModal(dateStr, year, month, day);
+                };
 
-        calendar.appendChild(weekContainer);
+                grid.appendChild(cell);
+            }
+
+        calendar.appendChild(grid);
         document.body.appendChild(calendar);
     }
 
@@ -2315,7 +3182,10 @@ window.addEventListener('firebaseReady', function() {
     calendarContainer.style.zIndex = '901'; // Just above the modal background
 
     // Function to open shift scheduling modal
-    async function openShiftSchedulingModal(dateStr, year, month, day) {
+    async function openShiftSchedulingModal(dateStr, year, month, day, shiftClassification = null) {
+        // Store current calendar state before opening modal
+        storeCurrentCalendarState();
+        
         // Create modal overlay
         const overlay = document.createElement('div');
         overlay.className = 'shift-scheduling-overlay';
@@ -2411,6 +3281,55 @@ window.addEventListener('firebaseReady', function() {
         employeeSection.appendChild(employeeLabel);
         employeeSection.appendChild(employeeSelect);
 
+        // Shift classification selection
+        const classificationSection = document.createElement('div');
+        classificationSection.style.display = 'flex';
+        classificationSection.style.flexDirection = 'column';
+        classificationSection.style.gap = '8px';
+
+        const classificationLabel = document.createElement('label');
+        classificationLabel.textContent = 'Shift Classification:';
+        classificationLabel.style.fontWeight = 'bold';
+        classificationLabel.style.color = '#333';
+
+        const classificationSelect = document.createElement('select');
+        classificationSelect.id = 'classificationSelect';
+        classificationSelect.style.padding = '12px';
+        classificationSelect.style.border = '1px solid #e0e0e0';
+        classificationSelect.style.borderRadius = '8px';
+        classificationSelect.style.fontSize = '16px';
+        classificationSelect.style.backgroundColor = 'white';
+
+        // Add shift classifications with default times
+        const shiftClassifications = [
+            { name: 'Cafe Open', startTime: '07:30', endTime: '11:30' },
+            { name: 'Cafe Morning', startTime: '09:00', endTime: '13:00' },
+            { name: 'Cafe Afternoon', startTime: '13:00', endTime: '16:00' },
+            { name: 'Cafe Close', startTime: '14:00', endTime: '18:00' },
+            { name: 'TEN Cleaning 1', startTime: '10:00', endTime: '14:00' },
+            { name: 'TEN Cleaning 2', startTime: '10:00', endTime: '14:00' }
+        ];
+
+        // Add default option
+        const defaultClassificationOption = document.createElement('option');
+        defaultClassificationOption.value = '';
+        defaultClassificationOption.textContent = 'Choose shift type...';
+        classificationSelect.appendChild(defaultClassificationOption);
+
+        // Add classification options
+        shiftClassifications.forEach(classification => {
+            const option = document.createElement('option');
+            option.value = classification.name;
+            option.textContent = classification.name;
+            if (shiftClassification && classification.name === shiftClassification) {
+                option.selected = true;
+            }
+            classificationSelect.appendChild(option);
+        });
+
+        classificationSection.appendChild(classificationLabel);
+        classificationSection.appendChild(classificationSelect);
+
         // Time selection container
         const timeContainer = document.createElement('div');
         timeContainer.style.display = 'flex';
@@ -2467,8 +3386,27 @@ window.addEventListener('firebaseReady', function() {
         timeContainer.appendChild(startTimeSection);
         timeContainer.appendChild(endTimeSection);
 
+        // Add event listener to auto-fill times when classification changes
+        classificationSelect.addEventListener('change', () => {
+            const selectedClassification = shiftClassifications.find(c => c.name === classificationSelect.value);
+            if (selectedClassification) {
+                startTimeInput.value = selectedClassification.startTime;
+                endTimeInput.value = selectedClassification.endTime;
+            }
+        });
+
+        // Auto-fill times if a classification is pre-selected
+        if (shiftClassification) {
+            const selectedClassification = shiftClassifications.find(c => c.name === shiftClassification);
+            if (selectedClassification) {
+                startTimeInput.value = selectedClassification.startTime;
+                endTimeInput.value = selectedClassification.endTime;
+            }
+        }
+
         // Add form sections
         form.appendChild(employeeSection);
+        form.appendChild(classificationSection);
         form.appendChild(timeContainer);
 
         // Create buttons container
@@ -2507,11 +3445,12 @@ window.addEventListener('firebaseReady', function() {
         scheduleButton.style.fontWeight = 'bold';
         scheduleButton.onclick = async () => {
             const selectedEmployeeId = employeeSelect.value;
+            const selectedClassification = classificationSelect.value;
             const startTime = startTimeInput.value;
             const endTime = endTimeInput.value;
 
-            if (!selectedEmployeeId || !startTime || !endTime) {
-                showCustomAlert('Please select an employee, start time, and end time.', 'warning');
+            if (!selectedEmployeeId || !selectedClassification || !startTime || !endTime) {
+                showCustomAlert('Please select an employee, shift classification, start time, and end time.', 'warning');
                 return;
             }
 
@@ -2526,7 +3465,27 @@ window.addEventListener('firebaseReady', function() {
                 const employeeDoc = await getDocs(query(collection(db, 'employees'), where('__name__', '==', selectedEmployeeId)));
                 const employeeName = employeeDoc.docs[0].data().name;
 
-                // Create scheduled shift
+                // Convert date string to YYYY-MM-DD format
+                const firestoreDate = convertToFirestoreDate(dateStr);
+                
+                // Create shift start and end times
+                const [startHour, startMinute] = startTime.split(':').map(Number);
+                const [endHour, endMinute] = endTime.split(':').map(Number);
+                
+                const shiftStartTime = new Date(year, month, day, startHour, startMinute);
+                const shiftFinishTime = new Date(year, month, day, endHour, endMinute);
+
+                // Create new shift using the new system
+                await createNewShift(
+                    firestoreDate,
+                    selectedClassification,
+                    selectedEmployeeId,
+                    employeeName,
+                    shiftStartTime,
+                    shiftFinishTime
+                );
+
+                // Also create in old system for compatibility
                 await addDoc(collection(db, 'scheduledShifts'), {
                     employeeId: selectedEmployeeId,
                     employeeName: employeeName,
@@ -2536,9 +3495,14 @@ window.addEventListener('firebaseReady', function() {
                     createdAt: Timestamp.now()
                 });
 
-                // Close modal and refresh calendar
+                // Close modal and refresh only the shift data
                 document.body.removeChild(overlay);
-                displayWeekView(month, year);
+                
+                // Refresh the specific date's shift data without changing calendar position
+                const refreshDate = convertToFirestoreDate(dateStr);
+                refreshShiftDataForDate(refreshDate);
+                
+                showCustomAlert('Shift scheduled successfully!', 'success');
             } catch (error) {
                 console.error('Error scheduling shift:', error);
                 showCustomAlert('Error scheduling shift. Please try again.', 'error');
@@ -2758,6 +3722,2064 @@ window.addEventListener('firebaseReady', function() {
             } catch (error) {
                 console.error('Error fetching employee history:', error);
                 showCustomAlert('Error loading employee history. Please try again.', 'error');
+            }
+    }
+
+    // ===== NEW SHIFTS COLLECTION SYSTEM =====
+    
+    /**
+     * Create a new shift in the shifts collection
+     * @param {string} dateStr - Date in YYYY-MM-DD format
+     * @param {string} shiftClassification - Shift type (Cafe Open, Cafe Morning, etc.)
+     * @param {string} employeeId - Employee document ID
+     * @param {string} employeeName - Employee name
+     * @param {Date} shiftStartTime - Scheduled start time
+     * @param {Date} shiftFinishTime - Scheduled end time
+     * @returns {Promise<string>} - Shift ID
+     */
+    async function createNewShift(dateStr, shiftClassification, employeeId, employeeName, shiftStartTime, shiftFinishTime) {
+        try {
+            const { doc, getDoc, setDoc, Timestamp } = window.firebaseServices;
+            
+            // Calculate total duration in minutes
+            const totalDuration = Math.floor((shiftFinishTime - shiftStartTime) / (1000 * 60));
+            
+            // Create the shift object
+            const newShift = {
+                shiftClassification: shiftClassification,
+                shiftStartTime: Timestamp.fromDate(shiftStartTime),
+                shiftFinishTime: Timestamp.fromDate(shiftFinishTime),
+                employeeName: employeeName,
+                employeeId: employeeId,
+                signInTime: null,
+                signOutTime: null,
+                breaks: [],
+                totalDuration: totalDuration,
+                isScheduled: true,
+                isCurrent: false,
+                isCompleted: false,
+                createdAt: Timestamp.now()
+            };
+            
+            // Get or create the date document
+            const dateDocRef = doc(db, 'shifts', dateStr);
+            const dateDoc = await getDoc(dateDocRef);
+            
+            if (dateDoc.exists()) {
+                // Document exists, add to existing shifts array
+                const existingData = dateDoc.data();
+                const shifts = existingData.shifts || [];
+                shifts.push(newShift);
+                
+                await setDoc(dateDocRef, { shifts: shifts }, { merge: true });
+            } else {
+                // Document doesn't exist, create new with this shift
+                await setDoc(dateDocRef, { shifts: [newShift] });
+            }
+            
+            console.log('New shift created successfully:', newShift);
+            return 'success';
+        } catch (error) {
+            console.error('Error creating new shift:', error);
+            console.error('Error details for createNewShift:', {
+                message: error.message,
+                stack: error.stack,
+                dateStr,
+                shiftClassification,
+                employeeId,
+                employeeName
+            });
+            throw error;
+        }
+    }
+    
+    /**
+     * Update shift status when employee signs in
+     * @param {string} dateStr - Date in YYYY-MM-DD format
+     * @param {string} employeeId - Employee document ID
+     * @param {Date} signInTime - Actual sign in time
+     * @returns {Promise<boolean>} - Success status
+     */
+    async function updateShiftToCurrent(dateStr, employeeId, signInTime) {
+        try {
+            const { doc, getDoc, setDoc, Timestamp } = window.firebaseServices;
+            
+            const dateDocRef = doc(db, 'shifts', dateStr);
+            const dateDoc = await getDoc(dateDocRef);
+            
+            if (!dateDoc.exists()) {
+                console.log('No shifts found for date:', dateStr);
+                return false;
+            }
+            
+            const data = dateDoc.data();
+            const shifts = data.shifts || [];
+            
+            // Find the scheduled shift for this employee
+            const shiftIndex = shifts.findIndex(shift => 
+                shift.employeeId === employeeId && 
+                shift.isScheduled === true
+            );
+            
+            if (shiftIndex === -1) {
+                console.log('No scheduled shift found for employee:', employeeId);
+                return false;
+            }
+            
+            // Calculate total duration from sign-in time to now
+            const totalDuration = Math.floor((new Date() - signInTime) / (1000 * 60));
+            
+            // Update the shift status
+            shifts[shiftIndex].isScheduled = false;
+            shifts[shiftIndex].isCurrent = true;
+            shifts[shiftIndex].isCompleted = false;
+            shifts[shiftIndex].signInTime = Timestamp.fromDate(signInTime);
+            shifts[shiftIndex].totalDuration = totalDuration;
+            
+            // Save updated shifts
+            await setDoc(dateDocRef, { shifts: shifts }, { merge: true });
+            
+            console.log('Shift updated to current:', shifts[shiftIndex]);
+            return true;
+        } catch (error) {
+            console.error('Error updating shift to current:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Complete a shift when employee signs out
+     * @param {string} dateStr - Date in YYYY-MM-DD format
+     * @param {string} employeeId - Employee document ID
+     * @param {Date} signOutTime - Actual sign out time
+     * @returns {Promise<boolean>} - Success status
+     */
+    async function completeShift(dateStr, employeeId, signOutTime) {
+        try {
+            const { doc, getDoc, setDoc, Timestamp } = window.firebaseServices;
+            
+            const dateDocRef = doc(db, 'shifts', dateStr);
+            const dateDoc = await getDoc(dateDocRef);
+            
+            if (!dateDoc.exists()) {
+                console.log('No shifts found for date:', dateStr);
+                return false;
+            }
+            
+            const data = dateDoc.data();
+            const shifts = data.shifts || [];
+            
+            // Find the current shift for this employee
+            const shiftIndex = shifts.findIndex(shift => 
+                shift.employeeId === employeeId && 
+                shift.isCurrent === true
+            );
+            
+            if (shiftIndex === -1) {
+                console.log('No current shift found for employee:', employeeId);
+                return false;
+            }
+            
+            // Calculate final total duration from sign-in to sign-out
+            const signInTime = shifts[shiftIndex].signInTime.toDate();
+            const totalDuration = Math.floor((signOutTime - signInTime) / (1000 * 60));
+            
+            // Update the shift status
+            shifts[shiftIndex].isScheduled = false;
+            shifts[shiftIndex].isCurrent = false;
+            shifts[shiftIndex].isCompleted = true;
+            shifts[shiftIndex].signOutTime = Timestamp.fromDate(signOutTime);
+            shifts[shiftIndex].totalDuration = totalDuration;
+            
+            // Save updated shifts
+            await setDoc(dateDocRef, { shifts: shifts }, { merge: true });
+            
+            console.log('Shift completed:', shifts[shiftIndex]);
+            return true;
+        } catch (error) {
+            console.error('Error completing shift:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Add a break to a current shift
+     * @param {string} dateStr - Date in YYYY-MM-DD format
+     * @param {string} employeeId - Employee document ID
+     * @param {Date} breakStartTime - Break start time
+     * @param {Date} breakEndTime - Break end time
+     * @returns {Promise<boolean>} - Success status
+     */
+    async function addBreakToShift(dateStr, employeeId, breakStartTime, breakEndTime) {
+        try {
+            const { doc, getDoc, setDoc, Timestamp } = window.firebaseServices;
+            
+            const dateDocRef = doc(db, 'shifts', dateStr);
+            const dateDoc = await getDoc(dateDocRef);
+            
+            if (!dateDoc.exists()) {
+                console.log('No shifts found for date:', dateStr);
+                return false;
+            }
+            
+            const data = dateDoc.data();
+            const shifts = data.shifts || [];
+            
+            // Find the current shift for this employee
+            const shiftIndex = shifts.findIndex(shift => 
+                shift.employeeId === employeeId && 
+                shift.isCurrent === true
+            );
+            
+            if (shiftIndex === -1) {
+                console.log('No current shift found for employee:', employeeId);
+                return false;
+            }
+            
+            // Calculate break duration in minutes
+            const durationMs = breakEndTime.getTime() - breakStartTime.getTime();
+            const durationMinutes = Math.floor(durationMs / (1000 * 60));
+            
+            // Create break object
+            const breakObj = {
+                startTime: Timestamp.fromDate(breakStartTime),
+                endTime: Timestamp.fromDate(breakEndTime),
+                duration: durationMinutes
+            };
+            
+            // Add break to shifts array
+            if (!shifts[shiftIndex].breaks) {
+                shifts[shiftIndex].breaks = [];
+            }
+            shifts[shiftIndex].breaks.push(breakObj);
+            
+            // Save updated shifts
+            await setDoc(dateDocRef, { shifts: shifts }, { merge: true });
+            
+            console.log('Break added to shift:', breakObj);
+            return true;
+        } catch (error) {
+            console.error('Error adding break to shift:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Get all shifts for a specific date
+     * @param {string} dateStr - Date in YYYY-MM-DD format
+     * @returns {Promise<Array>} - Array of shifts
+     */
+    async function getShiftsForDate(dateStr) {
+        try {
+            const { doc, getDoc } = window.firebaseServices;
+            
+            const dateDocRef = doc(db, 'shifts', dateStr);
+            const dateDoc = await getDoc(dateDocRef);
+            
+            if (!dateDoc.exists()) {
+                return [];
+            }
+            
+            const data = dateDoc.data();
+            return data.shifts || [];
+        } catch (error) {
+            console.error('Error getting shifts for date:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Get current shift for an employee
+     * @param {string} dateStr - Date in YYYY-MM-DD format
+     * @param {string} employeeId - Employee document ID
+     * @returns {Promise<Object|null>} - Current shift or null
+     */
+    async function getCurrentShift(dateStr, employeeId) {
+        try {
+            const shifts = await getShiftsForDate(dateStr);
+            return shifts.find(shift => 
+                shift.employeeId === employeeId && 
+                shift.isCurrent === true
+            ) || null;
+        } catch (error) {
+            console.error('Error getting current shift:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Convert date string to YYYY-MM-DD format
+     * @param {string} dateStr - Date in MM/DD/YYYY format
+     * @returns {string} - Date in YYYY-MM-DD format
+     */
+    function convertToFirestoreDate(dateStr) {
+        // Handle MM/DD/YYYY format (from toLocaleDateString)
+        if (dateStr.includes('/')) {
+            const [month, day, year] = dateStr.split('/');
+            return `${year}-${month}-${day}`;
+        }
+        
+        // Handle other formats with Date constructor
+        const date = new Date(dateStr);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    /**
+     * Show shift details modal with edit functionality
+     * @param {Object} shift - The shift object
+     * @param {string} dateStr - Date string
+     * @param {number} year - Year
+     * @param {number} month - Month
+     * @param {number} day - Day
+     */
+    function showShiftDetailsModal(shift, dateStr, year, month, day) {
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'shift-details-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.style.zIndex = '1000';
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.className = 'shift-details-modal';
+        modal.style.backgroundColor = 'white';
+        modal.style.padding = '30px';
+        modal.style.borderRadius = '10px';
+        modal.style.minWidth = '400px';
+        modal.style.maxWidth = '500px';
+        modal.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+        modal.style.position = 'relative';
+
+        // Add close button
+        const closeButton = document.createElement('button');
+        closeButton.innerHTML = '×';
+        closeButton.style.position = 'absolute';
+        closeButton.style.top = '15px';
+        closeButton.style.right = '20px';
+        closeButton.style.border = 'none';
+        closeButton.style.background = 'none';
+        closeButton.style.fontSize = '24px';
+        closeButton.style.cursor = 'pointer';
+        closeButton.style.color = '#666';
+        closeButton.onclick = () => {
+            if (overlay && overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        };
+
+        // Create title with edit icon
+        const titleContainer = document.createElement('div');
+        titleContainer.style.display = 'flex';
+        titleContainer.style.alignItems = 'center';
+        titleContainer.style.justifyContent = 'space-between';
+        titleContainer.style.marginBottom = '25px';
+
+        const title = document.createElement('h2');
+        title.textContent = 'Shift Details';
+        title.style.margin = '0';
+        title.style.color = 'var(--primary)';
+        title.style.fontSize = '24px';
+
+        const editButton = document.createElement('button');
+        editButton.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        `;
+        editButton.style.border = 'none';
+        editButton.style.background = 'none';
+        editButton.style.cursor = 'pointer';
+        editButton.style.padding = '8px';
+        editButton.style.borderRadius = '50%';
+        editButton.style.transition = 'background-color 0.2s';
+        editButton.style.color = 'var(--primary)';
+        editButton.onmouseover = () => {
+            editButton.style.backgroundColor = '#f8f9fa';
+        };
+        editButton.onmouseout = () => {
+            editButton.style.backgroundColor = 'transparent';
+        };
+        editButton.onclick = () => {
+            // Close the details modal first
+            if (overlay && overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+            // Open edit modal
+            openShiftEditModal(shift, dateStr, year, month, day);
+        };
+
+        titleContainer.appendChild(title);
+        titleContainer.appendChild(editButton);
+
+        // Create content container
+        const content = document.createElement('div');
+        content.style.display = 'flex';
+        content.style.flexDirection = 'column';
+        content.style.gap = '15px';
+
+        // Employee section
+        const employeeSection = createDetailSection('Employee', shift.employeeName, `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
+                <path d="M5 20c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="currentColor" stroke-width="2"/>
+            </svg>
+        `);
+
+        // Shift classification section
+        const classificationSection = createDetailSection('Shift Type', shift.shiftClassification, `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        `);
+
+        // Date section
+        const date = new Date(year, month, day);
+        const dateSection = createDetailSection('Date', date.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        }), `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+                <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+                <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/>
+                <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
+            </svg>
+        `);
+
+        // Time section
+        const startTime = shift.shiftStartTime.toDate();
+        const endTime = shift.shiftFinishTime.toDate();
+        const timeSection = createDetailSection('Time', `${startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`, `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        `);
+
+        // Status section
+        let statusText, statusColor, statusIcon;
+        if (shift.isCompleted) {
+            statusText = 'Completed';
+            statusColor = '#28a745';
+            statusIcon = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            `;
+        } else if (shift.isCurrent) {
+            statusText = 'In Progress';
+            statusColor = '#ffc107';
+            statusIcon = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            `;
+        } else {
+            statusText = 'Scheduled';
+            statusColor = '#17a2b8';
+            statusIcon = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            `;
+        }
+        const statusSection = createDetailSection('Status', statusText, statusIcon, statusColor);
+
+        // Sign in/out times if available
+        if (shift.signInTime) {
+            const signInTime = shift.signInTime.toDate();
+            const signInSection = createDetailSection('Sign In', signInTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            `);
+            content.appendChild(signInSection);
+        }
+
+        if (shift.signOutTime) {
+            const signOutTime = shift.signOutTime.toDate();
+            const signOutSection = createDetailSection('Sign Out', signOutTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            `);
+            content.appendChild(signOutSection);
+        }
+
+        // Breaks section if any
+        if (shift.breaks && shift.breaks.length > 0) {
+            const breaksSection = document.createElement('div');
+            breaksSection.style.border = '1px solid #e0e0e0';
+            breaksSection.style.borderRadius = '8px';
+            breaksSection.style.padding = '15px';
+            breaksSection.style.backgroundColor = '#f8f9fa';
+
+            const breaksTitle = document.createElement('div');
+            breaksTitle.style.display = 'flex';
+            breaksTitle.style.alignItems = 'center';
+            breaksTitle.style.gap = '8px';
+            breaksTitle.style.fontWeight = 'bold';
+            breaksTitle.style.marginBottom = '10px';
+            breaksTitle.style.color = '#333';
+            breaksTitle.style.fontSize = '14px';
+            breaksTitle.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Breaks
+            `;
+
+            const breaksList = document.createElement('div');
+            breaksList.style.display = 'flex';
+            breaksList.style.flexDirection = 'column';
+            breaksList.style.gap = '8px';
+
+            shift.breaks.forEach((breakItem, index) => {
+                const breakStart = breakItem.startTime.toDate();
+                const breakEnd = breakItem.endTime.toDate();
+                const breakDisplay = document.createElement('div');
+                breakDisplay.style.fontSize = '14px';
+                breakDisplay.style.color = '#666';
+                breakDisplay.textContent = `${breakStart.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${breakEnd.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} (${breakItem.duration}m)`;
+                breaksList.appendChild(breakDisplay);
+            });
+
+            breaksSection.appendChild(breaksTitle);
+            breaksSection.appendChild(breaksList);
+            content.appendChild(breaksSection);
+        }
+
+        // Add all sections to content
+        content.appendChild(employeeSection);
+        content.appendChild(classificationSection);
+        content.appendChild(dateSection);
+        content.appendChild(timeSection);
+        content.appendChild(statusSection);
+
+        // Create buttons container
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.style.display = 'flex';
+        buttonsContainer.style.gap = '15px';
+        buttonsContainer.style.marginTop = '25px';
+
+        // Close button
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = 'Close';
+        closeBtn.style.flex = '1';
+        closeBtn.style.padding = '12px';
+        closeBtn.style.border = '1px solid #e0e0e0';
+        closeBtn.style.borderRadius = '8px';
+        closeBtn.style.backgroundColor = 'white';
+        closeBtn.style.color = '#666';
+        closeBtn.style.cursor = 'pointer';
+        closeBtn.style.fontSize = '16px';
+        closeBtn.style.fontWeight = 'bold';
+        closeBtn.onclick = () => {
+            if (overlay && overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        };
+
+        buttonsContainer.appendChild(closeBtn);
+
+        // Assemble modal
+        modal.appendChild(closeButton);
+        modal.appendChild(titleContainer);
+        modal.appendChild(content);
+        modal.appendChild(buttonsContainer);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        // Close modal when clicking outside
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                if (overlay && overlay.parentNode) {
+                    overlay.parentNode.removeChild(overlay);
+                }
+            }
+        });
+    }
+
+    /**
+     * Create a detail section for the shift details modal
+     * @param {string} label - Section label
+     * @param {string} value - Section value
+     * @param {string} icon - SVG icon
+     * @param {string} color - Optional color for the value
+     * @returns {HTMLElement} - The section element
+     */
+    function createDetailSection(label, value, icon, color = '#333') {
+        const section = document.createElement('div');
+        section.style.border = '1px solid #e0e0e0';
+        section.style.borderRadius = '8px';
+        section.style.padding = '15px';
+        section.style.backgroundColor = 'white';
+
+        const title = document.createElement('div');
+        title.style.display = 'flex';
+        title.style.alignItems = 'center';
+        title.style.gap = '8px';
+        title.style.fontWeight = 'bold';
+        title.style.marginBottom = '8px';
+        title.style.color = '#666';
+        title.style.fontSize = '14px';
+        title.innerHTML = `${icon} ${label}`;
+
+        const valueDiv = document.createElement('div');
+        valueDiv.textContent = value;
+        valueDiv.style.fontSize = '16px';
+        valueDiv.style.color = color;
+        valueDiv.style.fontWeight = '500';
+
+        section.appendChild(title);
+        section.appendChild(valueDiv);
+        return section;
+    }
+
+    /**
+     * Open shift edit modal
+     * @param {Object} shift - The shift object to edit
+     * @param {string} dateStr - Date string
+     * @param {number} year - Year
+     * @param {number} month - Month
+     * @param {number} day - Day
+     */
+    async function openShiftEditModal(shift, dateStr, year, month, day) {
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'shift-edit-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.style.zIndex = '1000';
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.className = 'shift-edit-modal';
+        modal.style.backgroundColor = 'white';
+        modal.style.padding = '30px';
+        modal.style.borderRadius = '10px';
+        modal.style.minWidth = '450px';
+        modal.style.maxWidth = '550px';
+        modal.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+        modal.style.position = 'relative';
+
+        // Add close button
+        const closeButton = document.createElement('button');
+        closeButton.innerHTML = '×';
+        closeButton.style.position = 'absolute';
+        closeButton.style.top = '15px';
+        closeButton.style.right = '20px';
+        closeButton.style.border = 'none';
+        closeButton.style.background = 'none';
+        closeButton.style.fontSize = '24px';
+        closeButton.style.cursor = 'pointer';
+        closeButton.style.color = '#666';
+        closeButton.onclick = () => {
+            if (overlay && overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        };
+
+        // Create title
+        const title = document.createElement('h2');
+        title.textContent = 'Edit Shift';
+        title.style.marginBottom = '25px';
+        title.style.color = 'var(--primary)';
+        title.style.textAlign = 'center';
+
+        // Create form
+        const form = document.createElement('div');
+        form.style.display = 'flex';
+        form.style.flexDirection = 'column';
+        form.style.gap = '20px';
+
+        // Employee selection
+        const employeeSection = document.createElement('div');
+        employeeSection.style.display = 'flex';
+        employeeSection.style.flexDirection = 'column';
+        employeeSection.style.gap = '8px';
+
+        const employeeLabel = document.createElement('label');
+        employeeLabel.textContent = 'Employee:';
+        employeeLabel.style.fontWeight = 'bold';
+        employeeLabel.style.color = '#333';
+
+        const employeeSelect = document.createElement('select');
+        employeeSelect.id = 'editEmployeeSelect';
+        employeeSelect.style.padding = '12px';
+        employeeSelect.style.border = '1px solid #e0e0e0';
+        employeeSelect.style.borderRadius = '8px';
+        employeeSelect.style.fontSize = '16px';
+        employeeSelect.style.backgroundColor = 'white';
+
+        // Add default option
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Choose an employee...';
+        employeeSelect.appendChild(defaultOption);
+
+        // Fetch employees and populate dropdown
+        try {
+            const employeesSnapshot = await getDocs(collection(db, 'employees'));
+            employeesSnapshot.forEach(doc => {
+                const employeeData = doc.data();
+                const option = document.createElement('option');
+                option.value = doc.id;
+                option.textContent = employeeData.name;
+                // Set current employee as selected
+                if (employeeData.name === shift.employeeName) {
+                    option.selected = true;
+                }
+                employeeSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error fetching employees:', error);
+        }
+
+        employeeSection.appendChild(employeeLabel);
+        employeeSection.appendChild(employeeSelect);
+
+        // Shift classification selection
+        const classificationSection = document.createElement('div');
+        classificationSection.style.display = 'flex';
+        classificationSection.style.flexDirection = 'column';
+        classificationSection.style.gap = '8px';
+
+        const classificationLabel = document.createElement('label');
+        classificationLabel.textContent = 'Shift Type:';
+        classificationLabel.style.fontWeight = 'bold';
+        classificationLabel.style.color = '#333';
+
+        const classificationSelect = document.createElement('select');
+        classificationSelect.id = 'editClassificationSelect';
+        classificationSelect.style.padding = '12px';
+        classificationSelect.style.border = '1px solid #e0e0e0';
+        classificationSelect.style.borderRadius = '8px';
+        classificationSelect.style.fontSize = '16px';
+        classificationSelect.style.backgroundColor = 'white';
+
+        // Add shift classifications with default times
+        const shiftClassifications = [
+            { name: 'Cafe Open', startTime: '07:30', endTime: '11:30' },
+            { name: 'Cafe Morning', startTime: '09:00', endTime: '13:00' },
+            { name: 'Cafe Afternoon', startTime: '13:00', endTime: '16:00' },
+            { name: 'Cafe Close', startTime: '14:00', endTime: '18:00' },
+            { name: 'TEN Cleaning 1', startTime: '10:00', endTime: '14:00' },
+            { name: 'TEN Cleaning 2', startTime: '10:00', endTime: '14:00' }
+        ];
+
+        // Add default option
+        const defaultClassificationOption = document.createElement('option');
+        defaultClassificationOption.value = '';
+        defaultClassificationOption.textContent = 'Choose shift type...';
+        classificationSelect.appendChild(defaultClassificationOption);
+
+        // Add classification options
+        shiftClassifications.forEach(classification => {
+            const option = document.createElement('option');
+            option.value = classification.name;
+            option.textContent = classification.name;
+            // Set current classification as selected
+            if (classification.name === shift.shiftClassification) {
+                option.selected = true;
+            }
+            classificationSelect.appendChild(option);
+        });
+
+        classificationSection.appendChild(classificationLabel);
+        classificationSection.appendChild(classificationSelect);
+
+        // Time inputs
+        const timeSection = document.createElement('div');
+        timeSection.style.display = 'flex';
+        timeSection.style.flexDirection = 'column';
+        timeSection.style.gap = '8px';
+
+        const timeLabel = document.createElement('label');
+        timeLabel.textContent = 'Time:';
+        timeLabel.style.fontWeight = 'bold';
+        timeLabel.style.color = '#333';
+
+        const timeInputsContainer = document.createElement('div');
+        timeInputsContainer.style.display = 'flex';
+        timeInputsContainer.style.gap = '10px';
+        timeInputsContainer.style.alignItems = 'center';
+
+        const startTimeInput = document.createElement('input');
+        startTimeInput.type = 'time';
+        startTimeInput.id = 'editStartTimeInput';
+        startTimeInput.style.padding = '12px';
+        startTimeInput.style.border = '1px solid #e0e0e0';
+        startTimeInput.style.borderRadius = '8px';
+        startTimeInput.style.fontSize = '16px';
+        startTimeInput.style.flex = '1';
+
+        const endTimeInput = document.createElement('input');
+        endTimeInput.type = 'time';
+        endTimeInput.id = 'editEndTimeInput';
+        endTimeInput.style.padding = '12px';
+        endTimeInput.style.border = '1px solid #e0e0e0';
+        endTimeInput.style.borderRadius = '8px';
+        endTimeInput.style.fontSize = '16px';
+        endTimeInput.style.flex = '1';
+
+        // Set current times
+        const startTime = shift.shiftStartTime.toDate();
+        const endTime = shift.shiftFinishTime.toDate();
+        startTimeInput.value = `${startTime.getHours().toString().padStart(2, '0')}:${startTime.getMinutes().toString().padStart(2, '0')}`;
+        endTimeInput.value = `${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`;
+
+        const timeSeparator = document.createElement('span');
+        timeSeparator.textContent = 'to';
+        timeSeparator.style.fontWeight = 'bold';
+        timeSeparator.style.color = '#666';
+
+        timeInputsContainer.appendChild(startTimeInput);
+        timeInputsContainer.appendChild(timeSeparator);
+        timeInputsContainer.appendChild(endTimeInput);
+
+        timeSection.appendChild(timeLabel);
+        timeSection.appendChild(timeInputsContainer);
+
+        // Auto-fill times when classification changes
+        classificationSelect.addEventListener('change', () => {
+            const selectedClassification = shiftClassifications.find(c => c.name === classificationSelect.value);
+            if (selectedClassification) {
+                startTimeInput.value = selectedClassification.startTime;
+                endTimeInput.value = selectedClassification.endTime;
+            }
+        });
+
+        // Add all sections to form
+        form.appendChild(employeeSection);
+        form.appendChild(classificationSection);
+        form.appendChild(timeSection);
+
+        // Create buttons container
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.style.display = 'flex';
+        buttonsContainer.style.gap = '15px';
+        buttonsContainer.style.marginTop = '25px';
+
+        // Cancel button
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.style.flex = '1';
+        cancelBtn.style.padding = '12px';
+        cancelBtn.style.border = '1px solid #e0e0e0';
+        cancelBtn.style.borderRadius = '8px';
+        cancelBtn.style.backgroundColor = 'white';
+        cancelBtn.style.color = '#666';
+        cancelBtn.style.cursor = 'pointer';
+        cancelBtn.style.fontSize = '16px';
+        cancelBtn.style.fontWeight = 'bold';
+        cancelBtn.onclick = () => {
+            if (overlay && overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        };
+
+        // Save button
+        const saveBtn = document.createElement('button');
+        saveBtn.textContent = 'Save Changes';
+        saveBtn.style.flex = '1';
+        saveBtn.style.padding = '12px';
+        saveBtn.style.border = 'none';
+        saveBtn.style.borderRadius = '8px';
+        saveBtn.style.backgroundColor = 'var(--primary)';
+        saveBtn.style.color = 'white';
+        saveBtn.style.cursor = 'pointer';
+        saveBtn.style.fontSize = '16px';
+        saveBtn.style.fontWeight = 'bold';
+        saveBtn.onclick = async () => {
+            // Validate inputs
+            if (!employeeSelect.value || !classificationSelect.value || !startTimeInput.value || !endTimeInput.value) {
+                showCustomAlert('Please fill in all fields', 'error');
+                return;
+            }
+
+            // Get selected employee name
+            const selectedEmployeeOption = employeeSelect.options[employeeSelect.selectedIndex];
+            const selectedEmployeeName = selectedEmployeeOption.textContent;
+
+            // Create new shift object with updated values
+            const updatedShift = {
+                ...shift,
+                employeeName: selectedEmployeeName,
+                employeeId: employeeSelect.value,
+                shiftClassification: classificationSelect.value,
+                shiftStartTime: new Date(year, month, day, parseInt(startTimeInput.value.split(':')[0]), parseInt(startTimeInput.value.split(':')[1])),
+                shiftFinishTime: new Date(year, month, day, parseInt(endTimeInput.value.split(':')[0]), parseInt(endTimeInput.value.split(':')[1]))
+            };
+
+            try {
+                // Update the shift in Firestore
+                const firestoreDate = convertToFirestoreDate(dateStr);
+                await updateShiftInFirestore(firestoreDate, shift.employeeId, updatedShift);
+                
+                // Close modal
+                if (overlay && overlay.parentNode) {
+                    overlay.parentNode.removeChild(overlay);
+                }
+                
+                // Refresh the calendar to show updated shift
+                displayWeekView(month, year);
+                
+                showCustomAlert('Shift updated successfully!', 'success');
+            } catch (error) {
+                console.error('Error updating shift:', error);
+                showCustomAlert('Error updating shift. Please try again.', 'error');
+            }
+        };
+
+        // Delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Delete Shift';
+        deleteBtn.style.flex = '1';
+        deleteBtn.style.padding = '12px';
+        deleteBtn.style.border = 'none';
+        deleteBtn.style.borderRadius = '8px';
+        deleteBtn.style.backgroundColor = '#dc3545';
+        deleteBtn.style.color = 'white';
+        deleteBtn.style.cursor = 'pointer';
+        deleteBtn.style.fontSize = '16px';
+        deleteBtn.style.fontWeight = 'bold';
+        deleteBtn.onclick = async () => {
+            // Confirm deletion
+            if (!confirm('Are you sure you want to delete this shift? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                // Delete the shift from Firestore
+                const firestoreDate = convertToFirestoreDate(dateStr);
+                await deleteShiftFromFirestore(firestoreDate, shift.employeeId);
+                
+                // Close modal
+                if (overlay && overlay.parentNode) {
+                    overlay.parentNode.removeChild(overlay);
+                }
+                
+                // Refresh the calendar to show updated shift
+                displayWeekView(month, year);
+                
+                showCustomAlert('Shift deleted successfully!', 'success');
+            } catch (error) {
+                console.error('Error deleting shift:', error);
+                showCustomAlert('Error deleting shift. Please try again.', 'error');
+            }
+        };
+
+        buttonsContainer.appendChild(cancelBtn);
+        buttonsContainer.appendChild(deleteBtn);
+        buttonsContainer.appendChild(saveBtn);
+
+        // Assemble modal
+        modal.appendChild(closeButton);
+        modal.appendChild(title);
+        modal.appendChild(form);
+        modal.appendChild(buttonsContainer);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        // Close modal when clicking outside
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                if (overlay && overlay.parentNode) {
+                    overlay.parentNode.removeChild(overlay);
+                }
+            }
+        });
+    }
+
+    /**
+     * Update shift in Firestore
+     * @param {string} dateStr - Date string in YYYY-MM-DD format
+     * @param {string} employeeId - Employee ID
+     * @param {Object} updatedShift - Updated shift object
+     */
+    async function updateShiftInFirestore(dateStr, employeeId, updatedShift) {
+        const docRef = doc(db, 'shifts', dateStr);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            const shifts = docSnap.data().shifts || [];
+            const shiftIndex = shifts.findIndex(s => s.employeeId === employeeId);
+            
+            if (shiftIndex !== -1) {
+                // Update the existing shift
+                shifts[shiftIndex] = updatedShift;
+                await setDoc(docRef, { shifts: shifts });
+            } else {
+                throw new Error('Shift not found');
+            }
+        } else {
+            throw new Error('Date document not found');
+        }
+    }
+
+    /**
+     * Delete shift from Firestore
+     * @param {string} dateStr - Date string in YYYY-MM-DD format
+     * @param {string} employeeId - Employee ID
+     */
+    async function deleteShiftFromFirestore(dateStr, employeeId) {
+        const docRef = doc(db, 'shifts', dateStr);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            const shifts = docSnap.data().shifts || [];
+            const shiftIndex = shifts.findIndex(s => s.employeeId === employeeId);
+            
+            if (shiftIndex !== -1) {
+                // Remove the shift from the array
+                shifts.splice(shiftIndex, 1);
+                
+                // If no shifts left for this date, delete the entire document
+                if (shifts.length === 0) {
+                    await deleteDoc(docRef);
+                } else {
+                    // Update the document with the remaining shifts
+                    await setDoc(docRef, { shifts: shifts });
+                }
+            } else {
+                throw new Error('Shift not found');
+            }
+        } else {
+            throw new Error('Date document not found');
+        }
+    }
+
+    /**
+     * Clean up all modal elements and restore main interface
+     */
+    function cleanupAllModals() {
+        // Remove all calendar-related elements
+        const calendarOverlays = document.querySelectorAll('.calendar-overlay');
+        calendarOverlays.forEach(overlay => {
+            if (overlay && overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        });
+        
+        const calendars = document.querySelectorAll('.calendar');
+        calendars.forEach(calendar => {
+            if (calendar && calendar.parentNode) {
+                calendar.parentNode.removeChild(calendar);
+            }
+        });
+        
+        // Remove all shift-related modals
+        const shiftOverlays = document.querySelectorAll('.shift-details-overlay, .shift-edit-overlay');
+        shiftOverlays.forEach(overlay => {
+            if (overlay && overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        });
+        
+        // Ensure main interface is visible
+        const mainContainer = document.querySelector('.container');
+        if (mainContainer) {
+            mainContainer.style.display = 'block';
+            mainContainer.style.visibility = 'visible';
+        }
+        
+        // Force a repaint
+        document.body.style.overflow = 'auto';
+    }
+
+    /**
+     * Show add employee modal
+     */
+    function showAddEmployeeModal() {
+        // Show setup modal
+        const setupModal = document.createElement('div');
+        setupModal.className = 'modal';
+        setupModal.style.display = 'flex';
+        setupModal.style.position = 'fixed';
+        setupModal.style.top = '0';
+        setupModal.style.left = '0';
+        setupModal.style.width = '100%';
+        setupModal.style.height = '100%';
+        setupModal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        setupModal.style.zIndex = '1000';
+        setupModal.style.alignItems = 'center';
+        setupModal.style.justifyContent = 'center';
+
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+        modalContent.style.backgroundColor = 'white';
+        modalContent.style.borderRadius = '10px';
+        modalContent.style.width = '90%';
+        modalContent.style.maxWidth = '500px';
+        modalContent.style.padding = '20px';
+
+        const modalTitle = document.createElement('h2');
+        modalTitle.textContent = 'Setup New Employee';
+        modalTitle.style.marginBottom = '20px';
+        modalTitle.style.color = 'var(--primary)';
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.placeholder = 'Employee Name';
+        nameInput.style.width = '100%';
+        nameInput.style.padding = '10px';
+        nameInput.style.marginBottom = '15px';
+        nameInput.style.border = '1px solid #e0e0e0';
+        nameInput.style.borderRadius = '8px';
+        nameInput.style.fontSize = '16px';
+
+        const wageInput = document.createElement('input');
+        wageInput.type = 'number';
+        wageInput.placeholder = 'Hourly Wage (円)';
+        wageInput.style.width = '100%';
+        wageInput.style.padding = '10px';
+        wageInput.style.marginBottom = '15px';
+        wageInput.style.border = '1px solid #e0e0e0';
+        wageInput.style.borderRadius = '8px';
+        wageInput.style.fontSize = '16px';
+
+        const setupPinDisplayContainer = document.createElement('div');
+        setupPinDisplayContainer.className = 'payment-details';
+        setupPinDisplayContainer.style.background = 'var(--light)';
+        setupPinDisplayContainer.style.padding = '15px';
+        setupPinDisplayContainer.style.borderRadius = '8px';
+        setupPinDisplayContainer.style.margin = '20px 0';
+
+        const setupPinDisplay = document.createElement('div');
+        setupPinDisplay.id = 'setupPinDisplay';
+        setupPinDisplay.className = 'total-amount';
+        setupPinDisplay.style.fontSize = '24px';
+        setupPinDisplay.style.fontWeight = 'bold';
+        setupPinDisplay.style.color = 'var(--primary)';
+        setupPinDisplay.style.marginBottom = '15px';
+        setupPinDisplay.style.textAlign = 'center';
+        setupPinDisplay.style.letterSpacing = '5px';
+        setupPinDisplay.textContent = '----';
+
+        setupPinDisplayContainer.appendChild(setupPinDisplay);
+
+        const setupKeypad = document.createElement('div');
+        setupKeypad.className = 'numpad';
+        setupKeypad.style.display = 'grid';
+        setupKeypad.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        setupKeypad.style.gap = '10px';
+
+        let setupPin = '';
+        const numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
+
+        numbers.forEach(num => {
+            if (num === '') {
+                const emptyBtn = document.createElement('div');
+                emptyBtn.style.height = '50px';
+                setupKeypad.appendChild(emptyBtn);
+            } else {
+                const btn = document.createElement('button');
+                btn.textContent = num;
+                btn.style.padding = '15px';
+                btn.style.border = '1px solid #e0e0e0';
+                btn.style.borderRadius = '8px';
+                btn.style.backgroundColor = 'white';
+                btn.style.fontSize = '18px';
+                btn.style.cursor = 'pointer';
+                btn.style.fontWeight = 'bold';
+
+                btn.onclick = () => {
+                    if (num === '⌫') {
+                        setupPin = setupPin.slice(0, -1);
+                    } else if (setupPin.length < 4) {
+                        setupPin += num;
+                    }
+                    setupPinDisplay.textContent = setupPin.padEnd(4, '-');
+                };
+
+                setupKeypad.appendChild(btn);
+            }
+        });
+
+        const saveButton = document.createElement('button');
+        saveButton.textContent = 'Save Employee';
+        saveButton.style.width = '100%';
+        saveButton.style.padding = '15px';
+        saveButton.style.backgroundColor = 'var(--primary)';
+        saveButton.style.color = 'white';
+        saveButton.style.border = 'none';
+        saveButton.style.borderRadius = '8px';
+        saveButton.style.fontSize = '16px';
+        saveButton.style.fontWeight = 'bold';
+        saveButton.style.cursor = 'pointer';
+        saveButton.style.marginTop = '20px';
+
+        saveButton.onclick = async () => {
+            if (!nameInput.value || !wageInput.value || setupPin.length !== 4) {
+                showCustomAlert('Please fill in all fields and set a 4-digit PIN', 'error');
+                return;
+            }
+
+            try {
+                const employeeData = {
+                    name: nameInput.value,
+                    wage: parseFloat(wageInput.value),
+                    pin: setupPin
+                };
+
+                await addDoc(collection(db, 'employees'), employeeData);
+                showCustomAlert('Employee added successfully!', 'success');
+                setupModal.remove();
+            } catch (error) {
+                console.error('Error adding employee:', error);
+                showCustomAlert('Error adding employee. Please try again.', 'error');
+            }
+        };
+
+        const closeButton = document.createElement('button');
+        closeButton.textContent = 'Cancel';
+        closeButton.style.width = '100%';
+        closeButton.style.padding = '10px';
+        closeButton.style.backgroundColor = 'white';
+        closeButton.style.color = '#666';
+        closeButton.style.border = '1px solid #e0e0e0';
+        closeButton.style.borderRadius = '8px';
+        closeButton.style.fontSize = '16px';
+        closeButton.style.cursor = 'pointer';
+        closeButton.style.marginTop = '10px';
+
+        closeButton.onclick = () => {
+            setupModal.remove();
+        };
+
+        modalContent.appendChild(modalTitle);
+        modalContent.appendChild(nameInput);
+        modalContent.appendChild(wageInput);
+        modalContent.appendChild(setupPinDisplayContainer);
+        modalContent.appendChild(setupKeypad);
+        modalContent.appendChild(saveButton);
+        modalContent.appendChild(closeButton);
+        setupModal.appendChild(modalContent);
+        document.body.appendChild(setupModal);
+    }
+
+    /**
+     * Show unscheduled shift keypad
+     */
+    function showUnscheduledShiftKeypad() {
+        const keypadModal = document.createElement('div');
+        keypadModal.className = 'keypad-modal';
+        keypadModal.style.display = 'flex';
+        keypadModal.style.position = 'fixed';
+        keypadModal.style.top = '0';
+        keypadModal.style.left = '0';
+        keypadModal.style.width = '100%';
+        keypadModal.style.height = '100%';
+        keypadModal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        keypadModal.style.zIndex = '1000';
+        keypadModal.style.alignItems = 'center';
+        keypadModal.style.justifyContent = 'center';
+
+        const modalContent = document.createElement('div');
+        modalContent.style.backgroundColor = 'white';
+        modalContent.style.borderRadius = '10px';
+        modalContent.style.width = '90%';
+        modalContent.style.maxWidth = '400px';
+        modalContent.style.padding = '30px';
+
+        const modalTitle = document.createElement('h2');
+        modalTitle.textContent = 'Unscheduled Shift Sign-in';
+        modalTitle.style.marginBottom = '20px';
+        modalTitle.style.color = 'var(--primary)';
+        modalTitle.style.textAlign = 'center';
+
+        const pinDisplay = document.createElement('div');
+        pinDisplay.id = 'unscheduledPinDisplay';
+        pinDisplay.style.fontSize = '32px';
+        pinDisplay.style.fontWeight = 'bold';
+        pinDisplay.style.color = 'var(--primary)';
+        pinDisplay.style.textAlign = 'center';
+        pinDisplay.style.marginBottom = '20px';
+        pinDisplay.style.letterSpacing = '8px';
+        pinDisplay.style.padding = '20px';
+        pinDisplay.style.backgroundColor = 'var(--light)';
+        pinDisplay.style.borderRadius = '8px';
+        pinDisplay.textContent = '----';
+
+        const keypad = document.createElement('div');
+        keypad.style.display = 'grid';
+        keypad.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        keypad.style.gap = '15px';
+
+        let inputPin = '';
+        const numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
+
+        numbers.forEach(num => {
+            if (num === '') {
+                const emptyBtn = document.createElement('div');
+                emptyBtn.style.height = '60px';
+                keypad.appendChild(emptyBtn);
+            } else {
+                const btn = document.createElement('button');
+                btn.textContent = num;
+                btn.style.padding = '20px';
+                btn.style.border = '1px solid #e0e0e0';
+                btn.style.borderRadius = '8px';
+                btn.style.backgroundColor = 'white';
+                btn.style.fontSize = '20px';
+                btn.style.cursor = 'pointer';
+                btn.style.fontWeight = 'bold';
+
+                btn.onclick = async () => {
+                    if (num === '⌫') {
+                        inputPin = inputPin.slice(0, -1);
+                    } else if (inputPin.length < 4) {
+                        inputPin += num;
+                    }
+                    pinDisplay.textContent = inputPin.padEnd(4, '-');
+
+                    if (inputPin.length === 4) {
+                        // Verify PIN and sign in employee
+                        try {
+                            const employeesSnapshot = await getDocs(collection(db, 'employees'));
+                            let employeeFound = null;
+                            
+                            employeesSnapshot.forEach(doc => {
+                                const employeeData = doc.data();
+                                if (employeeData.pin === inputPin) {
+                                    employeeFound = { id: doc.id, ...employeeData };
+                                }
+                            });
+
+                            if (employeeFound) {
+                                // Sign in for unscheduled shift
+                                const now = new Date();
+                                const today = now.toISOString().split('T')[0];
+                                
+                                const unscheduledShift = {
+                                    employeeName: employeeFound.name,
+                                    employeeId: employeeFound.id,
+                                    shiftClassification: 'Unscheduled',
+                                    shiftStartTime: now,
+                                    shiftFinishTime: null,
+                                    signInTime: now,
+                                    signOutTime: null,
+                                    breaks: [],
+                                    isScheduled: false,
+                                    isCurrent: true,
+                                    isCompleted: false
+                                };
+
+                                await createNewShift(today, 'Unscheduled', employeeFound.id, employeeFound.name, now, null);
+                                showCustomAlert(`${employeeFound.name} signed in for unscheduled shift!`, 'success');
+                                keypadModal.remove();
+                                loadTodayShifts(); // Refresh the shifts list
+                            } else {
+                                showCustomAlert('Invalid PIN. Please try again.', 'error');
+                                inputPin = '';
+                                pinDisplay.textContent = '----';
+                            }
+                        } catch (error) {
+                            console.error('Error signing in employee:', error);
+                            showCustomAlert('Error signing in. Please try again.', 'error');
+                        }
+                    }
+                };
+
+                keypad.appendChild(btn);
+            }
+        });
+
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Cancel';
+        cancelButton.style.width = '100%';
+        cancelButton.style.padding = '15px';
+        cancelButton.style.backgroundColor = 'white';
+        cancelButton.style.color = '#666';
+        cancelButton.style.border = '1px solid #e0e0e0';
+        cancelButton.style.borderRadius = '8px';
+        cancelButton.style.fontSize = '16px';
+        cancelButton.style.cursor = 'pointer';
+        cancelButton.style.marginTop = '20px';
+
+        cancelButton.onclick = () => {
+            keypadModal.remove();
+        };
+
+        modalContent.appendChild(modalTitle);
+        modalContent.appendChild(pinDisplay);
+        modalContent.appendChild(keypad);
+        modalContent.appendChild(cancelButton);
+        keypadModal.appendChild(modalContent);
+        document.body.appendChild(keypadModal);
+    }
+
+    /**
+     * Load and display today's shifts
+     */
+    async function loadTodayShifts() {
+        const shiftsList = document.getElementById('todayShiftsList');
+        if (!shiftsList) return;
+
+        shiftsList.innerHTML = '';
+
+        try {
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            const shifts = await getShiftsForDate(todayStr);
+
+            if (shifts.length === 0) {
+                const noShiftsMessage = document.createElement('div');
+                noShiftsMessage.textContent = 'No shifts scheduled for today';
+                noShiftsMessage.style.textAlign = 'center';
+                noShiftsMessage.style.color = '#666';
+                noShiftsMessage.style.padding = '40px';
+                noShiftsMessage.style.fontStyle = 'italic';
+                shiftsList.appendChild(noShiftsMessage);
+                return;
+            }
+
+            // Group shifts by classification
+            const groupedShifts = {};
+            shifts.forEach(shift => {
+                if (!groupedShifts[shift.shiftClassification]) {
+                    groupedShifts[shift.shiftClassification] = [];
+                }
+                groupedShifts[shift.shiftClassification].push(shift);
+            });
+
+            // Display shifts by classification
+            Object.keys(groupedShifts).forEach(classification => {
+                const classificationGroup = document.createElement('div');
+                classificationGroup.style.marginBottom = '20px';
+
+                const classificationTitle = document.createElement('h4');
+                classificationTitle.textContent = classification;
+                classificationTitle.style.marginBottom = '10px';
+                classificationTitle.style.color = 'var(--primary)';
+                classificationTitle.style.fontSize = '16px';
+                classificationTitle.style.fontWeight = 'bold';
+
+                classificationGroup.appendChild(classificationTitle);
+
+                groupedShifts[classification].forEach(shift => {
+                    const shiftCard = document.createElement('div');
+                    shiftCard.style.backgroundColor = 'white';
+                    shiftCard.style.borderRadius = '8px';
+                    shiftCard.style.padding = '15px';
+                    shiftCard.style.marginBottom = '10px';
+                    shiftCard.style.border = '1px solid #e0e0e0';
+                    shiftCard.style.cursor = 'pointer';
+                    shiftCard.style.transition = 'all 0.2s';
+
+                    // Set background color based on status
+                    if (shift.isCompleted) {
+                        shiftCard.style.backgroundColor = '#d4edda';
+                        shiftCard.style.borderColor = '#28a745';
+                    } else if (shift.isCurrent) {
+                        shiftCard.style.backgroundColor = '#fff3cd';
+                        shiftCard.style.borderColor = '#ffc107';
+                    } else {
+                        shiftCard.style.backgroundColor = '#d1ecf1';
+                        shiftCard.style.borderColor = '#17a2b8';
+                    }
+
+                    shiftCard.onmouseover = () => {
+                        shiftCard.style.transform = 'translateY(-2px)';
+                        shiftCard.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+                    };
+
+                    shiftCard.onmouseout = () => {
+                        shiftCard.style.transform = 'translateY(0)';
+                        shiftCard.style.boxShadow = 'none';
+                    };
+
+                    // Show actual times if shift is in progress or completed, otherwise show scheduled times
+                    let timeRange;
+                    if (shift.isCompleted) {
+                        // For completed shifts, show ONLY actual sign-in and sign-out times
+                        const actualStartTime = shift.signInTime ? shift.signInTime.toDate() : shift.shiftStartTime.toDate();
+                        const actualEndTime = shift.signOutTime ? shift.signOutTime.toDate() : shift.shiftFinishTime.toDate();
+                        timeRange = `${actualStartTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${actualEndTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+                    } else if (shift.isCurrent) {
+                        // For in-progress shifts, show actual sign-in time and "Ongoing"
+                        const actualStartTime = shift.signInTime ? shift.signInTime.toDate() : shift.shiftStartTime.toDate();
+                        timeRange = `${actualStartTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - Ongoing`;
+                    } else {
+                        // Show scheduled times for scheduled shifts
+                        const startTime = shift.shiftStartTime.toDate();
+                        const endTime = shift.shiftFinishTime ? shift.shiftFinishTime.toDate() : null;
+                        
+                        timeRange = endTime 
+                            ? `${startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
+                            : `${startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - Ongoing`;
+                    }
+
+                    const statusText = shift.isCompleted ? 'Completed' : shift.isCurrent ? 'In Progress' : 'Scheduled';
+                    const statusColor = shift.isCompleted ? '#28a745' : shift.isCurrent ? '#ffc107' : '#17a2b8';
+
+                    // Check if employee is currently on break
+                    const isOnBreak = shift.breaks && shift.breaks.length > 0 && 
+                                     shift.breaks[shift.breaks.length - 1].endTime === null;
+                    
+                    let breakIndicator = '';
+                    if (isOnBreak) {
+                        const breakStartTime = shift.breaks[shift.breaks.length - 1].startTime.toDate();
+                        const breakStartTimeStr = breakStartTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        breakIndicator = `<div style="color: #dc3545; font-weight: bold; font-size: 12px; margin-top: 2px;">ON BREAK (since ${breakStartTimeStr})</div>`;
+                    }
+
+                    shiftCard.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">${shift.employeeName}</div>
+                                <div style="color: #666; font-size: 14px;">${timeRange}</div>
+                                ${breakIndicator}
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="color: ${statusColor}; font-weight: bold; font-size: 14px;">${statusText}</div>
+                                ${shift.signInTime ? `<div style="color: #666; font-size: 12px;">Signed in: ${shift.signInTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>` : ''}
+                                ${shift.breaks && shift.breaks.length > 0 ? `<div style="color: #666; font-size: 12px;">Breaks: ${shift.breaks.length}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+
+                    // Add click handler for sign in/out
+                    shiftCard.onclick = () => {
+                        if (shift.isScheduled && !shift.isCurrent && !shift.isCompleted) {
+                            // Sign in for scheduled shift
+                            showShiftSignInKeypad(shift, todayStr);
+                        } else if (shift.isCurrent && !shift.isCompleted) {
+                            // Show break options for current shift
+                            showBreakOptionsModal(shift, todayStr);
+                        }
+                    };
+
+                    classificationGroup.appendChild(shiftCard);
+                });
+
+                shiftsList.appendChild(classificationGroup);
+            });
+
+        } catch (error) {
+            console.error('Error loading today\'s shifts:', error);
+            const errorMessage = document.createElement('div');
+            errorMessage.textContent = 'Error loading shifts. Please try again.';
+            errorMessage.style.textAlign = 'center';
+            errorMessage.style.color = '#dc3545';
+            errorMessage.style.padding = '40px';
+            shiftsList.appendChild(errorMessage);
+        }
+    }
+
+    /**
+     * Show shift sign-in keypad
+     */
+    function showShiftSignInKeypad(shift, dateStr) {
+        const keypadModal = document.createElement('div');
+        keypadModal.className = 'keypad-modal';
+        keypadModal.style.display = 'flex';
+        keypadModal.style.position = 'fixed';
+        keypadModal.style.top = '0';
+        keypadModal.style.left = '0';
+        keypadModal.style.width = '100%';
+        keypadModal.style.height = '100%';
+        keypadModal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        keypadModal.style.zIndex = '1000';
+        keypadModal.style.alignItems = 'center';
+        keypadModal.style.justifyContent = 'center';
+
+        const modalContent = document.createElement('div');
+        modalContent.style.backgroundColor = 'white';
+        modalContent.style.borderRadius = '10px';
+        modalContent.style.width = '90%';
+        modalContent.style.maxWidth = '400px';
+        modalContent.style.padding = '30px';
+
+        const modalTitle = document.createElement('h2');
+        modalTitle.textContent = `Sign In - ${shift.employeeName}`;
+        modalTitle.style.marginBottom = '10px';
+        modalTitle.style.color = 'var(--primary)';
+        modalTitle.style.textAlign = 'center';
+
+        const shiftInfo = document.createElement('div');
+        shiftInfo.textContent = `${shift.shiftClassification} - ${shift.shiftStartTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${shift.shiftFinishTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        shiftInfo.style.textAlign = 'center';
+        shiftInfo.style.color = '#666';
+        shiftInfo.style.marginBottom = '20px';
+        shiftInfo.style.fontSize = '14px';
+
+        const pinDisplay = document.createElement('div');
+        pinDisplay.id = 'shiftSignInPinDisplay';
+        pinDisplay.style.fontSize = '32px';
+        pinDisplay.style.fontWeight = 'bold';
+        pinDisplay.style.color = 'var(--primary)';
+        pinDisplay.style.textAlign = 'center';
+        pinDisplay.style.marginBottom = '20px';
+        pinDisplay.style.letterSpacing = '8px';
+        pinDisplay.style.padding = '20px';
+        pinDisplay.style.backgroundColor = 'var(--light)';
+        pinDisplay.style.borderRadius = '8px';
+        pinDisplay.textContent = '----';
+
+        const keypad = document.createElement('div');
+        keypad.style.display = 'grid';
+        keypad.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        keypad.style.gap = '15px';
+
+        let inputPin = '';
+        const numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
+
+        numbers.forEach(num => {
+            if (num === '') {
+                const emptyBtn = document.createElement('div');
+                emptyBtn.style.height = '60px';
+                keypad.appendChild(emptyBtn);
+            } else {
+                const btn = document.createElement('button');
+                btn.textContent = num;
+                btn.style.padding = '20px';
+                btn.style.border = '1px solid #e0e0e0';
+                btn.style.borderRadius = '8px';
+                btn.style.backgroundColor = 'white';
+                btn.style.fontSize = '20px';
+                btn.style.cursor = 'pointer';
+                btn.style.fontWeight = 'bold';
+
+                btn.onclick = async () => {
+                    if (num === '⌫') {
+                        inputPin = inputPin.slice(0, -1);
+                    } else if (inputPin.length < 4) {
+                        inputPin += num;
+                    }
+                    pinDisplay.textContent = inputPin.padEnd(4, '-');
+
+                    if (inputPin.length === 4) {
+                        // Verify PIN matches the employee
+                        try {
+                            const employeeDoc = await getDoc(doc(db, 'employees', shift.employeeId));
+                            if (employeeDoc.exists() && employeeDoc.data().pin === inputPin) {
+                                // Sign in the employee
+                                const now = new Date();
+                                await updateShiftToCurrent(dateStr, shift.employeeId, now);
+                                showCustomAlert(`${shift.employeeName} signed in successfully!`, 'success');
+                                keypadModal.remove();
+                                loadTodayShifts(); // Refresh the shifts list
+                            } else {
+                                showCustomAlert('Invalid PIN. Please try again.', 'error');
+                                inputPin = '';
+                                pinDisplay.textContent = '----';
+                            }
+                        } catch (error) {
+                            console.error('Error signing in employee:', error);
+                            showCustomAlert('Error signing in. Please try again.', 'error');
+                        }
+                    }
+                };
+
+                keypad.appendChild(btn);
+            }
+        });
+
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Cancel';
+        cancelButton.style.width = '100%';
+        cancelButton.style.padding = '15px';
+        cancelButton.style.backgroundColor = 'white';
+        cancelButton.style.color = '#666';
+        cancelButton.style.border = '1px solid #e0e0e0';
+        cancelButton.style.borderRadius = '8px';
+        cancelButton.style.fontSize = '16px';
+        cancelButton.style.cursor = 'pointer';
+        cancelButton.style.marginTop = '20px';
+
+        cancelButton.onclick = () => {
+            keypadModal.remove();
+        };
+
+        modalContent.appendChild(modalTitle);
+        modalContent.appendChild(shiftInfo);
+        modalContent.appendChild(pinDisplay);
+        modalContent.appendChild(keypad);
+        modalContent.appendChild(cancelButton);
+        keypadModal.appendChild(modalContent);
+        document.body.appendChild(keypadModal);
+    }
+
+    /**
+     * Show shift sign-out keypad
+     */
+    function showShiftSignOutKeypad(shift, dateStr) {
+        const keypadModal = document.createElement('div');
+        keypadModal.className = 'keypad-modal';
+        keypadModal.style.display = 'flex';
+        keypadModal.style.position = 'fixed';
+        keypadModal.style.top = '0';
+        keypadModal.style.left = '0';
+        keypadModal.style.width = '100%';
+        keypadModal.style.height = '100%';
+        keypadModal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        keypadModal.style.zIndex = '1000';
+        keypadModal.style.alignItems = 'center';
+        keypadModal.style.justifyContent = 'center';
+
+        const modalContent = document.createElement('div');
+        modalContent.style.backgroundColor = 'white';
+        modalContent.style.borderRadius = '10px';
+        modalContent.style.width = '90%';
+        modalContent.style.maxWidth = '400px';
+        modalContent.style.padding = '30px';
+
+        const modalTitle = document.createElement('h2');
+        modalTitle.textContent = `Sign Out - ${shift.employeeName}`;
+        modalTitle.style.marginBottom = '10px';
+        modalTitle.style.color = 'var(--primary)';
+        modalTitle.style.textAlign = 'center';
+
+        const shiftInfo = document.createElement('div');
+        shiftInfo.textContent = `${shift.shiftClassification} - ${shift.shiftStartTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${shift.shiftFinishTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        shiftInfo.style.textAlign = 'center';
+        shiftInfo.style.color = '#666';
+        shiftInfo.style.marginBottom = '20px';
+        shiftInfo.style.fontSize = '14px';
+
+        const pinDisplay = document.createElement('div');
+        pinDisplay.id = 'shiftSignOutPinDisplay';
+        pinDisplay.style.fontSize = '32px';
+        pinDisplay.style.fontWeight = 'bold';
+        pinDisplay.style.color = 'var(--primary)';
+        pinDisplay.style.textAlign = 'center';
+        pinDisplay.style.marginBottom = '20px';
+        pinDisplay.style.letterSpacing = '8px';
+        pinDisplay.style.padding = '20px';
+        pinDisplay.style.backgroundColor = 'var(--light)';
+        pinDisplay.style.borderRadius = '8px';
+        pinDisplay.textContent = '----';
+
+        const keypad = document.createElement('div');
+        keypad.style.display = 'grid';
+        keypad.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        keypad.style.gap = '15px';
+
+        let inputPin = '';
+        const numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
+
+        numbers.forEach(num => {
+            if (num === '') {
+                const emptyBtn = document.createElement('div');
+                emptyBtn.style.height = '60px';
+                keypad.appendChild(emptyBtn);
+            } else {
+                const btn = document.createElement('button');
+                btn.textContent = num;
+                btn.style.padding = '20px';
+                btn.style.border = '1px solid #e0e0e0';
+                btn.style.borderRadius = '8px';
+                btn.style.backgroundColor = 'white';
+                btn.style.fontSize = '20px';
+                btn.style.cursor = 'pointer';
+                btn.style.fontWeight = 'bold';
+
+                btn.onclick = async () => {
+                    if (num === '⌫') {
+                        inputPin = inputPin.slice(0, -1);
+                    } else if (inputPin.length < 4) {
+                        inputPin += num;
+                    }
+                    pinDisplay.textContent = inputPin.padEnd(4, '-');
+
+                    if (inputPin.length === 4) {
+                        // Verify PIN matches the employee
+                        try {
+                            const employeeDoc = await getDoc(doc(db, 'employees', shift.employeeId));
+                            if (employeeDoc.exists() && employeeDoc.data().pin === inputPin) {
+                                // Sign out the employee
+                                const now = new Date();
+                                await completeShift(dateStr, shift.employeeId, now);
+                                showCustomAlert(`${shift.employeeName} signed out successfully!`, 'success');
+                                keypadModal.remove();
+                                loadTodayShifts(); // Refresh the shifts list
+                            } else {
+                                showCustomAlert('Invalid PIN. Please try again.', 'error');
+                                inputPin = '';
+                                pinDisplay.textContent = '----';
+                            }
+                        } catch (error) {
+                            console.error('Error signing out employee:', error);
+                            showCustomAlert('Error signing out. Please try again.', 'error');
+                        }
+                    }
+                };
+
+                keypad.appendChild(btn);
+            }
+        });
+
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Cancel';
+        cancelButton.style.width = '100%';
+        cancelButton.style.padding = '15px';
+        cancelButton.style.backgroundColor = 'white';
+        cancelButton.style.color = '#666';
+        cancelButton.style.border = '1px solid #e0e0e0';
+        cancelButton.style.borderRadius = '8px';
+        cancelButton.style.fontSize = '16px';
+        cancelButton.style.cursor = 'pointer';
+        cancelButton.style.marginTop = '20px';
+
+        cancelButton.onclick = () => {
+            keypadModal.remove();
+        };
+
+        modalContent.appendChild(modalTitle);
+        modalContent.appendChild(shiftInfo);
+        modalContent.appendChild(pinDisplay);
+        modalContent.appendChild(keypad);
+        modalContent.appendChild(cancelButton);
+        keypadModal.appendChild(modalContent);
+        document.body.appendChild(keypadModal);
+    }
+
+    // Load today's shifts when the page loads
+    loadTodayShifts();
+
+    /**
+     * Show break options modal for current shift
+     */
+    function showBreakOptionsModal(shift, dateStr) {
+        const modal = document.createElement('div');
+        modal.className = 'break-options-modal';
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        modal.style.zIndex = '1000';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+
+        const modalContent = document.createElement('div');
+        modalContent.style.backgroundColor = 'white';
+        modalContent.style.borderRadius = '10px';
+        modalContent.style.width = '90%';
+        modalContent.style.maxWidth = '400px';
+        modalContent.style.padding = '30px';
+
+        const modalTitle = document.createElement('h2');
+        modalTitle.textContent = `${shift.employeeName} - Break Options`;
+        modalTitle.style.marginBottom = '20px';
+        modalTitle.style.color = 'var(--primary)';
+        modalTitle.style.textAlign = 'center';
+
+        const shiftInfo = document.createElement('div');
+        shiftInfo.textContent = `${shift.shiftClassification} - ${shift.shiftStartTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${shift.shiftFinishTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        shiftInfo.style.textAlign = 'center';
+        shiftInfo.style.color = '#666';
+        shiftInfo.style.marginBottom = '20px';
+        shiftInfo.style.fontSize = '14px';
+
+        // Check if employee is currently on break
+        const isOnBreak = shift.breaks && shift.breaks.length > 0 && 
+                         shift.breaks[shift.breaks.length - 1].endTime === null;
+
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.style.display = 'flex';
+        buttonsContainer.style.flexDirection = 'column';
+        buttonsContainer.style.gap = '15px';
+
+        if (isOnBreak) {
+            // End break button
+            const endBreakBtn = document.createElement('button');
+            endBreakBtn.textContent = 'End Break';
+            endBreakBtn.style.padding = '15px';
+            endBreakBtn.style.border = 'none';
+            endBreakBtn.style.borderRadius = '8px';
+            endBreakBtn.style.backgroundColor = '#28a745';
+            endBreakBtn.style.color = 'white';
+            endBreakBtn.style.fontSize = '16px';
+            endBreakBtn.style.fontWeight = 'bold';
+            endBreakBtn.style.cursor = 'pointer';
+
+            endBreakBtn.onclick = async () => {
+                try {
+                    const now = new Date();
+                    await endBreakForShift(dateStr, shift.employeeId, now);
+                    showCustomAlert('Break ended successfully!', 'success');
+                    modal.remove();
+                    loadTodayShifts(); // Refresh the shifts list
+                } catch (error) {
+                    console.error('Error ending break:', error);
+                    showCustomAlert('Error ending break. Please try again.', 'error');
+                }
+            };
+
+            buttonsContainer.appendChild(endBreakBtn);
+        } else {
+            // Start break button
+            const startBreakBtn = document.createElement('button');
+            startBreakBtn.textContent = 'Start Break';
+            startBreakBtn.style.padding = '15px';
+            startBreakBtn.style.border = 'none';
+            startBreakBtn.style.borderRadius = '8px';
+            startBreakBtn.style.backgroundColor = '#ffc107';
+            startBreakBtn.style.color = 'white';
+            startBreakBtn.style.fontSize = '16px';
+            startBreakBtn.style.fontWeight = 'bold';
+            startBreakBtn.style.cursor = 'pointer';
+
+            startBreakBtn.onclick = async () => {
+                try {
+                    const now = new Date();
+                    await startBreakForShift(dateStr, shift.employeeId, now);
+                    showCustomAlert('Break started successfully!', 'success');
+                    modal.remove();
+                    loadTodayShifts(); // Refresh the shifts list
+                } catch (error) {
+                    console.error('Error starting break:', error);
+                    showCustomAlert('Error starting break. Please try again.', 'error');
+                }
+            };
+
+            buttonsContainer.appendChild(startBreakBtn);
+        }
+
+        // Sign out button
+        const signOutBtn = document.createElement('button');
+        signOutBtn.textContent = 'Sign Out';
+        signOutBtn.style.padding = '15px';
+        signOutBtn.style.border = '1px solid #dc3545';
+        signOutBtn.style.borderRadius = '8px';
+        signOutBtn.style.backgroundColor = 'white';
+        signOutBtn.style.color = '#dc3545';
+        signOutBtn.style.fontSize = '16px';
+        signOutBtn.style.fontWeight = 'bold';
+        signOutBtn.style.cursor = 'pointer';
+
+        signOutBtn.onclick = () => {
+            modal.remove();
+            showShiftSignOutKeypad(shift, dateStr);
+        };
+
+        // Cancel button
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.style.padding = '15px';
+        cancelBtn.style.border = '1px solid #e0e0e0';
+        cancelBtn.style.borderRadius = '8px';
+        cancelBtn.style.backgroundColor = 'white';
+        cancelBtn.style.color = '#666';
+        cancelBtn.style.fontSize = '16px';
+        cancelBtn.style.fontWeight = 'bold';
+        cancelBtn.style.cursor = 'pointer';
+
+        cancelBtn.onclick = () => {
+            modal.remove();
+        };
+
+        buttonsContainer.appendChild(signOutBtn);
+        buttonsContainer.appendChild(cancelBtn);
+
+        modalContent.appendChild(modalTitle);
+        modalContent.appendChild(shiftInfo);
+        modalContent.appendChild(buttonsContainer);
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+
+        // Close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
+    /**
+     * Start break for a shift
+     */
+    async function startBreakForShift(dateStr, employeeId, startTime) {
+        const docRef = doc(db, 'shifts', dateStr);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            const shifts = docSnap.data().shifts || [];
+            const shiftIndex = shifts.findIndex(s => s.employeeId === employeeId);
+            
+            if (shiftIndex !== -1) {
+                const shift = shifts[shiftIndex];
+                if (!shift.breaks) {
+                    shift.breaks = [];
+                }
+                
+                // Add new break
+                shift.breaks.push({
+                    startTime: startTime,
+                    endTime: null,
+                    duration: 0
+                });
+                
+                await setDoc(docRef, { shifts: shifts });
+            } else {
+                throw new Error('Shift not found');
+            }
+        } else {
+            throw new Error('Date document not found');
+        }
+    }
+
+    /**
+     * End break for a shift
+     */
+    async function endBreakForShift(dateStr, employeeId, endTime) {
+        const docRef = doc(db, 'shifts', dateStr);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            const shifts = docSnap.data().shifts || [];
+            const shiftIndex = shifts.findIndex(s => s.employeeId === employeeId);
+            
+            if (shiftIndex !== -1) {
+                const shift = shifts[shiftIndex];
+                if (shift.breaks && shift.breaks.length > 0) {
+                    const lastBreak = shift.breaks[shift.breaks.length - 1];
+                    if (lastBreak.endTime === null) {
+                        lastBreak.endTime = endTime;
+                        lastBreak.duration = Math.round((endTime - lastBreak.startTime) / (1000 * 60)); // Duration in minutes
+                    }
+                }
+                
+                await setDoc(docRef, { shifts: shifts });
+            } else {
+                throw new Error('Shift not found');
+            }
+        } else {
+            throw new Error('Date document not found');
             }
     }
 }); 

@@ -6,7 +6,8 @@
     "androidScheme": "https"
   },
   "ios": {
-    "contentInset": "always"
+    "contentInset": "never",
+    "backgroundColor": "#6F4E37"
   },
   "plugins": {
     "SplashScreen": {
@@ -16,7 +17,9 @@
     },
     "StatusBar": {
       "style": "dark",
-      "backgroundColor": "#6F4E37"
+      "backgroundColor": "#6F4E37",
+      "overlaysWebView": false,
+      "hidden": true
     }
   }
 }

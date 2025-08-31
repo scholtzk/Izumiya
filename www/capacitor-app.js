@@ -21,11 +21,13 @@ class CapacitorApp {
         }
     }
 
-    async setupNativeFeatures() {
-        try {
-            // Configure status bar
-            await StatusBar.setStyle({ style: 'DARK' });
-            await StatusBar.setBackgroundColor({ color: '#6F4E37' });
+            async setupNativeFeatures() {
+            try {
+                // Hide status bar completely and set full screen
+                await StatusBar.hide();
+                
+                // Set status bar to overlay webview for full screen
+                await StatusBar.setOverlaysWebView({ overlay: true });
 
             // Hide splash screen after app is ready
             setTimeout(async () => {
