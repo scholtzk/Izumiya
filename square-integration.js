@@ -200,8 +200,8 @@ class SquareIntegration {
         // Clean up URL parameters
         this.cleanupUrl();
         
-        // Redirect to ProSurf after processing
-        this.redirectToProSurf();
+        // Redirect to home screen app after processing
+        this.redirectToHomeScreenApp();
     }
 
     // Handle payment cancellation
@@ -215,46 +215,35 @@ class SquareIntegration {
         // Return to payment modal
         this.cleanupUrl();
         
-        // Redirect to ProSurf after cancellation
-        this.redirectToProSurf();
+        // Redirect to home screen app after cancellation
+        this.redirectToHomeScreenApp();
     }
     
-    // Redirect to ProSurf
-    redirectToProSurf() {
-        console.log('Starting ProSurf redirect process...');
-        this.showDebugInfo('Opening ProSurf... Please tap "Open" when prompted');
+    // Redirect to home screen app
+    redirectToHomeScreenApp() {
+        console.log('Redirecting to home screen app...');
+        this.showDebugInfo('Returning to POS app...');
         
         // Show user-friendly message
         if (window.showCustomAlert) {
-            window.showCustomAlert('Opening ProSurf... Please tap "Open" when the dialog appears', 'info');
+            window.showCustomAlert('Returning to POS app...', 'info');
         }
         
-        // Use the working URL scheme
-        const prosurfUrl = 'prosurf://https://scholtzk.github.io/Izumiya/';
+        // Redirect to the POS URL (will open in home screen app if installed)
+        const posUrl = 'https://scholtzk.github.io/Izumiya/';
         
-        // Try multiple methods to trigger ProSurf
         setTimeout(() => {
-            console.log('Attempting ProSurf redirect:', prosurfUrl);
-            this.showDebugInfo('Attempting ProSurf redirect...');
+            console.log('Redirecting to POS:', posUrl);
+            this.showDebugInfo('Redirecting to POS app...');
             
             try {
-                // Method 1: Direct location change
-                window.location.href = prosurfUrl;
-                console.log('ProSurf redirect attempted');
+                // Direct redirect to POS URL
+                window.location.href = posUrl;
+                console.log('POS redirect attempted');
             } catch (error) {
-                console.log('ProSurf redirect failed:', error);
-                this.showDebugInfo(`ProSurf redirect failed: ${error.message}`);
+                console.log('POS redirect failed:', error);
+                this.showDebugInfo(`POS redirect failed: ${error.message}`);
             }
-        }, 500);
-        
-        // Try alternative method after a delay
-        setTimeout(() => {
-            this.tryLinkRedirect();
-        }, 2000);
-        
-        // Show instruction message
-        setTimeout(() => {
-            this.showDebugInfo('If ProSurf dialog appeared, please tap "Open" to continue');
         }, 1000);
     }
     
@@ -314,8 +303,8 @@ class SquareIntegration {
 
         this.cleanupUrl();
         
-        // Redirect to ProSurf after error
-        this.redirectToProSurf();
+        // Redirect to home screen app after error
+        this.redirectToHomeScreenApp();
     }
 
     // Handle payment error
@@ -328,8 +317,8 @@ class SquareIntegration {
 
         this.cleanupUrl();
         
-        // Redirect to ProSurf after error
-        this.redirectToProSurf();
+        // Redirect to home screen app after error
+        this.redirectToHomeScreenApp();
     }
 
     // Clean up URL parameters after processing
