@@ -247,26 +247,6 @@ class SquareIntegration {
         }, 1000);
     }
     
-    // Try alternative link-based redirect
-    tryLinkRedirect() {
-        console.log('Trying link-based ProSurf redirect...');
-        this.showDebugInfo('Trying link-based ProSurf redirect...');
-        
-        try {
-            const link = document.createElement('a');
-            link.href = 'prosurf://https://scholtzk.github.io/Izumiya/';
-            link.target = '_self';
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            console.log('Link-based ProSurf redirect attempted');
-            this.showDebugInfo('Link-based ProSurf redirect attempted');
-        } catch (error) {
-            console.log('Link-based redirect failed:', error);
-            this.showDebugInfo(`Link-based redirect failed: ${error.message}`);
-        }
-    }
     
     // Handle Square success from redirect page
     handleSquareSuccess(transactionId) {
