@@ -565,6 +565,9 @@ function loadCategoryItems(category) {
         orderPanel.style.display = 'none';
         analysisContainer.style.display = 'block';
         signInContainer.style.display = 'none';
+        // Hide settings container
+        const existingSettingsContainer = document.querySelector('.settings-container');
+        if (existingSettingsContainer) existingSettingsContainer.remove();
         if (window.renderAnalysisTab) window.renderAnalysisTab();
         return;
     }
@@ -573,6 +576,9 @@ function loadCategoryItems(category) {
         orderPanel.style.display = 'none';
         analysisContainer.style.display = 'none';
         signInContainer.style.display = 'none';
+        // Hide settings container
+        const existingSettingsContainer = document.querySelector('.settings-container');
+        if (existingSettingsContainer) existingSettingsContainer.remove();
         const existingStocktakeContainer = document.querySelector('.stocktake-container');
         if (existingStocktakeContainer) existingStocktakeContainer.remove();
         const newStocktakeContainer = document.createElement('div');
@@ -586,6 +592,9 @@ function loadCategoryItems(category) {
         orderPanel.style.display = 'none';
         analysisContainer.style.display = 'none';
         signInContainer && (signInContainer.style.display = 'none');
+        // Hide settings container
+        const existingSettingsContainer = document.querySelector('.settings-container');
+        if (existingSettingsContainer) existingSettingsContainer.remove();
         // Show the task manager container
         const taskManagerContainer = document.getElementById('task-manager-container');
         if (taskManagerContainer) taskManagerContainer.style.display = 'block';
@@ -595,6 +604,9 @@ function loadCategoryItems(category) {
         itemsGrid.style.display = 'none';
         orderPanel.style.display = 'none';
         analysisContainer.style.display = 'none';
+        // Hide settings container
+        const existingSettingsContainer = document.querySelector('.settings-container');
+        if (existingSettingsContainer) existingSettingsContainer.remove();
         const signInContainer = document.querySelector('.sign-in-container');
         if (signInContainer) signInContainer.style.display = 'flex';
         return;
@@ -603,6 +615,9 @@ function loadCategoryItems(category) {
     orderPanel.style.display = 'flex';
     analysisContainer.style.display = 'none';
     signInContainer.style.display = 'none';
+    // Hide settings container
+    const existingSettingsContainer = document.querySelector('.settings-container');
+    if (existingSettingsContainer) existingSettingsContainer.remove();
     if (category === 'Drinks' || category === 'Food') {
         loadMenuItems(category, renderOrderItems, updateOrderSummary, saveCurrentOrder, showCustomItemModal, window.showDiscountModal);
     }

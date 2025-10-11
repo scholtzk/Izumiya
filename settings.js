@@ -757,3 +757,54 @@ document.addEventListener('click', function(e) {
         }, 100);
     }
 });
+
+// Display settings in the provided container
+function displaySettings(container) {
+    console.log('Displaying settings in container:', container);
+    
+    // Clear the container
+    container.innerHTML = '';
+    
+    // Create settings content
+    const settingsContent = document.createElement('div');
+    settingsContent.style.padding = '20px';
+    settingsContent.style.maxWidth = '800px';
+    settingsContent.style.margin = '0 auto';
+    
+    const title = document.createElement('h2');
+    title.textContent = window.currentLang === 'ja' ? '設定' : 'Settings';
+    title.style.marginBottom = '20px';
+    title.style.color = '#333';
+    title.style.fontSize = '24px';
+    title.style.fontWeight = '600';
+    
+    const availabilityBtn = document.createElement('button');
+    availabilityBtn.textContent = window.currentLang === 'ja' ? 'アイテムの利用可能性を管理' : 'Manage Item Availability';
+    availabilityBtn.style.padding = '12px 24px';
+    availabilityBtn.style.backgroundColor = 'var(--primary)';
+    availabilityBtn.style.color = 'white';
+    availabilityBtn.style.border = 'none';
+    availabilityBtn.style.borderRadius = '8px';
+    availabilityBtn.style.cursor = 'pointer';
+    availabilityBtn.style.fontSize = '16px';
+    availabilityBtn.style.fontWeight = '500';
+    availabilityBtn.style.transition = 'background-color 0.3s';
+    
+    availabilityBtn.addEventListener('mouseenter', function() {
+        this.style.backgroundColor = '#0056b3';
+    });
+    
+    availabilityBtn.addEventListener('mouseleave', function() {
+        this.style.backgroundColor = 'var(--primary)';
+    });
+    
+    availabilityBtn.addEventListener('click', function() {
+        openAvailabilityModal();
+    });
+    
+    settingsContent.appendChild(title);
+    settingsContent.appendChild(availabilityBtn);
+    container.appendChild(settingsContent);
+    
+    console.log('Settings displayed successfully');
+}
