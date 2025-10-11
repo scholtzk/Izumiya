@@ -1954,7 +1954,32 @@
       <h2 style="margin:0; color:var(--primary);">Settings</h2>
     </div>
   </div>
-  <div id="settings-content"></div>
+  <div id="settings-content">
+    <!-- Availability Management Button -->
+    <button id="availabilityBtn" style="padding: 12px 24px; background-color: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 500; transition: background-color 0.3s; margin-bottom: 20px;">
+      <span id="availabilityBtnText">Manage Item Availability</span>
+    </button>
+    
+    <!-- Card Payment Toggle Section -->
+    <div style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+      <h3 style="margin-bottom: 15px; color: #333; font-size: 18px; font-weight: 600;">
+        <span id="cardPaymentTitle">Card Payment Settings</span>
+      </h3>
+      
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+        <span id="cardPaymentLabel" style="font-size: 16px; color: #333; font-weight: 500;">Enable Card Payments</span>
+        
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <label style="position: relative; display: inline-block; width: 60px; height: 30px;">
+            <input type="checkbox" id="cardPaymentToggle" style="opacity: 0; width: 0; height: 0;">
+            <span id="cardPaymentSlider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--primary); transition: 0.3s; border-radius: 30px;"></span>
+            <span id="cardPaymentKnob" style="position: absolute; content: ''; height: 24px; width: 24px; left: 32px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+          </label>
+          <span id="cardPaymentStatus" style="font-size: 14px; color: #28a745; font-weight: 500;">Enabled</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
         </div>
@@ -2149,5 +2174,115 @@
     <script src="payslip-generator.js"></script>
     <script src="square-integration.js"></script>
     <!-- <script type="module" src="debug-payment.js"></script> -->
+    
+    <!-- Settings Functionality Script -->
+    <script>
+    // Initialize settings when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeSettings();
+    });
+    
+    function initializeSettings() {
+        // Initialize card payment toggle
+        const cardPaymentToggle = document.getElementById('cardPaymentToggle');
+        const cardPaymentSlider = document.getElementById('cardPaymentSlider');
+        const cardPaymentKnob = document.getElementById('cardPaymentKnob');
+        const cardPaymentStatus = document.getElementById('cardPaymentStatus');
+        
+        // Load card payment setting
+        const cardPaymentEnabled = loadCardPaymentSetting();
+        cardPaymentToggle.checked = cardPaymentEnabled;
+        
+        // Set initial toggle appearance
+        cardPaymentSlider.style.backgroundColor = cardPaymentEnabled ? 'var(--primary)' : '#ccc';
+        cardPaymentKnob.style.left = cardPaymentEnabled ? '32px' : '3px';
+        cardPaymentStatus.textContent = cardPaymentEnabled ? 
+            (window.currentLang === 'ja' ? '有効' : 'Enabled') : 
+            (window.currentLang === 'ja' ? '無効' : 'Disabled');
+        cardPaymentStatus.style.color = cardPaymentEnabled ? '#28a745' : '#dc3545';
+        
+        // Add toggle change listener
+        cardPaymentToggle.addEventListener('change', function() {
+            cardPaymentSlider.style.backgroundColor = this.checked ? 'var(--primary)' : '#ccc';
+            cardPaymentKnob.style.left = this.checked ? '32px' : '3px';
+            
+            // Update status text
+            cardPaymentStatus.textContent = this.checked ? 
+                (window.currentLang === 'ja' ? '有効' : 'Enabled') : 
+                (window.currentLang === 'ja' ? '無効' : 'Disabled');
+            cardPaymentStatus.style.color = this.checked ? '#28a745' : '#dc3545';
+            
+            // Save setting and update card button
+            saveCardPaymentSetting(this.checked);
+            updateCardButtonState(this.checked);
+        });
+        
+        // Initialize availability button
+        const availabilityBtn = document.getElementById('availabilityBtn');
+        if (availabilityBtn) {
+            availabilityBtn.addEventListener('click', function() {
+                if (window.openAvailabilityModal) {
+                    window.openAvailabilityModal();
+                }
+            });
+        }
+        
+        // Update language-specific text
+        updateSettingsLanguage();
+    }
+    
+    function loadCardPaymentSetting() {
+        const setting = localStorage.getItem('cardPaymentEnabled');
+        return setting === null ? true : setting === 'true'; // Default to enabled
+    }
+    
+    function saveCardPaymentSetting(enabled) {
+        localStorage.setItem('cardPaymentEnabled', enabled.toString());
+        console.log('Card payment setting saved:', enabled);
+    }
+    
+    function updateCardButtonState(enabled) {
+        const cardMethodBtn = document.getElementById('cardMethodBtn');
+        if (cardMethodBtn) {
+            if (enabled) {
+                cardMethodBtn.style.opacity = '1';
+                cardMethodBtn.style.cursor = 'pointer';
+                cardMethodBtn.style.pointerEvents = 'auto';
+                cardMethodBtn.disabled = false;
+            } else {
+                cardMethodBtn.style.opacity = '0.5';
+                cardMethodBtn.style.cursor = 'not-allowed';
+                cardMethodBtn.style.pointerEvents = 'none';
+                cardMethodBtn.disabled = true;
+            }
+        }
+    }
+    
+    function updateSettingsLanguage() {
+        const availabilityBtnText = document.getElementById('availabilityBtnText');
+        const cardPaymentTitle = document.getElementById('cardPaymentTitle');
+        const cardPaymentLabel = document.getElementById('cardPaymentLabel');
+        
+        if (window.currentLang === 'ja') {
+            if (availabilityBtnText) availabilityBtnText.textContent = 'アイテムの利用可能性を管理';
+            if (cardPaymentTitle) cardPaymentTitle.textContent = 'カード決済設定';
+            if (cardPaymentLabel) cardPaymentLabel.textContent = 'カード決済を有効にする';
+        } else {
+            if (availabilityBtnText) availabilityBtnText.textContent = 'Manage Item Availability';
+            if (cardPaymentTitle) cardPaymentTitle.textContent = 'Card Payment Settings';
+            if (cardPaymentLabel) cardPaymentLabel.textContent = 'Enable Card Payments';
+        }
+    }
+    
+    // Listen for language changes
+    document.addEventListener('languageChanged', function() {
+        updateSettingsLanguage();
+    });
+    
+    // Make functions globally available
+    window.loadCardPaymentSetting = loadCardPaymentSetting;
+    window.saveCardPaymentSetting = saveCardPaymentSetting;
+    window.updateCardButtonState = updateCardButtonState;
+    </script>
 </body>
 </html>

@@ -72,6 +72,35 @@ function renderSettingsInterface() {
                     </button>
                 </div>
                 
+                <!-- Card Payment Settings Section -->
+                <div style="background: #f8f9fa; border-radius: 12px; padding: 24px; border: 1px solid #e9ecef;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                        <div style="width: 40px; height: 40px; background: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                                <line x1="1" y1="10" x2="23" y2="10" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 style="margin: 0; color: #333; font-size: 18px; font-weight: 600;">Card Payment Settings</h3>
+                            <p style="margin: 4px 0 0 0; color: #666; font-size: 14px;">Enable or disable card payment options</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-size: 16px; color: #333; font-weight: 500;">Enable Card Payments</span>
+                        
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <label style="position: relative; display: inline-block; width: 60px; height: 30px;">
+                                <input type="checkbox" id="cardPaymentToggle" style="opacity: 0; width: 0; height: 0;">
+                                <span id="cardPaymentSlider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--primary); transition: 0.3s; border-radius: 30px;"></span>
+                                <span id="cardPaymentKnob" style="position: absolute; content: ''; height: 24px; width: 24px; left: 32px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+                            </label>
+                            <span id="cardPaymentStatus" style="font-size: 14px; color: #28a745; font-weight: 500;">Enabled</span>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Other Settings Sections (for future expansion) -->
                 <div style="background: #f8f9fa; border-radius: 12px; padding: 24px; border: 1px solid #e9ecef; opacity: 0.6;">
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
@@ -98,6 +127,50 @@ function renderSettingsInterface() {
     if (availabilityBtn) {
         availabilityBtn.addEventListener('click', showAvailabilityModal);
     }
+    
+    // Initialize card payment toggle
+    initializeCardPaymentToggle();
+}
+
+// Initialize card payment toggle functionality
+function initializeCardPaymentToggle() {
+    const cardPaymentToggle = document.getElementById('cardPaymentToggle');
+    const cardPaymentSlider = document.getElementById('cardPaymentSlider');
+    const cardPaymentKnob = document.getElementById('cardPaymentKnob');
+    const cardPaymentStatus = document.getElementById('cardPaymentStatus');
+    
+    if (!cardPaymentToggle || !cardPaymentSlider || !cardPaymentKnob || !cardPaymentStatus) {
+        console.log('Card payment toggle elements not found');
+        return;
+    }
+    
+    // Load card payment setting
+    const cardPaymentEnabled = loadCardPaymentSetting();
+    cardPaymentToggle.checked = cardPaymentEnabled;
+    
+    // Set initial toggle appearance
+    cardPaymentSlider.style.backgroundColor = cardPaymentEnabled ? 'var(--primary)' : '#ccc';
+    cardPaymentKnob.style.left = cardPaymentEnabled ? '32px' : '3px';
+    cardPaymentStatus.textContent = cardPaymentEnabled ? 
+        (window.currentLang === 'ja' ? '有効' : 'Enabled') : 
+        (window.currentLang === 'ja' ? '無効' : 'Disabled');
+    cardPaymentStatus.style.color = cardPaymentEnabled ? '#28a745' : '#dc3545';
+    
+    // Add toggle change listener
+    cardPaymentToggle.addEventListener('change', function() {
+        cardPaymentSlider.style.backgroundColor = this.checked ? 'var(--primary)' : '#ccc';
+        cardPaymentKnob.style.left = this.checked ? '32px' : '3px';
+        
+        // Update status text
+        cardPaymentStatus.textContent = this.checked ? 
+            (window.currentLang === 'ja' ? '有効' : 'Enabled') : 
+            (window.currentLang === 'ja' ? '無効' : 'Disabled');
+        cardPaymentStatus.style.color = this.checked ? '#28a745' : '#dc3545';
+        
+        // Save setting and update card button
+        saveCardPaymentSetting(this.checked);
+        updateCardButtonState(this.checked);
+    });
 }
 
 // Show availability management modal
