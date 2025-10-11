@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Square Payment Callback</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background-color: #f0f0f0;
+        }
+        .loading {
+            font-size: 18px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading">Processing Square payment...</div>
+    
+    <script>
+        // Get Square callback parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const dataParam = urlParams.get('data');
+        
+        if (dataParam) {
+            try {
+                // Parse Square callback data
+                const transactionInfo = JSON.parse(decodeURIComponent(dataParam));
+                console.log('Square callback data:', transactionInfo);
+                
+                // Check for success or error
+                if (transactionInfo.error_code) {
+                    // Error occurred
+                    console.error('Square payment error:', transactionInfo.error_code);
+                    // Redirect to POS with error
+                    window.location.href = 'prosurf://https://scholtzk.github.io/Izumiya/?square_error=' + encodeURIComponent(transactionInfo.error_code);
+                } else if (transactionInfo.transaction_id || transactionInfo.client_transaction_id) {
+                    // Success
+                    console.log('Square payment successful');
+                    // Redirect to POS with success
+                    const transactionId = transactionInfo.transaction_id || transactionInfo.client_transaction_id;
+                    window.location.href = 'prosurf://https://scholtzk.github.io/Izumiya/?square_success=1&transaction_id=' + encodeURIComponent(transactionId);
+                } else {
+                    // Cancelled
+                    console.log('Square payment cancelled');
+                    window.location.href = 'prosurf://https://scholtzk.github.io/Izumiya/?square_cancelled=1';
+                }
+            } catch (error) {
+                console.error('Error parsing Square callback:', error);
+                // Redirect to POS with error
+                window.location.href = 'prosurf://https://scholtzk.github.io/Izumiya/?square_error=parse_error';
+            }
+        } else {
+            // No data parameter, redirect to POS
+            window.location.href = 'prosurf://https://scholtzk.github.io/Izumiya/';
+        }
+    </script>
+</body>
+</html>

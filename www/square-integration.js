@@ -4,7 +4,7 @@
 // Square Configuration
 const SQUARE_CONFIG = {
     appId: 'sq0idp-MVzo31QnyyzHTP4SrxoOoQ',
-    callbackUrl: 'https://scholtzk.github.io/Izumiya/',
+    callbackUrl: 'https://scholtzk.github.io/Izumiya/square-callback.html',
     currency: 'JPY',
     version: '1.3'
 };
@@ -44,7 +44,14 @@ class SquareIntegration {
         const urlParams = new URLSearchParams(window.location.search);
         const dataParam = urlParams.get('data');
         
+        // Check for Square callback parameters (from redirect page)
+        const squareSuccess = urlParams.get('square_success');
+        const squareError = urlParams.get('square_error');
+        const squareCancelled = urlParams.get('square_cancelled');
+        const transactionId = urlParams.get('transaction_id');
+        
         if (dataParam) {
+            // Direct Square callback
             try {
                 const transactionInfo = this.getTransactionInfo(window.location);
                 this.handlePaymentCallback(transactionInfo);
@@ -52,6 +59,15 @@ class SquareIntegration {
                 console.error('Error parsing Square callback data:', error);
                 this.showDebugInfo('Error parsing Square callback: ' + error.message);
             }
+        } else if (squareSuccess) {
+            // Success from redirect page
+            this.handleSquareSuccess(transactionId);
+        } else if (squareError) {
+            // Error from redirect page
+            this.handleSquareError(squareError);
+        } else if (squareCancelled) {
+            // Cancelled from redirect page
+            this.handlePaymentCancellation();
         }
     }
     
@@ -140,6 +156,42 @@ class SquareIntegration {
         }
 
         // Return to payment modal
+        this.cleanupUrl();
+    }
+    
+    // Handle Square success from redirect page
+    handleSquareSuccess(transactionId) {
+        console.log('Square payment successful via redirect:', transactionId);
+        
+        if (window.showCustomAlert) {
+            window.showCustomAlert(`Square payment successful! Transaction ID: ${transactionId}`, 'success');
+        }
+
+        // Process the payment through the existing POS system
+        if (window.currentOrder && window.processPayment) {
+            const squareOrder = {
+                ...window.currentOrder,
+                paymentMethod: 'Square',
+                paymentId: transactionId,
+                total: window.currentOrder.total,
+                timestamp: new Date(),
+                paymentStatus: 'paid'
+            };
+
+            window.processPayment(squareOrder);
+        }
+
+        this.cleanupUrl();
+    }
+    
+    // Handle Square error from redirect page
+    handleSquareError(errorCode) {
+        console.error('Square payment error via redirect:', errorCode);
+        
+        if (window.showCustomAlert) {
+            window.showCustomAlert(`Square payment failed: ${errorCode}`, 'error');
+        }
+
         this.cleanupUrl();
     }
 
