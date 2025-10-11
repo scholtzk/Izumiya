@@ -40,37 +40,49 @@ class SquareIntegration {
 
     // Setup callback URL handling for payment results
     setupCallbackHandling() {
-        // Check if we're returning from a Square payment
+        // Check if we're returning from a Square payment (iOS format)
         const urlParams = new URLSearchParams(window.location.search);
-        const paymentStatus = urlParams.get('status');
-        const paymentAmount = urlParams.get('amount');
-        const paymentId = urlParams.get('payment_id');
-
-        if (paymentStatus && paymentAmount) {
-            this.handlePaymentCallback(paymentStatus, paymentAmount, paymentId);
+        const dataParam = urlParams.get('data');
+        
+        if (dataParam) {
+            try {
+                const transactionInfo = JSON.parse(decodeURIComponent(dataParam));
+                this.handlePaymentCallback(transactionInfo);
+            } catch (error) {
+                console.error('Error parsing Square callback data:', error);
+                this.showDebugInfo('Error parsing Square callback: ' + error.message);
+            }
         }
     }
 
     // Handle payment callback from Square
-    handlePaymentCallback(status, amount, paymentId) {
-        console.log('Square payment callback received:', { status, amount, paymentId });
+    handlePaymentCallback(transactionInfo) {
+        console.log('Square payment callback received:', transactionInfo);
+        this.showDebugInfo('Square callback received: ' + JSON.stringify(transactionInfo));
         
-        if (status === 'success') {
-            this.processSuccessfulPayment(amount, paymentId);
-        } else if (status === 'cancelled') {
-            this.handlePaymentCancellation();
+        // Check for error first
+        if (transactionInfo.error_code) {
+            this.handlePaymentError(transactionInfo.error_code);
+            return;
+        }
+        
+        // Check for success
+        if (transactionInfo.transaction_id || transactionInfo.client_transaction_id) {
+            this.processSuccessfulPayment(transactionInfo);
         } else {
-            this.handlePaymentError(status);
+            this.handlePaymentCancellation();
         }
     }
 
     // Process successful Square payment
-    processSuccessfulPayment(amount, paymentId) {
-        console.log('Processing successful Square payment:', amount);
+    processSuccessfulPayment(transactionInfo) {
+        console.log('Processing successful Square payment:', transactionInfo);
+        
+        const transactionId = transactionInfo.transaction_id || transactionInfo.client_transaction_id;
         
         // Show success message
         if (window.showCustomAlert) {
-            window.showCustomAlert(`Square payment successful: ¥${amount}`, 'success');
+            window.showCustomAlert(`Square payment successful! Transaction ID: ${transactionId}`, 'success');
         }
 
         // Process the payment through the existing POS system
@@ -79,8 +91,8 @@ class SquareIntegration {
             const squareOrder = {
                 ...window.currentOrder,
                 paymentMethod: 'Square',
-                paymentId: paymentId,
-                total: parseInt(amount),
+                paymentId: transactionId,
+                total: window.currentOrder.total,
                 timestamp: new Date(),
                 paymentStatus: 'paid'
             };
@@ -137,22 +149,25 @@ class SquareIntegration {
             return;
         }
         
-        // Prepare Square payment data
-        const squareData = {
+        // Prepare Square payment data according to official documentation
+        const dataParameter = {
             amount_money: {
-                amount: Math.round(amount), // Square expects amount in smallest currency unit
+                amount: Math.round(amount), // Amount in cents for JPY
                 currency_code: SQUARE_CONFIG.currency
             },
             callback_url: SQUARE_CONFIG.callbackUrl,
             client_id: SQUARE_CONFIG.appId,
-            version: SQUARE_CONFIG.version
+            version: SQUARE_CONFIG.version,
+            notes: "POS Transaction",
+            options: {
+                supported_tender_types: ["CREDIT_CARD", "CASH", "OTHER", "SQUARE_GIFT_CARD", "CARD_ON_FILE"]
+            }
         };
 
-        // Encode the data for URL
-        const encodedData = encodeURIComponent(JSON.stringify(squareData));
-        const squareUrl = `square-commerce-v1://payment/create?data=${encodedData}`;
+        // Use the exact format from Square documentation
+        const squareUrl = "square-commerce-v1://payment/create?data=" + encodeURIComponent(JSON.stringify(dataParameter));
         
-        console.log('Square payment data:', squareData);
+        console.log('Square payment data:', dataParameter);
         console.log('Square URL:', squareUrl);
 
         // Show loading message
@@ -160,7 +175,7 @@ class SquareIntegration {
             window.showCustomAlert('Opening Square app...', 'info');
         }
 
-        // Attempt to open Square app
+        // Use window.location as per Square documentation
         this.attemptSquarePayment(squareUrl);
     }
 
@@ -169,64 +184,23 @@ class SquareIntegration {
         console.log('Attempting to open Square app with URL:', squareUrl);
         
         // Show debug info on screen for iPad
-        this.showDebugInfo('Attempting to open Square app...');
+        this.showDebugInfo('Opening Square app...');
         
-        // Try multiple methods to open Square app
-        let squareOpened = false;
-        
-        // Method 1: Direct window.location
+        // Use the exact method from Square documentation
         try {
-            window.location.href = squareUrl;
-            squareOpened = true;
-            this.showDebugInfo('Method 1: Direct location attempted');
-        } catch (error) {
-            this.showDebugInfo('Method 1 failed: ' + error.message);
-        }
-        
-        // Method 2: Create and click link
-        if (!squareOpened) {
-            try {
-                const link = document.createElement('a');
-                link.href = squareUrl;
-                link.target = '_self';
-                link.style.display = 'none';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                squareOpened = true;
-                this.showDebugInfo('Method 2: Link click attempted');
-            } catch (error) {
-                this.showDebugInfo('Method 2 failed: ' + error.message);
-            }
-        }
-        
-        // Method 3: Use window.open
-        if (!squareOpened) {
-            try {
-                window.open(squareUrl, '_self');
-                squareOpened = true;
-                this.showDebugInfo('Method 3: Window.open attempted');
-            } catch (error) {
-                this.showDebugInfo('Method 3 failed: ' + error.message);
-            }
-        }
-        
-        // Set up fallback timeout
-        const fallbackTimeout = setTimeout(() => {
-            this.showDebugInfo('Square app not responding after 3 seconds');
-            this.handleSquareNotInstalled();
-        }, 3000);
-        
-        // Check if we're still on the same page (indicating Square didn't open)
-        const checkPage = setInterval(() => {
-            if (document.visibilityState === 'visible') {
-                // Still on the page, Square probably didn't open
-                clearTimeout(fallbackTimeout);
-                clearInterval(checkPage);
-                this.showDebugInfo('Still on page - Square app likely not installed');
+            window.location = squareUrl;
+            this.showDebugInfo('Square app launch attempted');
+            
+            // Set up fallback timeout
+            setTimeout(() => {
+                this.showDebugInfo('Square app not responding - may not be installed');
                 this.handleSquareNotInstalled();
-            }
-        }, 1000);
+            }, 3000);
+            
+        } catch (error) {
+            this.showDebugInfo('Error opening Square: ' + error.message);
+            this.handleSquareNotInstalled();
+        }
     }
     
     // Show debug information on screen for iPad

@@ -40,14 +40,18 @@ class SquareIntegration {
 
     // Setup callback URL handling for payment results
     setupCallbackHandling() {
-        // Check if we're returning from a Square payment
+        // Check if we're returning from a Square payment (iOS format)
         const urlParams = new URLSearchParams(window.location.search);
-        const paymentStatus = urlParams.get('status');
-        const paymentAmount = urlParams.get('amount');
-        const paymentId = urlParams.get('payment_id');
-
-        if (paymentStatus && paymentAmount) {
-            this.handlePaymentCallback(paymentStatus, paymentAmount, paymentId);
+        const dataParam = urlParams.get('data');
+        
+        if (dataParam) {
+            try {
+                const transactionInfo = JSON.parse(decodeURIComponent(dataParam));
+                this.handlePaymentCallback(transactionInfo);
+            } catch (error) {
+                console.error('Error parsing Square callback data:', error);
+                this.showDebugInfo('Error parsing Square callback: ' + error.message);
+            }
         }
     }
 
@@ -137,22 +141,25 @@ class SquareIntegration {
             return;
         }
         
-        // Prepare Square payment data
-        const squareData = {
+        // Prepare Square payment data according to official documentation
+        const dataParameter = {
             amount_money: {
-                amount: Math.round(amount), // Square expects amount in smallest currency unit
+                amount: Math.round(amount), // Amount in cents for JPY
                 currency_code: SQUARE_CONFIG.currency
             },
             callback_url: SQUARE_CONFIG.callbackUrl,
             client_id: SQUARE_CONFIG.appId,
-            version: SQUARE_CONFIG.version
+            version: SQUARE_CONFIG.version,
+            notes: "POS Transaction",
+            options: {
+                supported_tender_types: ["CREDIT_CARD", "CASH", "OTHER", "SQUARE_GIFT_CARD", "CARD_ON_FILE"]
+            }
         };
 
-        // Encode the data for URL
-        const encodedData = encodeURIComponent(JSON.stringify(squareData));
-        const squareUrl = `square-commerce-v1://payment/create?data=${encodedData}`;
+        // Use the exact format from Square documentation
+        const squareUrl = "square-commerce-v1://payment/create?data=" + encodeURIComponent(JSON.stringify(dataParameter));
         
-        console.log('Square payment data:', squareData);
+        console.log('Square payment data:', dataParameter);
         console.log('Square URL:', squareUrl);
 
         // Show loading message
@@ -160,7 +167,7 @@ class SquareIntegration {
             window.showCustomAlert('Opening Square app...', 'info');
         }
 
-        // Attempt to open Square app
+        // Use window.location as per Square documentation
         this.attemptSquarePayment(squareUrl);
     }
 
