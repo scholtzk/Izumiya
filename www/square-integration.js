@@ -222,47 +222,40 @@ class SquareIntegration {
     // Redirect to ProSurf
     redirectToProSurf() {
         console.log('Starting ProSurf redirect process...');
-        this.showDebugInfo('Starting ProSurf redirect...');
+        this.showDebugInfo('Opening ProSurf... Please tap "Open" when prompted');
         
-        // Try multiple ProSurf URL schemes
-        const prosurfUrls = [
-            'prosurf://https://scholtzk.github.io/Izumiya/',
-            'prosurf://scholtzk.github.io/Izumiya/',
-            'prosurf://https://scholtzk.github.io/Izumiya',
-            'prosurf://scholtzk.github.io/Izumiya',
-            'prosurf://open?url=https://scholtzk.github.io/Izumiya/',
-            'prosurf://open?url=scholtzk.github.io/Izumiya/'
-        ];
+        // Show user-friendly message
+        if (window.showCustomAlert) {
+            window.showCustomAlert('Opening ProSurf... Please tap "Open" when the dialog appears', 'info');
+        }
         
-        let attemptCount = 0;
+        // Use the working URL scheme
+        const prosurfUrl = 'prosurf://https://scholtzk.github.io/Izumiya/';
         
-        const tryRedirect = () => {
-            if (attemptCount < prosurfUrls.length) {
-                const url = prosurfUrls[attemptCount];
-                console.log(`ProSurf redirect attempt ${attemptCount + 1}: ${url}`);
-                this.showDebugInfo(`Trying ProSurf URL ${attemptCount + 1}: ${url}`);
-                
-                try {
-                    window.location.href = url;
-                    console.log('ProSurf redirect attempted');
-                } catch (error) {
-                    console.log('ProSurf redirect failed:', error);
-                    this.showDebugInfo(`ProSurf attempt ${attemptCount + 1} failed: ${error.message}`);
-                }
-                
-                attemptCount++;
-                setTimeout(tryRedirect, 2000);
-            } else {
-                console.log('All ProSurf redirect attempts failed');
-                this.showDebugInfo('All ProSurf attempts failed - staying in Safari');
-                
-                // Try alternative: create a link and click it
-                this.tryLinkRedirect();
+        // Try multiple methods to trigger ProSurf
+        setTimeout(() => {
+            console.log('Attempting ProSurf redirect:', prosurfUrl);
+            this.showDebugInfo('Attempting ProSurf redirect...');
+            
+            try {
+                // Method 1: Direct location change
+                window.location.href = prosurfUrl;
+                console.log('ProSurf redirect attempted');
+            } catch (error) {
+                console.log('ProSurf redirect failed:', error);
+                this.showDebugInfo(`ProSurf redirect failed: ${error.message}`);
             }
-        };
+        }, 500);
         
-        // Start the redirect attempts
-        setTimeout(tryRedirect, 1000);
+        // Try alternative method after a delay
+        setTimeout(() => {
+            this.tryLinkRedirect();
+        }, 2000);
+        
+        // Show instruction message
+        setTimeout(() => {
+            this.showDebugInfo('If ProSurf dialog appeared, please tap "Open" to continue');
+        }, 1000);
     }
     
     // Try alternative link-based redirect
