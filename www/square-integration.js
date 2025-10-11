@@ -129,6 +129,14 @@ class SquareIntegration {
     openSquarePayment(amount) {
         console.log('Opening Square payment for amount:', amount);
         
+        // Validate amount
+        if (!amount || amount <= 0) {
+            if (window.showCustomAlert) {
+                window.showCustomAlert('Invalid payment amount', 'error');
+            }
+            return;
+        }
+        
         // Prepare Square payment data
         const squareData = {
             amount_money: {
@@ -144,7 +152,13 @@ class SquareIntegration {
         const encodedData = encodeURIComponent(JSON.stringify(squareData));
         const squareUrl = `square-commerce-v1://payment/create?data=${encodedData}`;
         
+        console.log('Square payment data:', squareData);
         console.log('Square URL:', squareUrl);
+
+        // Show loading message
+        if (window.showCustomAlert) {
+            window.showCustomAlert('Opening Square app...', 'info');
+        }
 
         // Attempt to open Square app
         this.attemptSquarePayment(squareUrl);
@@ -152,33 +166,39 @@ class SquareIntegration {
 
     // Attempt to open Square app with fallback handling
     attemptSquarePayment(squareUrl) {
-        // Create a hidden iframe to test if Square app is available
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = squareUrl;
-        document.body.appendChild(iframe);
-
-        // Set up fallback handling
-        const fallbackTimeout = setTimeout(() => {
-            this.handleSquareNotInstalled();
-        }, 2000);
-
-        // Listen for iframe load (indicates Square app opened)
-        iframe.onload = () => {
-            clearTimeout(fallbackTimeout);
-            document.body.removeChild(iframe);
-            console.log('Square app opened successfully');
-        };
-
-        // Also try direct window.location as backup
-        setTimeout(() => {
-            try {
-                window.location.href = squareUrl;
-            } catch (error) {
-                console.error('Error opening Square app:', error);
+        console.log('Attempting to open Square app with URL:', squareUrl);
+        
+        // Try to open Square app directly
+        try {
+            // Create a temporary link element to trigger the URL scheme
+            const link = document.createElement('a');
+            link.href = squareUrl;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log('Square app launch attempted');
+            
+            // Set up fallback timeout
+            const fallbackTimeout = setTimeout(() => {
+                console.log('Square app not responding, showing fallback options');
                 this.handleSquareNotInstalled();
-            }
-        }, 100);
+            }, 3000);
+            
+            // Clear timeout if user returns to the app (indicating Square opened)
+            const checkReturn = setInterval(() => {
+                if (document.hasFocus()) {
+                    clearTimeout(fallbackTimeout);
+                    clearInterval(checkReturn);
+                    console.log('User returned to app, Square likely opened');
+                }
+            }, 500);
+            
+        } catch (error) {
+            console.error('Error opening Square app:', error);
+            this.handleSquareNotInstalled();
+        }
     }
 
     // Handle case where Square app is not installed
