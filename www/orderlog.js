@@ -532,7 +532,33 @@ export async function processPayNow(orderNumber, showCustomAlert, getOrderByNumb
             const tenderedText = (document.getElementById('tenderedAmount').textContent || '0');
             const tenderedAmount = parseInt(tenderedText.replace(/[^0-9]/g, ''), 10) || 0;
             
-            if (tenderedAmount < totalAmount) {
+            // Double-check using debug panel values
+            const debugContent = document.getElementById('debugContent');
+            let doubleCheckPassed = false;
+            
+            if (debugContent) {
+                try {
+                    const debugText = debugContent.innerHTML;
+                    const totalMatch = debugText.match(/Total:\s*(\d+)/);
+                    const tenderedMatch = debugText.match(/Tendered:\s*(\d+)/);
+                    
+                    if (totalMatch && tenderedMatch) {
+                        const debugTotal = parseInt(totalMatch[1], 10);
+                        const debugTendered = parseInt(tenderedMatch[1], 10);
+                        
+                        console.log('Double-check values - Total:', debugTotal, 'Tendered:', debugTendered);
+                        
+                        if (debugTendered >= debugTotal) {
+                            console.log('Double-check PASSED: Payment is sufficient according to debug panel');
+                            doubleCheckPassed = true;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error in double-check function:', error);
+                }
+            }
+            
+            if (!doubleCheckPassed && tenderedAmount < totalAmount) {
                 showCustomAlert('Insufficient payment amount', 'warning');
                 return;
             }
@@ -1419,7 +1445,33 @@ export async function processPayment(currentOrder, moveCurrentOrderToCompleted, 
     const tenderedAmount = parseInt(String(tenderedText).replace(/[^0-9]/g, ''), 10) || 0;
     const totalAmount = parseInt(String(totalText).replace(/[^0-9]/g, ''), 10) || 0;
     
-    if (tenderedAmount < totalAmount) {
+    // Double-check using debug panel values
+    const debugContent = document.getElementById('debugContent');
+    let doubleCheckPassed = false;
+    
+    if (debugContent) {
+        try {
+            const debugText = debugContent.innerHTML;
+            const totalMatch = debugText.match(/Total:\s*(\d+)/);
+            const tenderedMatch = debugText.match(/Tendered:\s*(\d+)/);
+            
+            if (totalMatch && tenderedMatch) {
+                const debugTotal = parseInt(totalMatch[1], 10);
+                const debugTendered = parseInt(tenderedMatch[1], 10);
+                
+                console.log('Double-check values - Total:', debugTotal, 'Tendered:', debugTendered);
+                
+                if (debugTendered >= debugTotal) {
+                    console.log('Double-check PASSED: Payment is sufficient according to debug panel');
+                    doubleCheckPassed = true;
+                }
+            }
+        } catch (error) {
+            console.error('Error in double-check function:', error);
+        }
+    }
+    
+    if (!doubleCheckPassed && tenderedAmount < totalAmount) {
         showCustomAlert('Insufficient payment amount', 'warning');
         return;
     }
@@ -1757,6 +1809,19 @@ export function updatePaymentModal(currentOrder) {
         if (typeof window.amountEntered !== 'undefined') {
             window.amountEntered = '';
         }
+        
+        // Update button state after modal update
+        setTimeout(() => {
+            const completeBtn = document.getElementById('completePaymentBtn');
+            if (completeBtn) {
+                completeBtn.disabled = true;
+                completeBtn.style.opacity = '0.5';
+                completeBtn.style.cursor = 'not-allowed';
+                completeBtn.style.backgroundColor = '#ccc';
+                completeBtn.style.color = '#666';
+                console.log('Button state reset to disabled after modal update');
+            }
+        }, 100);
         
         // Disable process button initially
         if (processBtn) {

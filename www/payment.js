@@ -153,6 +153,7 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                 if (tenderedAmountEl) tenderedAmountEl.textContent = '0';
                 if (changeAmountEl) changeAmountEl.textContent = '0';
                 updateDebugPanel();
+                updateButtonState();
                 return;
             }
 
@@ -170,6 +171,7 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
             }
             
             updateDebugPanel();
+            updateButtonState();
         } catch (error) {
             console.error('Error in updateDisplay:', error);
             // Reset to safe state
@@ -177,6 +179,41 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
             if (tenderedAmountEl) tenderedAmountEl.textContent = '0';
             if (changeAmountEl) changeAmountEl.textContent = '0';
             updateDebugPanel();
+            updateButtonState();
+        }
+    }
+
+    // Update Complete Payment button state based on payment validation
+    function updateButtonState() {
+        try {
+            const completeBtn = document.getElementById('completePaymentBtn');
+            if (!completeBtn) return;
+
+            const totalTextRaw = totalAmountEl.textContent || '0';
+            const total = parseInt(String(totalTextRaw).replace(/[^0-9]/g, ''), 10) || 0;
+            const tendered = tenderedAmount ? (parseInt(String(tenderedAmount).replace(/[^0-9]/g, ''), 10) || 0) : 0;
+            
+            // Check if payment is sufficient
+            const isPaymentSufficient = tendered >= total;
+            
+            // Update button state
+            if (isPaymentSufficient) {
+                completeBtn.disabled = false;
+                completeBtn.style.opacity = '1';
+                completeBtn.style.cursor = 'pointer';
+                completeBtn.style.backgroundColor = 'var(--primary)';
+                completeBtn.style.color = 'white';
+            } else {
+                completeBtn.disabled = true;
+                completeBtn.style.opacity = '0.5';
+                completeBtn.style.cursor = 'not-allowed';
+                completeBtn.style.backgroundColor = '#ccc';
+                completeBtn.style.color = '#666';
+            }
+            
+            console.log('Button state updated - Payment sufficient:', isPaymentSufficient, 'Total:', total, 'Tendered:', tendered);
+        } catch (error) {
+            console.error('Error updating button state:', error);
         }
     }
 
@@ -271,6 +308,62 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
         });
     }
 
+    // Double-check function to read debug panel values and validate payment
+    function doubleCheckPaymentValues() {
+        try {
+            const debugContent = document.getElementById('debugContent');
+            if (!debugContent) {
+                console.log('Debug panel not found, using standard validation');
+                return null;
+            }
+            
+            const debugText = debugContent.innerHTML;
+            console.log('Debug panel content:', debugText);
+            
+            // Extract values from debug panel using regex
+            const totalMatch = debugText.match(/Total:\s*(\d+)/);
+            const tenderedMatch = debugText.match(/Tendered:\s*(\d+)/);
+            const changeMatch = debugText.match(/Change:\s*(\d+)/);
+            const variableMatch = debugText.match(/Variable:\s*(.+?)(?:<br>|$)/);
+            
+            if (totalMatch && tenderedMatch) {
+                const debugTotal = parseInt(totalMatch[1], 10);
+                const debugTendered = parseInt(tenderedMatch[1], 10);
+                const debugChange = changeMatch ? parseInt(changeMatch[1], 10) : 0;
+                const debugVariable = variableMatch ? variableMatch[1].trim() : 'empty';
+                
+                console.log('Double-check values - Total:', debugTotal, 'Tendered:', debugTendered, 'Change:', debugChange, 'Variable:', debugVariable);
+                
+                // Check if the debug values show sufficient payment
+                if (debugTendered >= debugTotal) {
+                    console.log('Double-check PASSED: Payment is sufficient according to debug panel');
+                    return {
+                        total: debugTotal,
+                        tendered: debugTendered,
+                        change: debugChange,
+                        variable: debugVariable,
+                        isValid: true
+                    };
+                } else {
+                    console.log('Double-check FAILED: Payment is insufficient according to debug panel');
+                    return {
+                        total: debugTotal,
+                        tendered: debugTendered,
+                        change: debugChange,
+                        variable: debugVariable,
+                        isValid: false
+                    };
+                }
+            }
+            
+            console.log('Could not parse debug panel values, falling back to standard validation');
+            return null;
+        } catch (error) {
+            console.error('Error in double-check function:', error);
+            return null;
+        }
+    }
+
     // Complete Payment button
     const completeBtn = document.getElementById('completePaymentBtn');
     if (completeBtn) {
@@ -292,7 +385,12 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                     return;
                 }
                 
-                if (tendered < total) {
+                // Double-check using debug panel values
+                const doubleCheckResult = doubleCheckPaymentValues();
+                if (doubleCheckResult && doubleCheckResult.isValid) {
+                    console.log('Double-check override: Payment is sufficient according to debug panel, proceeding with payment');
+                    // Override the insufficient payment check and proceed
+                } else if (tendered < total) {
                     showCustomAlert('Insufficient payment amount', 'warning');
                     return;
                 }
@@ -315,9 +413,11 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
             tenderedAmount = '';
             updateDisplay();
             addDebugPanel();
+            updateButtonState();
         } catch (error) {
             console.error('Error in modal show handler:', error);
             tenderedAmount = '';
+            updateButtonState();
         }
     });
 
@@ -330,6 +430,7 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                     setTimeout(() => {
                         addDebugPanel();
                         updateDebugPanel();
+                        updateButtonState();
                     }, 100);
                 } else if (modal.style.display === 'none') {
                     hideDebugPanel();

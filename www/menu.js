@@ -27,6 +27,7 @@ export const menuData = {
         { name: 'Local Discount', name_ja: 'ローカル割引', price: 0, isDiscount: true, hidePrice: true }
     ],
     'Food': [
+        { name: 'Banana Bread', name_ja: 'バナナブレッド', price: 450, section: 1 },
         { name: 'Toast', name_ja: 'トースト', price: 440, hasJam: true, section: 1 },
         { name: 'Granola Yogurt', name_ja: 'グラノーラリーヨーグルト', price: 1200, section: 1 },
         { name: 'Breakfast', name_ja: '朝食セット', price: 1500, section: 1 },
@@ -36,6 +37,7 @@ export const menuData = {
         { name: 'Caprese Sandwich', name_ja: 'カプレーゼサンド', price: 1500, section: 2 },
         { name: 'Tuna Sandwich', name_ja: 'ツナサンド', price: 1500, section: 2 },
         { name: 'Salmon Sandwich', name_ja: 'サーモンサンド', price: 1700, section: 2 },
+        { name: 'Burger', name_ja: 'バーガー', price: 2000, hasFries: true, section: 2 },
         { type: 'divider' },
         { name: 'Fries', name_ja: 'フライドポテト', price: 400, section: 3 },
         { name: 'Edamame', name_ja: '枝豆', price: 450, section: 3 },
@@ -44,7 +46,7 @@ export const menuData = {
         { name: 'Ice Cream', name_ja: 'アイスクリーム', price: 480, hasFlavor: true, section: 3 },
         { name: 'Cake', name_ja: 'ケーキ', price: 680, hasFlavor: true, section: 3 },
         { name: 'Matcha Special', name_ja: '抹茶スペシャル', price: 950, section: 3 },
-        { name: 'Takeaway', name_ja: 'テイクアウェイ', isMilkAddon: true },
+        { name: 'Luggage', name_ja: '荷物預かり', price: 500, section: 3 },
         { name: 'Other...', name_ja: 'その他...', price: 0, isCustom: true, hidePrice: true }
     ]
 };
@@ -543,6 +545,70 @@ export function showProscuittoOptions(item, itemCard, addItemToOrder, renderOrde
     }, 0);
 }
 
+// Show burger options
+export function showBurgerOptions(item, itemCard, addItemToOrder, renderOrderItems, updateOrderSummary, saveCurrentOrder, showCustomItemModal, showDiscountModal) {
+    const optionsDiv = document.createElement('div');
+    optionsDiv.className = 'custom-options';
+    optionsDiv.style.display = 'block';
+    optionsDiv.style.position = 'absolute'; // Set position for modal context
+    // Set dropdown position
+    if (itemCard._dropdownModalOffset) {
+        optionsDiv.style.left = itemCard._dropdownModalOffset.left + 'px';
+        optionsDiv.style.top = itemCard._dropdownModalOffset.top + 'px';
+    } else {
+        optionsDiv.style.left = itemCard.getBoundingClientRect().left + 'px';
+        optionsDiv.style.top = (itemCard.getBoundingClientRect().top + itemCard.getBoundingClientRect().height) + 'px';
+    }
+    
+    const options = ['No Fries', 'Add Fries (+¥250)'];
+    
+    options.forEach(option => {
+        const optionEl = document.createElement('div');
+        optionEl.className = 'custom-option';
+        optionEl.textContent = option;
+        optionEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            let price = item.price;
+            let customizations = [];
+            if (option === 'Add Fries (+¥250)') {
+                price = item.price + 250;
+                customizations = ['Fries'];
+            }
+            const customizedItem = {
+                ...item,
+                price: price,
+                customizations: customizations
+            };
+            addItemToOrder(customizedItem, renderOrderItems, updateOrderSummary, saveCurrentOrder, showCustomItemModal, showDiscountModal);
+            if (optionsDiv.parentNode) {
+                optionsDiv.parentNode.removeChild(optionsDiv);
+            }
+        });
+        optionsDiv.appendChild(optionEl);
+    });
+    
+    if (itemCard.closest('.add-item-content')) {
+        itemCard.closest('.add-item-content').appendChild(optionsDiv);
+    } else {
+        document.body.appendChild(optionsDiv);
+    }
+    
+    const closeOptions = (e) => {
+        if (!optionsDiv.contains(e.target) && e.target !== itemCard) {
+            if (optionsDiv.parentNode === document.body) {
+                document.body.removeChild(optionsDiv);
+            } else if (optionsDiv.parentNode) {
+                optionsDiv.parentNode.removeChild(optionsDiv);
+            }
+            document.removeEventListener('click', closeOptions);
+        }
+    };
+    
+    setTimeout(() => {
+        document.addEventListener('click', closeOptions);
+    }, 0);
+}
+
 // Show soft drink options
 export function showSoftDrinkOptions(item, itemCard, addItemToOrder, renderOrderItems, updateOrderSummary, saveCurrentOrder, showCustomItemModal, showDiscountModal) {
     const optionsDiv = document.createElement('div');
@@ -730,6 +796,8 @@ export function loadMenuItems(category, renderOrderItems, updateOrderSummary, sa
                         }
                     } else if (item.name === 'Caprese Sandwich') {
                         showProscuittoOptions(item, itemCard, addItemToOrder, renderOrderItems, updateOrderSummary, saveCurrentOrder, showCustomItemModal, showDiscountModal);
+                    } else if (item.name === 'Burger') {
+                        showBurgerOptions(item, itemCard, addItemToOrder, renderOrderItems, updateOrderSummary, saveCurrentOrder, showCustomItemModal, showDiscountModal);
                     } else if (item.hasSoftDrink) {
                         showSoftDrinkOptions(item, itemCard, addItemToOrder, renderOrderItems, updateOrderSummary, saveCurrentOrder, showCustomItemModal, showDiscountModal);
                     } else if (item.hasTea) {

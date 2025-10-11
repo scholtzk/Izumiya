@@ -36,6 +36,7 @@ import {
   showCakeOptions,
   showIceCreamOptions,
   showProscuittoOptions,
+  showBurgerOptions,
   showSoftDrinkOptions,
   showTeaOptions
 } from './menu.js';
@@ -45,6 +46,7 @@ window.showExtraShotOptions = showExtraShotOptions;
 window.showCakeOptions = showCakeOptions;
 window.showIceCreamOptions = showIceCreamOptions;
 window.showProscuittoOptions = showProscuittoOptions;
+window.showBurgerOptions = showBurgerOptions;
 window.showSoftDrinkOptions = showSoftDrinkOptions;
 window.showTeaOptions = showTeaOptions;
 
@@ -187,6 +189,58 @@ function showDiscountModal() {
     applyDiscountBtn.disabled = true;
 }
 window.showDiscountModal = showDiscountModal;
+
+function selectPaymentMethod(method) {
+    const cashBtn = document.getElementById('cashMethodBtn');
+    const cardBtn = document.getElementById('cardMethodBtn');
+    const cardInfo = document.getElementById('cardPaymentInfo');
+    const cashPaymentElements = document.getElementById('cashPaymentElements');
+    const cashNumpadElements = document.getElementById('cashNumpadElements');
+    const completePaymentBtn = document.getElementById('completePaymentBtn');
+    const processCardBtn = document.getElementById('processCardBtn');
+    const totalAmount = parseInt(document.getElementById('totalAmount').textContent);
+    
+    // Update button states
+    if (method === 'cash') {
+        cashBtn.classList.add('active');
+        cardBtn.classList.remove('active');
+        cardInfo.style.display = 'none';
+        
+        // Show cash payment elements
+        cashPaymentElements.classList.remove('hidden');
+        cashNumpadElements.classList.remove('hidden');
+        
+        // Show cash payment button, hide card button
+        completePaymentBtn.style.display = 'block';
+        processCardBtn.style.display = 'none';
+        
+        // Update modal title
+        document.querySelector('#paymentModal h2').textContent = 'Cash Payment';
+    } else if (method === 'card') {
+        cashBtn.classList.remove('active');
+        cardBtn.classList.add('active');
+        cardInfo.style.display = 'block';
+        
+        // Hide cash payment elements
+        cashPaymentElements.classList.add('hidden');
+        cashNumpadElements.classList.add('hidden');
+        
+        // Hide cash payment button, show card button
+        completePaymentBtn.style.display = 'none';
+        processCardBtn.style.display = 'block';
+        
+        // Update modal title
+        document.querySelector('#paymentModal h2').textContent = 'Card Payment';
+        
+        // Calculate and display card surcharge
+        const surcharge = Math.round(totalAmount * 0.025);
+        const cardTotal = totalAmount + surcharge;
+        
+        document.getElementById('cardSurcharge').textContent = surcharge;
+        document.getElementById('cardTotal').textContent = cardTotal;
+    }
+}
+window.selectPaymentMethod = selectPaymentMethod;
 
 // --- App Initialization and Event Listeners ---
 
@@ -426,6 +480,24 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 
+    // Add event listeners for payment method selection
+    document.getElementById('cashMethodBtn').addEventListener('click', function() {
+        selectPaymentMethod('cash');
+    });
+
+    document.getElementById('cardMethodBtn').addEventListener('click', function() {
+        selectPaymentMethod('card');
+    });
+
+    document.getElementById('processCardBtn').addEventListener('click', function() {
+        // Use Square integration for card payment
+        if (window.SquareIntegration && window.SquareIntegration.processCardPayment) {
+            window.SquareIntegration.processCardPayment();
+        } else {
+            showCustomAlert('Square integration not available', 'error');
+        }
+    });
+
     // Add click event listener to logo for page refresh
     document.querySelector('.logo').addEventListener('click', () => {
         location.reload();
@@ -541,28 +613,23 @@ function loadCategoryItems(category) {
             orderPanel.style.display = 'none';
             analysisContainer.style.display = 'none';
             signInContainer.style.display = 'none';
+            // Hide settings container
+            const settingsContainerEl = document.getElementById('settings-container');
+            if (settingsContainerEl) settingsContainerEl.style.display = 'none';
             const newOrderLogContainer = document.createElement('div');
             newOrderLogContainer.className = 'order-log-container active';
             document.querySelector('.menu-panel').appendChild(newOrderLogContainer);
             displayOrderLog(newOrderLogContainer, getDisplayName, translate, updateOrderInDaily, getOrderByNumber, showCustomAlert);
             return;
         }
-    if (category === 'Settings') {
-        itemsGrid.style.display = 'none';
-        orderPanel.style.display = 'none';
-        analysisContainer.style.display = 'none';
-        signInContainer.style.display = 'none';
-        const newSettingsContainer = document.createElement('div');
-        newSettingsContainer.className = 'settings-container active';
-        document.querySelector('.menu-panel').appendChild(newSettingsContainer);
-        displaySettings(newSettingsContainer);
-        return;
-    }
     if (category === 'Analysis') {
         itemsGrid.style.display = 'none';
         orderPanel.style.display = 'none';
         analysisContainer.style.display = 'block';
         signInContainer.style.display = 'none';
+        // Hide settings container
+        const settingsContainerEl = document.getElementById('settings-container');
+        if (settingsContainerEl) settingsContainerEl.style.display = 'none';
         if (window.renderAnalysisTab) window.renderAnalysisTab();
         return;
     }
@@ -571,6 +638,9 @@ function loadCategoryItems(category) {
         orderPanel.style.display = 'none';
         analysisContainer.style.display = 'none';
         signInContainer.style.display = 'none';
+        // Hide settings container
+        const settingsContainerEl = document.getElementById('settings-container');
+        if (settingsContainerEl) settingsContainerEl.style.display = 'none';
         const existingStocktakeContainer = document.querySelector('.stocktake-container');
         if (existingStocktakeContainer) existingStocktakeContainer.remove();
         const newStocktakeContainer = document.createElement('div');
@@ -579,20 +649,23 @@ function loadCategoryItems(category) {
         if (window.stocktakeSystem) window.stocktakeSystem.renderStocktake(newStocktakeContainer);
         return;
     }
-    if (category === 'Task Manager') {
+    if (category === 'Settings') {
         itemsGrid.style.display = 'none';
         orderPanel.style.display = 'none';
         analysisContainer.style.display = 'none';
         signInContainer && (signInContainer.style.display = 'none');
-        // Show the task manager container
-        const taskManagerContainer = document.getElementById('task-manager-container');
-        if (taskManagerContainer) taskManagerContainer.style.display = 'block';
+        // Show the settings container
+        const settingsContainer = document.getElementById('settings-container');
+        if (settingsContainer) settingsContainer.style.display = 'block';
         return;
     }
     if (category === 'employee') {
         itemsGrid.style.display = 'none';
         orderPanel.style.display = 'none';
         analysisContainer.style.display = 'none';
+        // Hide settings container
+        const settingsContainerEl = document.getElementById('settings-container');
+        if (settingsContainerEl) settingsContainerEl.style.display = 'none';
         const signInContainer = document.querySelector('.sign-in-container');
         if (signInContainer) signInContainer.style.display = 'flex';
         return;
@@ -601,6 +674,9 @@ function loadCategoryItems(category) {
     orderPanel.style.display = 'flex';
     analysisContainer.style.display = 'none';
     signInContainer.style.display = 'none';
+    // Hide settings container
+    const settingsContainerEl = document.getElementById('settings-container');
+    if (settingsContainerEl) settingsContainerEl.style.display = 'none';
     if (category === 'Drinks' || category === 'Food') {
         loadMenuItems(category, renderOrderItems, updateOrderSummary, saveCurrentOrder, showCustomItemModal, window.showDiscountModal);
     }

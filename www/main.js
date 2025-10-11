@@ -36,6 +36,7 @@ import {
   showCakeOptions,
   showIceCreamOptions,
   showProscuittoOptions,
+  showBurgerOptions,
   showSoftDrinkOptions,
   showTeaOptions
 } from './menu.js';
@@ -45,6 +46,7 @@ window.showExtraShotOptions = showExtraShotOptions;
 window.showCakeOptions = showCakeOptions;
 window.showIceCreamOptions = showIceCreamOptions;
 window.showProscuittoOptions = showProscuittoOptions;
+window.showBurgerOptions = showBurgerOptions;
 window.showSoftDrinkOptions = showSoftDrinkOptions;
 window.showTeaOptions = showTeaOptions;
 

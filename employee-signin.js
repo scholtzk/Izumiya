@@ -420,7 +420,7 @@ window.addEventListener('firebaseReady', function() {
 
     // Initialize Firebase services
     const db = window.firebaseDb;
-    const { collection, addDoc, Timestamp, getDocs, query, where, orderBy, updateDoc, deleteDoc } = window.firebaseServices;
+    const { collection, addDoc, Timestamp, getDocs, query, where, orderBy, updateDoc, deleteDoc, doc, getDoc, setDoc } = window.firebaseServices;
 
     // Function to format time duration
     function formatDuration(startTime, endTime = null) {
@@ -1986,7 +1986,14 @@ window.addEventListener('firebaseReady', function() {
                     `;
                     
                     shiftBlock.onclick = () => {
-                        openShiftSchedulingModal(dateStr, year, month, currentDate.getDate());
+                        // Check if this is a completed shift (has endTime)
+                        if (shift.data.endTime) {
+                            // Open edit modal for completed shift
+                            openCompletedShiftEditModal(shift.data, shift.doc.ref, dateStr, year, month, currentDate.getDate());
+                        } else {
+                            // Open scheduling modal for current shift
+                            openShiftSchedulingModal(dateStr, year, month, currentDate.getDate());
+                        }
                     };
                     
                     timeGrid.appendChild(shiftBlock);
@@ -2071,6 +2078,7 @@ window.addEventListener('firebaseReady', function() {
                         }
                     }
                     
+                    // Create shift content without buttons
                     scheduledBlock.innerHTML = `
                         <div style="font-weight: bold; color: #1976d2; margin-bottom: 2px; font-size: 9px;">${shift.data.employeeName}</div>
                         <div style="color: #1976d2; font-size: 8px;">
@@ -2079,27 +2087,11 @@ window.addEventListener('firebaseReady', function() {
                         <div style="color: #1976d2; font-size: 7px; margin-top: 1px;">
                             ${Math.floor(shift.height / 60)}h ${shift.height % 60}m
                         </div>
-                        <div style="position: absolute; top: 2px; right: 2px; font-size: 10px; color: #f44336; cursor: pointer; background: white; border-radius: 50%; width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;" title="Delete scheduled shift">×</div>
                     `;
                     
-                    // Add click handler to delete scheduled shift
-                    scheduledBlock.onclick = async (e) => {
-                        if (e.target.title === 'Delete scheduled shift') {
-                            e.stopPropagation();
-                            showCustomConfirm(
-                                `Delete scheduled shift for ${shift.data.employeeName}?`,
-                                async () => {
-                                    try {
-                                        await deleteDoc(shift.doc.ref);
-                                        displayWeekView(month, year);
-                                    } catch (error) {
-                                        console.error('Error deleting scheduled shift:', error);
-                                        showCustomAlert('Error deleting scheduled shift. Please try again.', 'error');
-                                    }
-                                }
-                            );
-                            return;
-                        }
+                    // Add click handler to open scheduled shift edit modal
+                    scheduledBlock.onclick = () => {
+                        openScheduledShiftEditModal(dateStr, year, month, currentDate.getDate(), shift.data, shift.doc.ref);
                     };
                     
                     timeGrid.appendChild(scheduledBlock);
@@ -2547,6 +2539,910 @@ window.addEventListener('firebaseReady', function() {
 
         buttonsContainer.appendChild(cancelButton);
         buttonsContainer.appendChild(scheduleButton);
+
+        // Assemble modal
+        modal.appendChild(closeButton);
+        modal.appendChild(title);
+        modal.appendChild(form);
+        modal.appendChild(buttonsContainer);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        // Close modal when clicking outside
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                document.body.removeChild(overlay);
+            }
+        });
+    }
+
+    // Function to open shift edit modal for past shifts
+    async function openShiftEditModal(dateStr, year, month, day, shiftData, shiftDocRef) {
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'shift-edit-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.style.zIndex = '1000';
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.className = 'shift-edit-modal';
+        modal.style.backgroundColor = 'white';
+        modal.style.padding = '30px';
+        modal.style.borderRadius = '10px';
+        modal.style.minWidth = '400px';
+        modal.style.maxWidth = '500px';
+        modal.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+        modal.style.position = 'relative';
+
+        // Add close button
+        const closeButton = document.createElement('button');
+        closeButton.innerHTML = '×';
+        closeButton.style.position = 'absolute';
+        closeButton.style.top = '15px';
+        closeButton.style.right = '20px';
+        closeButton.style.border = 'none';
+        closeButton.style.background = 'none';
+        closeButton.style.fontSize = '24px';
+        closeButton.style.cursor = 'pointer';
+        closeButton.style.color = '#666';
+        closeButton.onclick = () => {
+            document.body.removeChild(overlay);
+        };
+
+        // Create title
+        const title = document.createElement('h2');
+        title.textContent = `Edit Shift - ${new Date(year, month, day).toLocaleDateString()}`;
+        title.style.marginBottom = '25px';
+        title.style.color = 'var(--primary)';
+        title.style.textAlign = 'center';
+
+        // Create form
+        const form = document.createElement('div');
+        form.style.display = 'flex';
+        form.style.flexDirection = 'column';
+        form.style.gap = '20px';
+
+        // Employee info (read-only)
+        const employeeSection = document.createElement('div');
+        employeeSection.style.display = 'flex';
+        employeeSection.style.flexDirection = 'column';
+        employeeSection.style.gap = '8px';
+
+        const employeeLabel = document.createElement('label');
+        employeeLabel.textContent = 'Employee:';
+        employeeLabel.style.fontWeight = 'bold';
+        employeeLabel.style.color = '#333';
+
+        const employeeDisplay = document.createElement('div');
+        employeeDisplay.textContent = shiftData.employeeName;
+        employeeDisplay.style.padding = '12px';
+        employeeDisplay.style.border = '1px solid #e0e0e0';
+        employeeDisplay.style.borderRadius = '8px';
+        employeeDisplay.style.fontSize = '16px';
+        employeeDisplay.style.backgroundColor = '#f5f5f5';
+        employeeDisplay.style.color = '#666';
+
+        employeeSection.appendChild(employeeLabel);
+        employeeSection.appendChild(employeeDisplay);
+
+        // Time selection container
+        const timeContainer = document.createElement('div');
+        timeContainer.style.display = 'flex';
+        timeContainer.style.gap = '15px';
+
+        // Start time selection
+        const startTimeSection = document.createElement('div');
+        startTimeSection.style.display = 'flex';
+        startTimeSection.style.flexDirection = 'column';
+        startTimeSection.style.gap = '8px';
+        startTimeSection.style.flex = '1';
+
+        const startTimeLabel = document.createElement('label');
+        startTimeLabel.textContent = 'Start Time:';
+        startTimeLabel.style.fontWeight = 'bold';
+        startTimeLabel.style.color = '#333';
+
+        const startTimeInput = document.createElement('input');
+        startTimeInput.type = 'time';
+        startTimeInput.id = 'editStartTimeInput';
+        startTimeInput.value = shiftData.startTime;
+        startTimeInput.style.padding = '12px';
+        startTimeInput.style.border = '1px solid #e0e0e0';
+        startTimeInput.style.borderRadius = '8px';
+        startTimeInput.style.fontSize = '16px';
+        startTimeInput.style.backgroundColor = 'white';
+
+        startTimeSection.appendChild(startTimeLabel);
+        startTimeSection.appendChild(startTimeInput);
+
+        // End time selection
+        const endTimeSection = document.createElement('div');
+        endTimeSection.style.display = 'flex';
+        endTimeSection.style.flexDirection = 'column';
+        endTimeSection.style.gap = '8px';
+        endTimeSection.style.flex = '1';
+
+        const endTimeLabel = document.createElement('label');
+        endTimeLabel.textContent = 'End Time:';
+        endTimeLabel.style.fontWeight = 'bold';
+        endTimeLabel.style.color = '#333';
+
+        const endTimeInput = document.createElement('input');
+        endTimeInput.type = 'time';
+        endTimeInput.id = 'editEndTimeInput';
+        endTimeInput.value = shiftData.endTime || '';
+        endTimeInput.style.padding = '12px';
+        endTimeInput.style.border = '1px solid #e0e0e0';
+        endTimeInput.style.borderRadius = '8px';
+        endTimeInput.style.fontSize = '16px';
+        endTimeInput.style.backgroundColor = 'white';
+
+        endTimeSection.appendChild(endTimeLabel);
+        endTimeSection.appendChild(endTimeInput);
+
+        timeContainer.appendChild(startTimeSection);
+        timeContainer.appendChild(endTimeSection);
+
+        // Add form sections
+        form.appendChild(employeeSection);
+        form.appendChild(timeContainer);
+
+        // Create buttons container
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.style.display = 'flex';
+        buttonsContainer.style.gap = '15px';
+        buttonsContainer.style.marginTop = '25px';
+
+        // Cancel button
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Cancel';
+        cancelButton.style.flex = '1';
+        cancelButton.style.padding = '12px';
+        cancelButton.style.border = '1px solid #e0e0e0';
+        cancelButton.style.borderRadius = '8px';
+        cancelButton.style.backgroundColor = 'white';
+        cancelButton.style.color = '#666';
+        cancelButton.style.cursor = 'pointer';
+        cancelButton.style.fontSize = '16px';
+        cancelButton.style.fontWeight = 'bold';
+        cancelButton.onclick = () => {
+            document.body.removeChild(overlay);
+        };
+
+        // Update button
+        const updateButton = document.createElement('button');
+        updateButton.textContent = 'Update Shift';
+        updateButton.style.flex = '1';
+        updateButton.style.padding = '12px';
+        updateButton.style.border = 'none';
+        updateButton.style.borderRadius = '8px';
+        updateButton.style.backgroundColor = 'var(--primary)';
+        updateButton.style.color = 'white';
+        updateButton.style.cursor = 'pointer';
+        updateButton.style.fontSize = '16px';
+        updateButton.style.fontWeight = 'bold';
+        updateButton.onclick = async () => {
+            const startTime = startTimeInput.value;
+            const endTime = endTimeInput.value;
+
+            if (!startTime || !endTime) {
+                showCustomAlert('Please enter both start time and end time.', 'warning');
+                return;
+            }
+
+            // Validate that end time is after start time
+            if (startTime >= endTime) {
+                showCustomAlert('End time must be after start time.', 'warning');
+                return;
+            }
+
+            try {
+                // Update the scheduled shift
+                await updateDoc(shiftDocRef, {
+                    startTime: startTime,
+                    endTime: endTime,
+                    updatedAt: Timestamp.now()
+                });
+
+                // Close modal and refresh calendar
+                document.body.removeChild(overlay);
+                displayWeekView(month, year);
+                showCustomAlert('Shift updated successfully!', 'success');
+            } catch (error) {
+                console.error('Error updating shift:', error);
+                showCustomAlert('Error updating shift. Please try again.', 'error');
+            }
+        };
+
+        buttonsContainer.appendChild(cancelButton);
+        buttonsContainer.appendChild(updateButton);
+
+        // Assemble modal
+        modal.appendChild(closeButton);
+        modal.appendChild(title);
+        modal.appendChild(form);
+        modal.appendChild(buttonsContainer);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        // Close modal when clicking outside
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                document.body.removeChild(overlay);
+            }
+        });
+    }
+
+    // Function to mark a shift as completed
+    async function markShiftAsCompleted(dateStr, shiftData, shiftDocRef) {
+        try {
+            console.log('Starting markShiftAsCompleted with:', { dateStr, shiftData });
+            
+            // Create timestamps for the shift times
+            const startDateTime = new Date(`${dateStr} ${shiftData.startTime}`);
+            const endDateTime = new Date(`${dateStr} ${shiftData.endTime}`);
+            
+            // Create a completed shift entry in employeeSignIns collection format
+            const completedShift = {
+                employeeId: shiftData.employeeId,
+                employeeName: shiftData.employeeName,
+                date: dateStr,
+                signInTime: Timestamp.fromDate(startDateTime),
+                endTime: Timestamp.fromDate(endDateTime),
+                breaks: [],
+                totalDuration: calculateDuration(shiftData.startTime, shiftData.endTime)
+            };
+            
+            console.log('Created completed shift for employeeSignIns:', completedShift);
+            
+            // Save to employeeSignIns collection (same format as normal completed shifts)
+            await addDoc(collection(db, 'employeeSignIns'), completedShift);
+            
+            console.log('Successfully saved to employeeSignIns collection');
+            
+            // THEN delete the original scheduled shift
+            await deleteDoc(shiftDocRef);
+            
+            console.log('Successfully deleted scheduled shift');
+            console.log('Shift marked as completed:', completedShift);
+            showCustomAlert('Shift marked as completed successfully!', 'success');
+            return true;
+        } catch (error) {
+            console.error('Error marking shift as completed:', error);
+            showCustomAlert('Error marking shift as completed: ' + error.message, 'error');
+            throw error;
+        }
+    }
+
+    // Helper function to calculate duration in minutes
+    function calculateDuration(startTime, endTime) {
+        const start = new Date(`2000-01-01 ${startTime}`);
+        const end = new Date(`2000-01-01 ${endTime}`);
+        return Math.floor((end - start) / (1000 * 60));
+    }
+
+    // Function to open completed shift edit modal
+    async function openCompletedShiftEditModal(shiftData, shiftDocRef, dateStr, year, month, day) {
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'completed-shift-edit-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.style.zIndex = '1000';
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.className = 'completed-shift-edit-modal';
+        modal.style.backgroundColor = 'white';
+        modal.style.padding = '30px';
+        modal.style.borderRadius = '10px';
+        modal.style.minWidth = '500px';
+        modal.style.maxWidth = '700px';
+        modal.style.maxHeight = '90vh';
+        modal.style.overflowY = 'auto';
+        modal.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+        modal.style.position = 'relative';
+
+        // Add close button
+        const closeButton = document.createElement('button');
+        closeButton.innerHTML = '×';
+        closeButton.style.position = 'absolute';
+        closeButton.style.top = '15px';
+        closeButton.style.right = '20px';
+        closeButton.style.border = 'none';
+        closeButton.style.background = 'none';
+        closeButton.style.fontSize = '24px';
+        closeButton.style.cursor = 'pointer';
+        closeButton.style.color = '#666';
+        closeButton.onclick = () => {
+            document.body.removeChild(overlay);
+        };
+
+        // Create title
+        const title = document.createElement('h2');
+        title.textContent = `Edit Completed Shift - ${new Date(year, month, day).toLocaleDateString()}`;
+        title.style.marginBottom = '25px';
+        title.style.color = 'var(--primary)';
+        title.style.textAlign = 'center';
+
+        // Create form
+        const form = document.createElement('div');
+        form.style.display = 'flex';
+        form.style.flexDirection = 'column';
+        form.style.gap = '20px';
+
+        // Employee info (read-only)
+        const employeeSection = document.createElement('div');
+        employeeSection.style.display = 'flex';
+        employeeSection.style.flexDirection = 'column';
+        employeeSection.style.gap = '8px';
+
+        const employeeLabel = document.createElement('label');
+        employeeLabel.textContent = 'Employee:';
+        employeeLabel.style.fontWeight = 'bold';
+        employeeLabel.style.color = '#333';
+
+        const employeeDisplay = document.createElement('div');
+        employeeDisplay.textContent = shiftData.employeeName;
+        employeeDisplay.style.padding = '12px';
+        employeeDisplay.style.border = '1px solid #e0e0e0';
+        employeeDisplay.style.borderRadius = '8px';
+        employeeDisplay.style.fontSize = '16px';
+        employeeDisplay.style.backgroundColor = '#f5f5f5';
+        employeeDisplay.style.color = '#666';
+
+        employeeSection.appendChild(employeeLabel);
+        employeeSection.appendChild(employeeDisplay);
+
+        // Time selection container
+        const timeContainer = document.createElement('div');
+        timeContainer.style.display = 'flex';
+        timeContainer.style.gap = '15px';
+
+        // Start time selection
+        const startTimeSection = document.createElement('div');
+        startTimeSection.style.display = 'flex';
+        startTimeSection.style.flexDirection = 'column';
+        startTimeSection.style.gap = '8px';
+        startTimeSection.style.flex = '1';
+
+        const startTimeLabel = document.createElement('label');
+        startTimeLabel.textContent = 'Start Time:';
+        startTimeLabel.style.fontWeight = 'bold';
+        startTimeLabel.style.color = '#333';
+
+        const startTimeInput = document.createElement('input');
+        startTimeInput.type = 'time';
+        startTimeInput.id = 'completedStartTimeInput';
+        startTimeInput.value = shiftData.signInTime.toDate().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+        startTimeInput.style.padding = '12px';
+        startTimeInput.style.border = '1px solid #e0e0e0';
+        startTimeInput.style.borderRadius = '8px';
+        startTimeInput.style.fontSize = '16px';
+        startTimeInput.style.backgroundColor = 'white';
+
+        startTimeSection.appendChild(startTimeLabel);
+        startTimeSection.appendChild(startTimeInput);
+
+        // End time selection
+        const endTimeSection = document.createElement('div');
+        endTimeSection.style.display = 'flex';
+        endTimeSection.style.flexDirection = 'column';
+        endTimeSection.style.gap = '8px';
+        endTimeSection.style.flex = '1';
+
+        const endTimeLabel = document.createElement('label');
+        endTimeLabel.textContent = 'End Time:';
+        endTimeLabel.style.fontWeight = 'bold';
+        endTimeLabel.style.color = '#333';
+
+        const endTimeInput = document.createElement('input');
+        endTimeInput.type = 'time';
+        endTimeInput.id = 'completedEndTimeInput';
+        endTimeInput.value = shiftData.endTime.toDate().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+        endTimeInput.style.padding = '12px';
+        endTimeInput.style.border = '1px solid #e0e0e0';
+        endTimeInput.style.borderRadius = '8px';
+        endTimeInput.style.fontSize = '16px';
+        endTimeInput.style.backgroundColor = 'white';
+
+        endTimeSection.appendChild(endTimeLabel);
+        endTimeSection.appendChild(endTimeInput);
+
+        timeContainer.appendChild(startTimeSection);
+        timeContainer.appendChild(endTimeSection);
+
+        // Breaks section
+        const breaksSection = document.createElement('div');
+        breaksSection.style.display = 'flex';
+        breaksSection.style.flexDirection = 'column';
+        breaksSection.style.gap = '8px';
+
+        const breaksLabel = document.createElement('label');
+        breaksLabel.textContent = 'Breaks:';
+        breaksLabel.style.fontWeight = 'bold';
+        breaksLabel.style.color = '#333';
+
+        const breaksContainer = document.createElement('div');
+        breaksContainer.id = 'breaksContainer';
+        breaksContainer.style.display = 'flex';
+        breaksContainer.style.flexDirection = 'column';
+        breaksContainer.style.gap = '10px';
+
+        // Add existing breaks
+        if (shiftData.breaks && shiftData.breaks.length > 0) {
+            shiftData.breaks.forEach((breakItem, index) => {
+                const startTimeStr = breakItem.startTime.toDate().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+                const endTimeStr = breakItem.endTime.toDate().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+                addBreakRow(breaksContainer, startTimeStr, endTimeStr, index);
+            });
+        }
+
+        // Add break button
+        const addBreakButton = document.createElement('button');
+        addBreakButton.textContent = '+ Add Break';
+        addBreakButton.type = 'button';
+        addBreakButton.style.padding = '8px 16px';
+        addBreakButton.style.border = '1px solid #007bff';
+        addBreakButton.style.borderRadius = '6px';
+        addBreakButton.style.backgroundColor = 'white';
+        addBreakButton.style.color = '#007bff';
+        addBreakButton.style.cursor = 'pointer';
+        addBreakButton.style.fontSize = '14px';
+        addBreakButton.style.alignSelf = 'flex-start';
+        addBreakButton.onclick = () => {
+            addBreakRow(breaksContainer);
+        };
+
+        breaksSection.appendChild(breaksLabel);
+        breaksSection.appendChild(breaksContainer);
+        breaksSection.appendChild(addBreakButton);
+
+        // Add form sections
+        form.appendChild(employeeSection);
+        form.appendChild(timeContainer);
+        form.appendChild(breaksSection);
+
+        // Create buttons container
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.style.display = 'flex';
+        buttonsContainer.style.gap = '15px';
+        buttonsContainer.style.marginTop = '25px';
+
+        // Cancel button
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Cancel';
+        cancelButton.style.flex = '1';
+        cancelButton.style.padding = '12px';
+        cancelButton.style.border = '1px solid #e0e0e0';
+        cancelButton.style.borderRadius = '8px';
+        cancelButton.style.backgroundColor = 'white';
+        cancelButton.style.color = '#666';
+        cancelButton.style.cursor = 'pointer';
+        cancelButton.style.fontSize = '16px';
+        cancelButton.style.fontWeight = 'bold';
+        cancelButton.onclick = () => {
+            document.body.removeChild(overlay);
+        };
+
+        // Update button
+        const updateButton = document.createElement('button');
+        updateButton.textContent = 'Update Shift';
+        updateButton.style.flex = '1';
+        updateButton.style.padding = '12px';
+        updateButton.style.border = 'none';
+        updateButton.style.borderRadius = '8px';
+        updateButton.style.backgroundColor = 'var(--primary)';
+        updateButton.style.color = 'white';
+        updateButton.style.cursor = 'pointer';
+        updateButton.style.fontSize = '16px';
+        updateButton.style.fontWeight = 'bold';
+        updateButton.onclick = async () => {
+            const startTime = startTimeInput.value;
+            const endTime = endTimeInput.value;
+
+            if (!startTime || !endTime) {
+                showCustomAlert('Please enter both start time and end time.', 'warning');
+                return;
+            }
+
+            // Validate that end time is after start time
+            if (startTime >= endTime) {
+                showCustomAlert('End time must be after start time.', 'warning');
+                return;
+            }
+
+            try {
+                // Collect break data
+                const breaks = [];
+                const breakRows = breaksContainer.querySelectorAll('.break-row');
+                breakRows.forEach(row => {
+                    const startTimeInput = row.querySelector('.break-start-time');
+                    const endTimeInput = row.querySelector('.break-end-time');
+                    if (startTimeInput.value && endTimeInput.value) {
+                        breaks.push({
+                            startTime: Timestamp.fromDate(new Date(`${dateStr} ${startTimeInput.value}`)),
+                            endTime: Timestamp.fromDate(new Date(`${dateStr} ${endTimeInput.value}`))
+                        });
+                    }
+                });
+
+                // Create new timestamps
+                const newStartTime = Timestamp.fromDate(new Date(`${dateStr} ${startTime}`));
+                const newEndTime = Timestamp.fromDate(new Date(`${dateStr} ${endTime}`));
+                
+                // Calculate new total duration
+                const newTotalDuration = calculateDuration(startTime, endTime);
+
+                // Update the completed shift
+                await updateDoc(shiftDocRef, {
+                    signInTime: newStartTime,
+                    endTime: newEndTime,
+                    breaks: breaks,
+                    totalDuration: newTotalDuration,
+                    updatedAt: Timestamp.now()
+                });
+
+                // Close modal and refresh calendar
+                document.body.removeChild(overlay);
+                displayWeekView(month, year);
+                showCustomAlert('Shift updated successfully!', 'success');
+            } catch (error) {
+                console.error('Error updating shift:', error);
+                showCustomAlert('Error updating shift. Please try again.', 'error');
+            }
+        };
+
+        buttonsContainer.appendChild(cancelButton);
+        buttonsContainer.appendChild(updateButton);
+
+        // Assemble modal
+        modal.appendChild(closeButton);
+        modal.appendChild(title);
+        modal.appendChild(form);
+        modal.appendChild(buttonsContainer);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        // Close modal when clicking outside
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                document.body.removeChild(overlay);
+            }
+        });
+    }
+
+    // Helper function to add a break row
+    function addBreakRow(container, startTime = '', endTime = '', index = null) {
+        const breakRow = document.createElement('div');
+        breakRow.className = 'break-row';
+        breakRow.style.display = 'flex';
+        breakRow.style.gap = '10px';
+        breakRow.style.alignItems = 'center';
+        breakRow.style.padding = '10px';
+        breakRow.style.border = '1px solid #e0e0e0';
+        breakRow.style.borderRadius = '6px';
+        breakRow.style.backgroundColor = '#f9f9f9';
+
+        const startTimeInput = document.createElement('input');
+        startTimeInput.type = 'time';
+        startTimeInput.className = 'break-start-time';
+        startTimeInput.value = startTime;
+        startTimeInput.style.padding = '8px';
+        startTimeInput.style.border = '1px solid #ddd';
+        startTimeInput.style.borderRadius = '4px';
+        startTimeInput.style.flex = '1';
+
+        const endTimeInput = document.createElement('input');
+        endTimeInput.type = 'time';
+        endTimeInput.className = 'break-end-time';
+        endTimeInput.value = endTime;
+        endTimeInput.style.padding = '8px';
+        endTimeInput.style.border = '1px solid #ddd';
+        endTimeInput.style.borderRadius = '4px';
+        endTimeInput.style.flex = '1';
+
+        const removeButton = document.createElement('button');
+        removeButton.textContent = '×';
+        removeButton.type = 'button';
+        removeButton.style.padding = '8px 12px';
+        removeButton.style.border = '1px solid #dc3545';
+        removeButton.style.borderRadius = '4px';
+        removeButton.style.backgroundColor = 'white';
+        removeButton.style.color = '#dc3545';
+        removeButton.style.cursor = 'pointer';
+        removeButton.style.fontSize = '16px';
+        removeButton.style.fontWeight = 'bold';
+        removeButton.onclick = () => {
+            container.removeChild(breakRow);
+        };
+
+        breakRow.appendChild(startTimeInput);
+        breakRow.appendChild(endTimeInput);
+        breakRow.appendChild(removeButton);
+        container.appendChild(breakRow);
+    }
+
+    // Function to open scheduled shift edit modal
+    async function openScheduledShiftEditModal(dateStr, year, month, day, shiftData, shiftDocRef) {
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'scheduled-shift-edit-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.style.zIndex = '1000';
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.className = 'scheduled-shift-edit-modal';
+        modal.style.backgroundColor = 'white';
+        modal.style.padding = '30px';
+        modal.style.borderRadius = '10px';
+        modal.style.minWidth = '400px';
+        modal.style.maxWidth = '500px';
+        modal.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+        modal.style.position = 'relative';
+
+        // Add close button
+        const closeButton = document.createElement('button');
+        closeButton.innerHTML = '×';
+        closeButton.style.position = 'absolute';
+        closeButton.style.top = '15px';
+        closeButton.style.right = '20px';
+        closeButton.style.border = 'none';
+        closeButton.style.background = 'none';
+        closeButton.style.fontSize = '24px';
+        closeButton.style.cursor = 'pointer';
+        closeButton.style.color = '#666';
+        closeButton.onclick = () => {
+            document.body.removeChild(overlay);
+        };
+
+        // Create title
+        const title = document.createElement('h2');
+        title.textContent = `Edit Scheduled Shift - ${new Date(year, month, day).toLocaleDateString()}`;
+        title.style.marginBottom = '25px';
+        title.style.color = 'var(--primary)';
+        title.style.textAlign = 'center';
+
+        // Create form
+        const form = document.createElement('div');
+        form.style.display = 'flex';
+        form.style.flexDirection = 'column';
+        form.style.gap = '20px';
+
+        // Employee info (read-only)
+        const employeeSection = document.createElement('div');
+        employeeSection.style.display = 'flex';
+        employeeSection.style.flexDirection = 'column';
+        employeeSection.style.gap = '8px';
+
+        const employeeLabel = document.createElement('label');
+        employeeLabel.textContent = 'Employee:';
+        employeeLabel.style.fontWeight = 'bold';
+        employeeLabel.style.color = '#333';
+
+        const employeeDisplay = document.createElement('div');
+        employeeDisplay.textContent = shiftData.employeeName;
+        employeeDisplay.style.padding = '12px';
+        employeeDisplay.style.border = '1px solid #e0e0e0';
+        employeeDisplay.style.borderRadius = '8px';
+        employeeDisplay.style.fontSize = '16px';
+        employeeDisplay.style.backgroundColor = '#f5f5f5';
+        employeeDisplay.style.color = '#666';
+
+        employeeSection.appendChild(employeeLabel);
+        employeeSection.appendChild(employeeDisplay);
+
+        // Time selection container
+        const timeContainer = document.createElement('div');
+        timeContainer.style.display = 'flex';
+        timeContainer.style.gap = '15px';
+
+        // Start time selection
+        const startTimeSection = document.createElement('div');
+        startTimeSection.style.display = 'flex';
+        startTimeSection.style.flexDirection = 'column';
+        startTimeSection.style.gap = '8px';
+        startTimeSection.style.flex = '1';
+
+        const startTimeLabel = document.createElement('label');
+        startTimeLabel.textContent = 'Start Time:';
+        startTimeLabel.style.fontWeight = 'bold';
+        startTimeLabel.style.color = '#333';
+
+        const startTimeInput = document.createElement('input');
+        startTimeInput.type = 'time';
+        startTimeInput.id = 'scheduledStartTimeInput';
+        startTimeInput.value = shiftData.startTime;
+        startTimeInput.style.padding = '12px';
+        startTimeInput.style.border = '1px solid #e0e0e0';
+        startTimeInput.style.borderRadius = '8px';
+        startTimeInput.style.fontSize = '16px';
+        startTimeInput.style.backgroundColor = 'white';
+
+        startTimeSection.appendChild(startTimeLabel);
+        startTimeSection.appendChild(startTimeInput);
+
+        // End time selection
+        const endTimeSection = document.createElement('div');
+        endTimeSection.style.display = 'flex';
+        endTimeSection.style.flexDirection = 'column';
+        endTimeSection.style.gap = '8px';
+        endTimeSection.style.flex = '1';
+
+        const endTimeLabel = document.createElement('label');
+        endTimeLabel.textContent = 'End Time:';
+        endTimeLabel.style.fontWeight = 'bold';
+        endTimeLabel.style.color = '#333';
+
+        const endTimeInput = document.createElement('input');
+        endTimeInput.type = 'time';
+        endTimeInput.id = 'scheduledEndTimeInput';
+        endTimeInput.value = shiftData.endTime || '';
+        endTimeInput.style.padding = '12px';
+        endTimeInput.style.border = '1px solid #e0e0e0';
+        endTimeInput.style.borderRadius = '8px';
+        endTimeInput.style.fontSize = '16px';
+        endTimeInput.style.backgroundColor = 'white';
+
+        endTimeSection.appendChild(endTimeLabel);
+        endTimeSection.appendChild(endTimeInput);
+
+        timeContainer.appendChild(startTimeSection);
+        timeContainer.appendChild(endTimeSection);
+
+        // Add form sections
+        form.appendChild(employeeSection);
+        form.appendChild(timeContainer);
+
+        // Create buttons container
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.style.display = 'flex';
+        buttonsContainer.style.flexDirection = 'column';
+        buttonsContainer.style.gap = '15px';
+        buttonsContainer.style.marginTop = '25px';
+
+        // Update button
+        const updateButton = document.createElement('button');
+        updateButton.textContent = 'Update Shift';
+        updateButton.style.padding = '12px';
+        updateButton.style.border = 'none';
+        updateButton.style.borderRadius = '8px';
+        updateButton.style.backgroundColor = 'var(--primary)';
+        updateButton.style.color = 'white';
+        updateButton.style.cursor = 'pointer';
+        updateButton.style.fontSize = '16px';
+        updateButton.style.fontWeight = 'bold';
+        updateButton.onclick = async () => {
+            const startTime = startTimeInput.value;
+            const endTime = endTimeInput.value;
+
+            if (!startTime || !endTime) {
+                showCustomAlert('Please enter both start time and end time.', 'warning');
+                return;
+            }
+
+            // Validate that end time is after start time
+            if (startTime >= endTime) {
+                showCustomAlert('End time must be after start time.', 'warning');
+                return;
+            }
+
+            try {
+                // Update the scheduled shift
+                await updateDoc(shiftDocRef, {
+                    startTime: startTime,
+                    endTime: endTime,
+                    updatedAt: Timestamp.now()
+                });
+
+                // Close modal and refresh calendar
+                document.body.removeChild(overlay);
+                displayWeekView(month, year);
+                showCustomAlert('Shift updated successfully!', 'success');
+            } catch (error) {
+                console.error('Error updating shift:', error);
+                showCustomAlert('Error updating shift. Please try again.', 'error');
+            }
+        };
+
+        // Mark as completed button
+        const markCompletedButton = document.createElement('button');
+        markCompletedButton.textContent = 'Mark as Completed';
+        markCompletedButton.style.padding = '12px';
+        markCompletedButton.style.border = 'none';
+        markCompletedButton.style.borderRadius = '8px';
+        markCompletedButton.style.backgroundColor = '#ff9800';
+        markCompletedButton.style.color = 'white';
+        markCompletedButton.style.cursor = 'pointer';
+        markCompletedButton.style.fontSize = '16px';
+        markCompletedButton.style.fontWeight = 'bold';
+        markCompletedButton.onclick = async () => {
+            showCustomConfirm(
+                `Mark shift as completed for ${shiftData.employeeName}?`,
+                async () => {
+                    try {
+                        await markShiftAsCompleted(dateStr, shiftData, shiftDocRef);
+                        document.body.removeChild(overlay);
+                        displayWeekView(month, year);
+                    } catch (error) {
+                        console.error('Error marking shift as completed:', error);
+                        showCustomAlert('Error marking shift as completed. Please try again.', 'error');
+                    }
+                }
+            );
+        };
+
+        // Delete button
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete Shift';
+        deleteButton.style.padding = '12px';
+        deleteButton.style.border = '1px solid #dc3545';
+        deleteButton.style.borderRadius = '8px';
+        deleteButton.style.backgroundColor = 'white';
+        deleteButton.style.color = '#dc3545';
+        deleteButton.style.cursor = 'pointer';
+        deleteButton.style.fontSize = '16px';
+        deleteButton.style.fontWeight = 'bold';
+        deleteButton.onclick = () => {
+            showCustomConfirm(
+                `Delete scheduled shift for ${shiftData.employeeName}?`,
+                async () => {
+                    try {
+                        await deleteDoc(shiftDocRef);
+                        document.body.removeChild(overlay);
+                        displayWeekView(month, year);
+                    } catch (error) {
+                        console.error('Error deleting scheduled shift:', error);
+                        showCustomAlert('Error deleting scheduled shift. Please try again.', 'error');
+                    }
+                }
+            );
+        };
+
+        // Cancel button
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Cancel';
+        cancelButton.style.padding = '12px';
+        cancelButton.style.border = '1px solid #e0e0e0';
+        cancelButton.style.borderRadius = '8px';
+        cancelButton.style.backgroundColor = 'white';
+        cancelButton.style.color = '#666';
+        cancelButton.style.cursor = 'pointer';
+        cancelButton.style.fontSize = '16px';
+        cancelButton.style.fontWeight = 'bold';
+        cancelButton.onclick = () => {
+            document.body.removeChild(overlay);
+        };
+
+        buttonsContainer.appendChild(updateButton);
+        buttonsContainer.appendChild(markCompletedButton);
+        buttonsContainer.appendChild(deleteButton);
+        buttonsContainer.appendChild(cancelButton);
 
         // Assemble modal
         modal.appendChild(closeButton);
