@@ -4,7 +4,7 @@
 // Square Configuration
 const SQUARE_CONFIG = {
     appId: 'sq0idp-MVzo31QnyyzHTP4SrxoOoQ',
-    callbackUrl: 'https://scholtzk.github.io/Izumiya/square-callback.html',
+    callbackUrl: 'https://scholtzk.github.io/Izumiya/',
     currency: 'JPY',
     version: '1.3'
 };
