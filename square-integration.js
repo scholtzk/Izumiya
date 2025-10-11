@@ -229,20 +229,23 @@ class SquareIntegration {
             window.showCustomAlert('Returning to POS app...', 'info');
         }
         
-        // Redirect to the POS URL (will open in home screen app if installed)
-        const posUrl = 'https://scholtzk.github.io/Izumiya/';
+        // Use dedicated PWA redirect page
+        const redirectUrl = 'https://scholtzk.github.io/Izumiya/pwa-redirect.html';
         
         setTimeout(() => {
-            console.log('Redirecting to POS:', posUrl);
-            this.showDebugInfo('Redirecting to POS app...');
+            console.log('Redirecting to PWA redirect page...');
+            this.showDebugInfo('Opening PWA...');
             
             try {
-                // Direct redirect to POS URL
-                window.location.href = posUrl;
-                console.log('POS redirect attempted');
+                // Redirect to dedicated PWA redirect page
+                window.location.href = redirectUrl;
+                console.log('PWA redirect page opened');
             } catch (error) {
-                console.log('POS redirect failed:', error);
-                this.showDebugInfo(`POS redirect failed: ${error.message}`);
+                console.log('PWA redirect failed:', error);
+                this.showDebugInfo(`PWA redirect failed: ${error.message}`);
+                
+                // Fallback to direct POS URL
+                window.location.href = 'https://scholtzk.github.io/Izumiya/';
             }
         }, 1000);
     }
