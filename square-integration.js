@@ -65,7 +65,9 @@ class SquareIntegration {
             // Direct Square callback
             console.log('Processing direct Square callback with data:', dataParam);
             try {
-                const transactionInfo = this.getTransactionInfo(window.location);
+                // Create a proper URL object from window.location
+                const currentUrl = new URL(window.location.href);
+                const transactionInfo = this.getTransactionInfo(currentUrl);
                 this.handlePaymentCallback(transactionInfo);
             } catch (error) {
                 console.error('Error parsing Square callback data:', error);
@@ -94,7 +96,21 @@ class SquareIntegration {
             console.log("Processing Square callback URL:", url.href);
             console.log("URL search params:", url.search);
             
-            const dataParam = url.searchParams.get("data");
+            let dataParam;
+            
+            // Try URL object first
+            if (url.searchParams && url.searchParams.get) {
+                dataParam = url.searchParams.get("data");
+                console.log("Using URL.searchParams.get");
+            } else {
+                // Fallback to manual parsing
+                console.log("URL.searchParams not available, using manual parsing");
+                const urlString = url.href || window.location.href;
+                const urlObj = new URL(urlString);
+                dataParam = urlObj.searchParams.get("data");
+                console.log("Using manual URL parsing");
+            }
+            
             console.log("Raw data parameter:", dataParam);
             
             if (!dataParam) {
@@ -120,20 +136,17 @@ class SquareIntegration {
         console.log('Square payment callback received:', transactionInfo);
         this.showDebugInfo('Square callback received: ' + JSON.stringify(transactionInfo));
         
-        // Use correct iOS parameter names from documentation
-        const clientTransactionId = "client_transaction_id";
-        const transactionId = "transaction_id";
-        const errorField = "error_code";
-        
-        // Check for error first
-        if (errorField in transactionInfo) {
-            this.handlePaymentError(transactionInfo[errorField]);
+        // Check for error first using Square's actual response format
+        if (transactionInfo.error_code) {
+            this.handlePaymentError(transactionInfo.error_code);
             return;
         }
         
-        // Check for success using correct parameter names
-        if (clientTransactionId in transactionInfo || transactionId in transactionInfo) {
+        // Check for success using Square's actual response format
+        if (transactionInfo.status === 'ok' || transactionInfo.transaction_id || transactionInfo.client_transaction_id) {
             this.processSuccessfulPayment(transactionInfo);
+        } else if (transactionInfo.status === 'error') {
+            this.handlePaymentError(transactionInfo.error_code || 'unknown_error');
         } else {
             this.handlePaymentCancellation();
         }
@@ -143,11 +156,12 @@ class SquareIntegration {
     processSuccessfulPayment(transactionInfo) {
         console.log('Processing successful Square payment:', transactionInfo);
         
-        // Use correct iOS parameter names from documentation
+        // Use Square's actual response format
         const clientTransactionId = transactionInfo.client_transaction_id;
         const transactionId = transactionInfo.transaction_id;
+        const status = transactionInfo.status;
         
-        // Build result string as per documentation
+        // Build result string using Square's actual response
         let resultString = "";
         if (clientTransactionId) {
             resultString += "Client Transaction ID: " + clientTransactionId + "<br>";
@@ -156,6 +170,9 @@ class SquareIntegration {
             resultString += "Transaction ID: " + transactionId + "<br>";
         } else {
             resultString += "Transaction ID: NO CARD USED<br>";
+        }
+        if (status) {
+            resultString += "Status: " + status + "<br>";
         }
         
         // Show success message
@@ -172,7 +189,8 @@ class SquareIntegration {
                 paymentId: transactionId || clientTransactionId,
                 total: window.currentOrder.total,
                 timestamp: new Date(),
-                paymentStatus: 'paid'
+                paymentStatus: 'paid',
+                squareStatus: status
             };
 
             // Process through existing payment system
