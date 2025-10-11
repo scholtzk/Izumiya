@@ -40,6 +40,9 @@ class SquareIntegration {
 
     // Setup callback URL handling for payment results
     setupCallbackHandling() {
+        console.log('Setting up Square callback handling...');
+        console.log('Current URL:', window.location.href);
+        
         // Check if we're returning from a Square payment (iOS format)
         const urlParams = new URLSearchParams(window.location.search);
         const dataParam = urlParams.get('data');
@@ -50,8 +53,17 @@ class SquareIntegration {
         const squareCancelled = urlParams.get('square_cancelled');
         const transactionId = urlParams.get('transaction_id');
         
+        console.log('URL parameters:', {
+            dataParam,
+            squareSuccess,
+            squareError,
+            squareCancelled,
+            transactionId
+        });
+        
         if (dataParam) {
             // Direct Square callback
+            console.log('Processing direct Square callback with data:', dataParam);
             try {
                 const transactionInfo = this.getTransactionInfo(window.location);
                 this.handlePaymentCallback(transactionInfo);
@@ -61,22 +73,46 @@ class SquareIntegration {
             }
         } else if (squareSuccess) {
             // Success from redirect page
+            console.log('Processing Square success from redirect');
             this.handleSquareSuccess(transactionId);
         } else if (squareError) {
             // Error from redirect page
+            console.log('Processing Square error from redirect');
             this.handleSquareError(squareError);
         } else if (squareCancelled) {
             // Cancelled from redirect page
+            console.log('Processing Square cancellation from redirect');
             this.handlePaymentCancellation();
+        } else {
+            console.log('No Square callback parameters found');
         }
     }
     
     // Get transaction info from Square callback (iOS format)
     getTransactionInfo(url) {
-        const data = decodeURIComponent(url.searchParams.get("data"));
-        console.log("Square callback data: " + data);
-        const transactionInfo = JSON.parse(data);
-        return transactionInfo;
+        try {
+            console.log("Processing Square callback URL:", url.href);
+            console.log("URL search params:", url.search);
+            
+            const dataParam = url.searchParams.get("data");
+            console.log("Raw data parameter:", dataParam);
+            
+            if (!dataParam) {
+                throw new Error("No data parameter found in URL");
+            }
+            
+            const data = decodeURIComponent(dataParam);
+            console.log("Decoded Square callback data:", data);
+            
+            const transactionInfo = JSON.parse(data);
+            console.log("Parsed transaction info:", transactionInfo);
+            
+            return transactionInfo;
+        } catch (error) {
+            console.error("Error in getTransactionInfo:", error);
+            this.showDebugInfo("Error parsing Square data: " + error.message);
+            throw error;
+        }
     }
 
     // Handle payment callback from Square
