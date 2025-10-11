@@ -221,26 +221,69 @@ class SquareIntegration {
     
     // Redirect to ProSurf
     redirectToProSurf() {
-        console.log('Redirecting to ProSurf...');
-        this.showDebugInfo('Redirecting to ProSurf...');
+        console.log('Starting ProSurf redirect process...');
+        this.showDebugInfo('Starting ProSurf redirect...');
         
-        // Try multiple redirect methods
-        setTimeout(() => {
-            try {
-                window.location.href = 'prosurf://https://scholtzk.github.io/Izumiya/';
-                console.log('ProSurf redirect attempted');
-            } catch (error) {
-                console.log('ProSurf redirect failed, trying alternative method');
-                // Fallback: try opening in new window
-                window.open('prosurf://https://scholtzk.github.io/Izumiya/', '_self');
+        // Try multiple ProSurf URL schemes
+        const prosurfUrls = [
+            'prosurf://https://scholtzk.github.io/Izumiya/',
+            'prosurf://scholtzk.github.io/Izumiya/',
+            'prosurf://https://scholtzk.github.io/Izumiya',
+            'prosurf://scholtzk.github.io/Izumiya',
+            'prosurf://open?url=https://scholtzk.github.io/Izumiya/',
+            'prosurf://open?url=scholtzk.github.io/Izumiya/'
+        ];
+        
+        let attemptCount = 0;
+        
+        const tryRedirect = () => {
+            if (attemptCount < prosurfUrls.length) {
+                const url = prosurfUrls[attemptCount];
+                console.log(`ProSurf redirect attempt ${attemptCount + 1}: ${url}`);
+                this.showDebugInfo(`Trying ProSurf URL ${attemptCount + 1}: ${url}`);
+                
+                try {
+                    window.location.href = url;
+                    console.log('ProSurf redirect attempted');
+                } catch (error) {
+                    console.log('ProSurf redirect failed:', error);
+                    this.showDebugInfo(`ProSurf attempt ${attemptCount + 1} failed: ${error.message}`);
+                }
+                
+                attemptCount++;
+                setTimeout(tryRedirect, 2000);
+            } else {
+                console.log('All ProSurf redirect attempts failed');
+                this.showDebugInfo('All ProSurf attempts failed - staying in Safari');
+                
+                // Try alternative: create a link and click it
+                this.tryLinkRedirect();
             }
-        }, 1000);
+        };
         
-        // Fallback to regular URL if ProSurf doesn't work
-        setTimeout(() => {
-            console.log('ProSurf not available, staying in current browser');
-            this.showDebugInfo('ProSurf not available - staying in Safari');
-        }, 3000);
+        // Start the redirect attempts
+        setTimeout(tryRedirect, 1000);
+    }
+    
+    // Try alternative link-based redirect
+    tryLinkRedirect() {
+        console.log('Trying link-based ProSurf redirect...');
+        this.showDebugInfo('Trying link-based ProSurf redirect...');
+        
+        try {
+            const link = document.createElement('a');
+            link.href = 'prosurf://https://scholtzk.github.io/Izumiya/';
+            link.target = '_self';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            console.log('Link-based ProSurf redirect attempted');
+            this.showDebugInfo('Link-based ProSurf redirect attempted');
+        } catch (error) {
+            console.log('Link-based redirect failed:', error);
+            this.showDebugInfo(`Link-based redirect failed: ${error.message}`);
+        }
     }
     
     // Handle Square success from redirect page
