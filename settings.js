@@ -802,9 +802,183 @@ function displaySettings(container) {
         openAvailabilityModal();
     });
     
+    // Card Payment Toggle Section
+    const cardPaymentSection = document.createElement('div');
+    cardPaymentSection.style.marginTop = '30px';
+    cardPaymentSection.style.padding = '20px';
+    cardPaymentSection.style.backgroundColor = '#f8f9fa';
+    cardPaymentSection.style.borderRadius = '8px';
+    cardPaymentSection.style.border = '1px solid #dee2e6';
+    
+    const cardPaymentTitle = document.createElement('h3');
+    cardPaymentTitle.textContent = window.currentLang === 'ja' ? 'カード決済設定' : 'Card Payment Settings';
+    cardPaymentTitle.style.marginBottom = '15px';
+    cardPaymentTitle.style.color = '#333';
+    cardPaymentTitle.style.fontSize = '18px';
+    cardPaymentTitle.style.fontWeight = '600';
+    
+    const cardPaymentRow = document.createElement('div');
+    cardPaymentRow.style.display = 'flex';
+    cardPaymentRow.style.alignItems = 'center';
+    cardPaymentRow.style.justifyContent = 'space-between';
+    cardPaymentRow.style.marginBottom = '10px';
+    
+    const cardPaymentLabel = document.createElement('span');
+    cardPaymentLabel.textContent = window.currentLang === 'ja' ? 'カード決済を有効にする' : 'Enable Card Payments';
+    cardPaymentLabel.style.fontSize = '16px';
+    cardPaymentLabel.style.color = '#333';
+    cardPaymentLabel.style.fontWeight = '500';
+    
+    const cardPaymentToggleContainer = document.createElement('div');
+    cardPaymentToggleContainer.style.display = 'flex';
+    cardPaymentToggleContainer.style.alignItems = 'center';
+    cardPaymentToggleContainer.style.gap = '10px';
+    
+    const cardPaymentToggle = document.createElement('label');
+    cardPaymentToggle.style.position = 'relative';
+    cardPaymentToggle.style.display = 'inline-block';
+    cardPaymentToggle.style.width = '60px';
+    cardPaymentToggle.style.height = '30px';
+    
+    const cardPaymentToggleInput = document.createElement('input');
+    cardPaymentToggleInput.type = 'checkbox';
+    cardPaymentToggleInput.style.opacity = '0';
+    cardPaymentToggleInput.style.width = '0';
+    cardPaymentToggleInput.style.height = '0';
+    
+    // Load card payment setting from localStorage
+    const cardPaymentEnabled = loadCardPaymentSetting();
+    cardPaymentToggleInput.checked = cardPaymentEnabled;
+    
+    const cardPaymentToggleSlider = document.createElement('span');
+    cardPaymentToggleSlider.style.position = 'absolute';
+    cardPaymentToggleSlider.style.cursor = 'pointer';
+    cardPaymentToggleSlider.style.top = '0';
+    cardPaymentToggleSlider.style.left = '0';
+    cardPaymentToggleSlider.style.right = '0';
+    cardPaymentToggleSlider.style.bottom = '0';
+    cardPaymentToggleSlider.style.backgroundColor = cardPaymentToggleInput.checked ? 'var(--primary)' : '#ccc';
+    cardPaymentToggleSlider.style.transition = '0.3s';
+    cardPaymentToggleSlider.style.borderRadius = '30px';
+    
+    const cardPaymentToggleKnob = document.createElement('span');
+    cardPaymentToggleKnob.style.position = 'absolute';
+    cardPaymentToggleKnob.style.content = '""';
+    cardPaymentToggleKnob.style.height = '24px';
+    cardPaymentToggleKnob.style.width = '24px';
+    cardPaymentToggleKnob.style.left = cardPaymentToggleInput.checked ? '32px' : '3px';
+    cardPaymentToggleKnob.style.bottom = '3px';
+    cardPaymentToggleKnob.style.backgroundColor = 'white';
+    cardPaymentToggleKnob.style.transition = '0.3s';
+    cardPaymentToggleKnob.style.borderRadius = '50%';
+    cardPaymentToggleKnob.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+    
+    cardPaymentToggle.appendChild(cardPaymentToggleInput);
+    cardPaymentToggle.appendChild(cardPaymentToggleSlider);
+    cardPaymentToggle.appendChild(cardPaymentToggleKnob);
+    
+    // Update toggle appearance when changed
+    cardPaymentToggleInput.addEventListener('change', function() {
+        cardPaymentToggleSlider.style.backgroundColor = this.checked ? 'var(--primary)' : '#ccc';
+        cardPaymentToggleKnob.style.left = this.checked ? '32px' : '3px';
+        
+        // Save card payment setting
+        saveCardPaymentSetting(this.checked);
+        
+        // Update card button state in payment modal
+        updateCardButtonState(this.checked);
+    });
+    
+    const cardPaymentStatusText = document.createElement('span');
+    cardPaymentStatusText.textContent = cardPaymentToggleInput.checked ? 
+        (window.currentLang === 'ja' ? '有効' : 'Enabled') : 
+        (window.currentLang === 'ja' ? '無効' : 'Disabled');
+    cardPaymentStatusText.style.fontSize = '14px';
+    cardPaymentStatusText.style.color = cardPaymentToggleInput.checked ? '#28a745' : '#dc3545';
+    cardPaymentStatusText.style.fontWeight = '500';
+    
+    // Update status text when toggle changes
+    cardPaymentToggleInput.addEventListener('change', function() {
+        cardPaymentStatusText.textContent = this.checked ? 
+            (window.currentLang === 'ja' ? '有効' : 'Enabled') : 
+            (window.currentLang === 'ja' ? '無効' : 'Disabled');
+        cardPaymentStatusText.style.color = this.checked ? '#28a745' : '#dc3545';
+    });
+    
+    cardPaymentToggleContainer.appendChild(cardPaymentToggle);
+    cardPaymentToggleContainer.appendChild(cardPaymentStatusText);
+    
+    cardPaymentRow.appendChild(cardPaymentLabel);
+    cardPaymentRow.appendChild(cardPaymentToggleContainer);
+    
+    cardPaymentSection.appendChild(cardPaymentTitle);
+    cardPaymentSection.appendChild(cardPaymentRow);
+    
     settingsContent.appendChild(title);
     settingsContent.appendChild(availabilityBtn);
+    settingsContent.appendChild(cardPaymentSection);
     container.appendChild(settingsContent);
     
     console.log('Settings displayed successfully');
 }
+
+// Card Payment Settings Functions
+function loadCardPaymentSetting() {
+    const setting = localStorage.getItem('cardPaymentEnabled');
+    return setting === null ? true : setting === 'true'; // Default to enabled
+}
+
+function saveCardPaymentSetting(enabled) {
+    localStorage.setItem('cardPaymentEnabled', enabled.toString());
+    console.log('Card payment setting saved:', enabled);
+}
+
+function updateCardButtonState(enabled) {
+    const cardMethodBtn = document.getElementById('cardMethodBtn');
+    if (cardMethodBtn) {
+        if (enabled) {
+            cardMethodBtn.style.opacity = '1';
+            cardMethodBtn.style.cursor = 'pointer';
+            cardMethodBtn.style.pointerEvents = 'auto';
+            cardMethodBtn.disabled = false;
+        } else {
+            cardMethodBtn.style.opacity = '0.5';
+            cardMethodBtn.style.cursor = 'not-allowed';
+            cardMethodBtn.style.pointerEvents = 'none';
+            cardMethodBtn.disabled = true;
+        }
+    }
+}
+
+// Initialize card button state when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    const cardPaymentEnabled = loadCardPaymentSetting();
+    updateCardButtonState(cardPaymentEnabled);
+});
+
+// Make functions globally available
+window.loadCardPaymentSetting = loadCardPaymentSetting;
+window.saveCardPaymentSetting = saveCardPaymentSetting;
+window.updateCardButtonState = updateCardButtonState;
+
+// Listen for payment modal opening to update card button state
+document.addEventListener('DOMContentLoaded', function() {
+    // Check for payment modal and update card button state when it opens
+    const paymentModal = document.getElementById('paymentModal');
+    if (paymentModal) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                    const modal = mutation.target;
+                    if (modal.style.display === 'flex' || modal.style.display === 'block') {
+                        // Payment modal is opening, update card button state
+                        const cardPaymentEnabled = loadCardPaymentSetting();
+                        updateCardButtonState(cardPaymentEnabled);
+                    }
+                }
+            });
+        });
+        
+        observer.observe(paymentModal, { attributes: true, attributeFilter: ['style'] });
+    }
+});
