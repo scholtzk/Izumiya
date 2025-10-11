@@ -168,37 +168,99 @@ class SquareIntegration {
     attemptSquarePayment(squareUrl) {
         console.log('Attempting to open Square app with URL:', squareUrl);
         
-        // Try to open Square app directly
+        // Show debug info on screen for iPad
+        this.showDebugInfo('Attempting to open Square app...');
+        
+        // Try multiple methods to open Square app
+        let squareOpened = false;
+        
+        // Method 1: Direct window.location
         try {
-            // Create a temporary link element to trigger the URL scheme
-            const link = document.createElement('a');
-            link.href = squareUrl;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            console.log('Square app launch attempted');
-            
-            // Set up fallback timeout
-            const fallbackTimeout = setTimeout(() => {
-                console.log('Square app not responding, showing fallback options');
-                this.handleSquareNotInstalled();
-            }, 3000);
-            
-            // Clear timeout if user returns to the app (indicating Square opened)
-            const checkReturn = setInterval(() => {
-                if (document.hasFocus()) {
-                    clearTimeout(fallbackTimeout);
-                    clearInterval(checkReturn);
-                    console.log('User returned to app, Square likely opened');
-                }
-            }, 500);
-            
+            window.location.href = squareUrl;
+            squareOpened = true;
+            this.showDebugInfo('Method 1: Direct location attempted');
         } catch (error) {
-            console.error('Error opening Square app:', error);
-            this.handleSquareNotInstalled();
+            this.showDebugInfo('Method 1 failed: ' + error.message);
         }
+        
+        // Method 2: Create and click link
+        if (!squareOpened) {
+            try {
+                const link = document.createElement('a');
+                link.href = squareUrl;
+                link.target = '_self';
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                squareOpened = true;
+                this.showDebugInfo('Method 2: Link click attempted');
+            } catch (error) {
+                this.showDebugInfo('Method 2 failed: ' + error.message);
+            }
+        }
+        
+        // Method 3: Use window.open
+        if (!squareOpened) {
+            try {
+                window.open(squareUrl, '_self');
+                squareOpened = true;
+                this.showDebugInfo('Method 3: Window.open attempted');
+            } catch (error) {
+                this.showDebugInfo('Method 3 failed: ' + error.message);
+            }
+        }
+        
+        // Set up fallback timeout
+        const fallbackTimeout = setTimeout(() => {
+            this.showDebugInfo('Square app not responding after 3 seconds');
+            this.handleSquareNotInstalled();
+        }, 3000);
+        
+        // Check if we're still on the same page (indicating Square didn't open)
+        const checkPage = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                // Still on the page, Square probably didn't open
+                clearTimeout(fallbackTimeout);
+                clearInterval(checkPage);
+                this.showDebugInfo('Still on page - Square app likely not installed');
+                this.handleSquareNotInstalled();
+            }
+        }, 1000);
+    }
+    
+    // Show debug information on screen for iPad
+    showDebugInfo(message) {
+        // Create or update debug display
+        let debugDiv = document.getElementById('square-debug');
+        if (!debugDiv) {
+            debugDiv = document.createElement('div');
+            debugDiv.id = 'square-debug';
+            debugDiv.style.cssText = `
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                background: rgba(0,0,0,0.8);
+                color: white;
+                padding: 10px;
+                border-radius: 5px;
+                font-size: 12px;
+                z-index: 10000;
+                max-width: 300px;
+                word-wrap: break-word;
+            `;
+            document.body.appendChild(debugDiv);
+        }
+        
+        const timestamp = new Date().toLocaleTimeString();
+        debugDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+        
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            if (debugDiv && debugDiv.parentNode) {
+                debugDiv.parentNode.removeChild(debugDiv);
+            }
+        }, 10000);
     }
 
     // Handle case where Square app is not installed
