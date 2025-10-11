@@ -199,6 +199,9 @@ class SquareIntegration {
 
         // Clean up URL parameters
         this.cleanupUrl();
+        
+        // Redirect to ProSurf after processing
+        this.redirectToProSurf();
     }
 
     // Handle payment cancellation
@@ -211,6 +214,33 @@ class SquareIntegration {
 
         // Return to payment modal
         this.cleanupUrl();
+        
+        // Redirect to ProSurf after cancellation
+        this.redirectToProSurf();
+    }
+    
+    // Redirect to ProSurf
+    redirectToProSurf() {
+        console.log('Redirecting to ProSurf...');
+        this.showDebugInfo('Redirecting to ProSurf...');
+        
+        // Try multiple redirect methods
+        setTimeout(() => {
+            try {
+                window.location.href = 'prosurf://https://scholtzk.github.io/Izumiya/';
+                console.log('ProSurf redirect attempted');
+            } catch (error) {
+                console.log('ProSurf redirect failed, trying alternative method');
+                // Fallback: try opening in new window
+                window.open('prosurf://https://scholtzk.github.io/Izumiya/', '_self');
+            }
+        }, 1000);
+        
+        // Fallback to regular URL if ProSurf doesn't work
+        setTimeout(() => {
+            console.log('ProSurf not available, staying in current browser');
+            this.showDebugInfo('ProSurf not available - staying in Safari');
+        }, 3000);
     }
     
     // Handle Square success from redirect page
@@ -247,6 +277,9 @@ class SquareIntegration {
         }
 
         this.cleanupUrl();
+        
+        // Redirect to ProSurf after error
+        this.redirectToProSurf();
     }
 
     // Handle payment error
@@ -258,6 +291,9 @@ class SquareIntegration {
         }
 
         this.cleanupUrl();
+        
+        // Redirect to ProSurf after error
+        this.redirectToProSurf();
     }
 
     // Clean up URL parameters after processing
