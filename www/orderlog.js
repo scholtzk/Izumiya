@@ -1503,12 +1503,23 @@ export async function processPayment(currentOrder, moveCurrentOrderToCompleted, 
     document.body.appendChild(processingOverlay);
     
     try {
-        // Check connection before processing
+        // Check connection before processing with proper validation
         if (window.ensureFirestoreConnection) {
             const isConnected = await window.ensureFirestoreConnection();
             if (!isConnected) {
                 console.warn('Connection check failed, proceeding with retry logic');
+                // Show user feedback about connection issues
+                showCustomAlert('Connection issue detected. Processing with retry logic...', 'warning');
             }
+        }
+        
+        // Validate current order state before processing
+        if (!currentOrder || !currentOrder.items || currentOrder.items.length === 0) {
+            throw new Error('Invalid order state: No items in current order');
+        }
+        
+        if (!currentOrder.total || currentOrder.total <= 0) {
+            throw new Error('Invalid order state: Invalid total amount');
         }
 
         // Move current order to completed orders
@@ -1521,12 +1532,39 @@ export async function processPayment(currentOrder, moveCurrentOrderToCompleted, 
             paymentStatus: 'paid'
         };
         
-        await moveCurrentOrderToCompleted(completedOrder);
+        // Move current order to completed orders with retry logic
+        let moveSuccess = false;
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        while (!moveSuccess && retryCount < maxRetries) {
+            try {
+                await moveCurrentOrderToCompleted(completedOrder);
+                moveSuccess = true;
+                console.log('Order successfully moved to completed');
+            } catch (error) {
+                retryCount++;
+                console.error(`Failed to move order to completed (attempt ${retryCount}):`, error);
+                
+                if (retryCount < maxRetries) {
+                    // Wait before retry with exponential backoff
+                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                } else {
+                    throw new Error(`Failed to complete order after ${maxRetries} attempts: ${error.message}`);
+                }
+            }
+        }
         
         // Remove processing overlay
         document.body.removeChild(processingOverlay);
         
-        // Immediately close modal and show success popup
+        // Validate payment completion before closing modal
+        const paymentValid = await validatePaymentCompletion(completedOrder.orderNumber, showCustomAlert);
+        if (!paymentValid) {
+            throw new Error('Payment completion validation failed');
+        }
+        
+        // Only close modal after successful completion and validation
         document.getElementById('paymentModal').style.display = 'none';
         
         // Show success/change popup
@@ -1572,18 +1610,50 @@ export async function processPayment(currentOrder, moveCurrentOrderToCompleted, 
         overlay.addEventListener('click', dismissPopup);
         successMessage.addEventListener('click', dismissPopup);
         
-        // Do the rest in the background with error handling
+        // Do the rest in the background with proper error handling
         (async () => {
             try {
+                // Process stock updates
                 if (window.stocktakeSystem && window.stocktakeSystem.processOrderForStock) {
                     await window.stocktakeSystem.processOrderForStock(completedOrder);
                 }
-                await clearCurrentOrder();
+                
+                // Clear current order with retry logic
+                let clearSuccess = false;
+                let clearRetryCount = 0;
+                const maxClearRetries = 3;
+                
+                while (!clearSuccess && clearRetryCount < maxClearRetries) {
+                    try {
+                        await clearCurrentOrder();
+                        clearSuccess = true;
+                        console.log('Current order cleared successfully');
+                    } catch (error) {
+                        clearRetryCount++;
+                        console.error(`Failed to clear current order (attempt ${clearRetryCount}):`, error);
+                        
+                        if (clearRetryCount < maxClearRetries) {
+                            await new Promise(resolve => setTimeout(resolve, 1000 * clearRetryCount));
+                        } else {
+                            throw new Error(`Failed to clear current order after ${maxClearRetries} attempts`);
+                        }
+                    }
+                }
+                
+                // Initialize new order
                 const newOrder = await initializeOrder();
-                window.currentOrder = newOrder;
+                if (newOrder) {
+                    window.currentOrder = newOrder;
+                    console.log('New order initialized successfully');
+                } else {
+                    console.warn('Failed to initialize new order');
+                }
             } catch (backgroundError) {
                 console.error('Background processing error:', backgroundError);
-                // Don't show error to user for background operations
+                // Show user-friendly error for critical background operations
+                if (backgroundError.message.includes('clear current order')) {
+                    showCustomAlert('Warning: Order completed but cleanup failed. Please refresh the page.', 'warning');
+                }
             }
         })();
     } catch (error) {
@@ -1752,6 +1822,27 @@ export async function processPayLater(currentOrder, moveCurrentOrderToCompleted,
         } else {
             showCustomAlert('Error saving order. Please try again.', 'error');
         }
+    }
+}
+
+// Validate that payment was completed successfully
+export async function validatePaymentCompletion(orderNumber, showCustomAlert) {
+    try {
+        // Check if order exists in completed orders
+        const completedOrder = await getOrderByNumber(orderNumber);
+        if (!completedOrder) {
+            throw new Error('Order not found in completed orders');
+        }
+        
+        if (completedOrder.paymentStatus !== 'paid') {
+            throw new Error('Order payment status is not paid');
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Payment completion validation failed:', error);
+        showCustomAlert('Payment validation failed. Please check order status.', 'error');
+        return false;
     }
 }
 

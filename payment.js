@@ -395,14 +395,35 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                     return;
                 }
                 
-                await processPayment();
-                paymentModal.style.display = 'none';
-                tenderedAmount = '';
-                updateDisplay();
-                hideDebugPanel();
+                // Disable button to prevent double-clicks
+                completeBtn.disabled = true;
+                completeBtn.textContent = 'Processing...';
+                
+                try {
+                    // Process payment and wait for completion
+                    await processPayment();
+                    
+                    // Only close modal after successful processing
+                    paymentModal.style.display = 'none';
+                    tenderedAmount = '';
+                    updateDisplay();
+                    hideDebugPanel();
+                } catch (paymentError) {
+                    console.error('Payment processing failed:', paymentError);
+                    showCustomAlert('Payment failed. Please try again.', 'error');
+                    // Re-enable button on failure
+                    completeBtn.disabled = false;
+                    completeBtn.textContent = 'Complete Payment';
+                    return;
+                }
             } catch (error) {
                 console.error('Error in complete payment handler:', error);
                 showCustomAlert('Payment processing error. Please try again.', 'error');
+                // Re-enable button on error
+                if (completeBtn) {
+                    completeBtn.disabled = false;
+                    completeBtn.textContent = 'Complete Payment';
+                }
             }
         });
     }
