@@ -365,8 +365,48 @@ function handleSquarePaymentSuccess() {
         waitingOverlay.remove();
     }
     
-    // Show success message (same as cash payment)
-    showCustomAlert('Card payment successful!', 'success');
+    // Show success popup (matching cash style)
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    overlay.style.zIndex = '999';
+    overlay.style.cursor = 'pointer';
+    const successMessage = document.createElement('div');
+    successMessage.style.position = 'fixed';
+    successMessage.style.top = '50%';
+    successMessage.style.left = '50%';
+    successMessage.style.transform = 'translate(-50%, -50%)';
+    successMessage.style.backgroundColor = '#4CAF50';
+    successMessage.style.color = 'white';
+    successMessage.style.padding = '40px';
+    successMessage.style.borderRadius = '15px';
+    successMessage.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+    successMessage.style.zIndex = '1000';
+    successMessage.style.textAlign = 'center';
+    successMessage.style.minWidth = '300px';
+
+    const paidAmount = (() => {
+        const cardTotalEl = document.getElementById('cardTotal');
+        if (cardTotalEl && cardTotalEl.textContent) {
+            const v = parseInt(cardTotalEl.textContent.replace(/[^0-9]/g, ''), 10);
+            if (!isNaN(v)) return v;
+        }
+        if (window.currentOrder && typeof window.currentOrder.total === 'number') {
+            return window.currentOrder.total;
+        }
+        return 0;
+    })();
+
+    successMessage.innerHTML = `
+        <div style="font-size: 28px; font-weight: bold; margin-bottom: 6px;">Card payment successful</div>
+        <div style="font-size: 18px; opacity: 0.9;">Paid: ¥${paidAmount}</div>
+    `;
+    document.body.appendChild(overlay);
+    document.body.appendChild(successMessage);
     
     // Close payment modal
     const paymentModal = document.getElementById('paymentModal');
@@ -374,10 +414,16 @@ function handleSquarePaymentSuccess() {
         paymentModal.style.display = 'none';
     }
     
-    // Clear current order and start new one
-    if (window.startNewOrder) {
-        window.startNewOrder();
-    }
+    const dismiss = async () => {
+        if (document.body.contains(overlay)) document.body.removeChild(overlay);
+        if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
+        // Clear current order and start new one
+        if (window.startNewOrder) {
+            window.startNewOrder();
+        }
+    };
+    overlay.addEventListener('click', dismiss);
+    successMessage.addEventListener('click', dismiss);
     
     // Clear timeout
     if (squarePaymentTimeout) {
