@@ -334,8 +334,11 @@ class SquareIntegration {
             return;
         }
         
-        // Create callback URL with order data
-        const callbackUrl = `${SQUARE_CONFIG.callbackUrl}?orderNumber=${currentOrder.orderNumber}&total=${amount}&items=${encodeURIComponent(JSON.stringify(currentOrder.items))}`;
+        // Use exact callback URL (must match Square app settings EXACTLY)
+        const callbackUrl = SQUARE_CONFIG.callbackUrl;
+
+        // Generate a client transaction id to correlate on callback
+        const clientTransactionId = `order-${currentOrder.orderNumber}-${Date.now()}`;
         
         // Prepare Square payment data according to official documentation
         const dataParameter = {
@@ -344,6 +347,7 @@ class SquareIntegration {
                 currency_code: SQUARE_CONFIG.currency
             },
             callback_url: callbackUrl,
+            client_transaction_id: clientTransactionId,
             client_id: SQUARE_CONFIG.appId,
             version: SQUARE_CONFIG.version,
             notes: "POS Transaction",
