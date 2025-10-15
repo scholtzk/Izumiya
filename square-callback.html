@@ -94,6 +94,29 @@
         </div>
     </div>
 
+    <!-- Firebase bootstrap (module) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, updateDoc, doc, deleteDoc, getDoc, Timestamp, setDoc, where } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD8nS3tRM8e6eeztv0l7XK9nyjsB9vjRTs",
+            authDomain: "izumiya-pos.firebaseapp.com",
+            projectId: "izumiya-pos",
+            storageBucket: "izumiya-pos.firebasestorage.app",
+            messagingSenderId: "548021570883",
+            appId: "1:548021570883:web:0c9e5057613edd9067f3f6",
+            measurementId: "G-H7F3BEJRQ8"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Minimal enhanced services (retry omitted for simplicity here)
+        window.firebaseDb = db;
+        window.firebaseServices = { collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, query, where, orderBy, Timestamp };
+    </script>
+
     <script>
         // Firebase configuration (same as main app)
         const firebaseConfig = {
@@ -152,101 +175,25 @@
             }
         }
 
-        // Save successful payment to Firebase
-        async function saveSuccessfulPayment(transactionInfo, orderData) {
-            try {
-                if (!firebaseServices) {
-                    throw new Error('Firebase services not available');
-                }
-
-                // Get the current order data from URL parameters
-                const orderNumber = new URLSearchParams(window.location.search).get('orderNumber');
-                const orderTotal = new URLSearchParams(window.location.search).get('total');
-                const orderItems = new URLSearchParams(window.location.search).get('items');
-                
-                if (!orderNumber || !orderTotal) {
-                    throw new Error('Missing order data in callback');
-                }
-
-                // Create completed order structure (same as cash payments)
-                const completedOrder = {
-                    items: JSON.parse(orderItems || '[]'),
-                    subtotal: parseInt(orderTotal),
-                    total: parseInt(orderTotal),
-                    orderNumber: parseInt(orderNumber),
-                    paymentMethod: 'Card',
-                    tenderedAmount: parseInt(orderTotal),
-                    change: 0,
-                    timestamp: firebaseServices.Timestamp.now(),
-                    paymentStatus: 'paid',
-                    completed: true,
-                    squareTransactionId: transactionInfo.transaction_id || transactionInfo.client_transaction_id,
-                    squareStatus: transactionInfo.status
-                };
-
-                // Save to Firebase using the same structure as cash payments
-                const dailyOrdersRef = await getDailyOrdersDoc();
-                const doc = await firebaseServices.getDoc(dailyOrdersRef);
-                const data = doc.data();
-                
-                // Remove current order and add completed order
-                const updatedOrders = { ...data.orders };
-                delete updatedOrders.current;
-                updatedOrders[completedOrder.orderNumber] = completedOrder;
-                
-                await firebaseServices.updateDoc(dailyOrdersRef, {
-                    orders: updatedOrders,
-                    lastUpdated: firebaseServices.Timestamp.now()
-                });
-
-                console.log('Successfully saved card payment to Firebase:', completedOrder);
-                return true;
-            } catch (error) {
-                console.error('Error saving successful payment:', error);
-                return false;
-            }
+        // Helper: today key and dailyOrders doc (same as app)
+        function getTodayKey() {
+            const today = new Date();
+            return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
         }
-
-        // Save failed payment to Firebase
-        async function saveFailedPayment(transactionInfo, reason) {
-            try {
-                if (!firebaseServices) {
-                    throw new Error('Firebase services not available');
-                }
-
-                const orderNumber = new URLSearchParams(window.location.search).get('orderNumber');
-                const orderTotal = new URLSearchParams(window.location.search).get('total');
-                
-                const failedPayment = {
-                    orderNumber: parseInt(orderNumber),
-                    amount: parseInt(orderTotal),
-                    reason: reason,
-                    squareErrorCode: transactionInfo.error_code,
-                    timestamp: firebaseServices.Timestamp.now(),
-                    date: new Date().toISOString().split('T')[0] // YYYY-MM-DD format
-                };
-
-                // Save to failed payments collection
-                const failedPaymentsRef = firebaseServices.collection('failed_payments');
-                await firebaseServices.addDoc(failedPaymentsRef, failedPayment);
-
-                console.log('Successfully saved failed payment to Firebase:', failedPayment);
-                return true;
-            } catch (error) {
-                console.error('Error saving failed payment:', error);
-                return false;
-            }
-        }
-
-        // Get daily orders document reference
         async function getDailyOrdersDoc() {
-            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-            return firebaseServices.doc(firebaseServices.collection('daily_orders').doc(today));
+            const todayKey = getTodayKey();
+            const dailyOrdersRef = window.firebaseServices.doc(window.firebaseDb, 'dailyOrders', todayKey);
+            const d = await window.firebaseServices.getDoc(dailyOrdersRef);
+            if (!d.exists()) {
+                await window.firebaseServices.setDoc(dailyOrdersRef, { date: todayKey, orders: {}, lastUpdated: window.firebaseServices.Timestamp.now() });
+            }
+            return dailyOrdersRef;
         }
 
-        // Redirect to ProSurf
-        function redirectToProSurf() {
-            const prosurfUrl = 'prosurf://https://scholtzk.github.io/Izumiya/';
+        // Redirect to ProSurf with query parameters for the POS to process
+        function redirectToProSurf(query) {
+            const base = 'https://scholtzk.github.io/Izumiya/';
+            const prosurfUrl = 'prosurf://' + base + (query || '');
             console.log('Redirecting to ProSurf:', prosurfUrl);
             
             // Try multiple methods to open ProSurf
@@ -256,7 +203,7 @@
             
             // Fallback after 3 seconds
             setTimeout(() => {
-                window.location.href = 'https://scholtzk.github.io/Izumiya/';
+                window.location.href = base + (query || '');
             }, 3000);
         }
 
@@ -275,21 +222,48 @@
                 if (transactionInfo.status === 'ok' || transactionInfo.transaction_id || transactionInfo.client_transaction_id) {
                     statusElement.textContent = 'Payment successful!';
                     statusElement.className = 'status success';
-                    detailsElement.textContent = 'Saving payment to database...';
-                    
-                    // Save successful payment
-                    const saveSuccess = await saveSuccessfulPayment(transactionInfo);
-                    if (saveSuccess) {
-                        detailsElement.textContent = 'Payment saved successfully. Returning to POS...';
-                    } else {
-                        detailsElement.textContent = 'Payment successful but failed to save. Returning to POS...';
-                        showDebugPanel();
+                    detailsElement.textContent = 'Saving payment...';
+
+                    // Move current order to completed (reuse app structure)
+                    try {
+                        const dailyOrdersRef = await getDailyOrdersDoc();
+                        const d = await window.firebaseServices.getDoc(dailyOrdersRef);
+                        const data = d.data() || { orders: {} };
+                        const current = data.orders ? data.orders.current : null;
+                        if (!current || !current.items || !current.orderNumber) {
+                            throw new Error('No current order found');
+                        }
+                        const completedOrder = {
+                            ...current,
+                            paymentMethod: 'Card',
+                            tenderedAmount: current.total,
+                            change: 0,
+                            paymentStatus: 'paid',
+                            timestamp: window.firebaseServices.Timestamp.now(),
+                            squareTransactionId: transactionInfo.transaction_id || transactionInfo.client_transaction_id,
+                            squareStatus: transactionInfo.status || 'ok'
+                        };
+                        const updated = { ...(data.orders || {}) };
+                        delete updated.current;
+                        updated[completedOrder.orderNumber] = completedOrder;
+                        await window.firebaseServices.updateDoc(dailyOrdersRef, {
+                            orders: updated,
+                            lastUpdated: window.firebaseServices.Timestamp.now()
+                        });
+                        addDebug('Save result', 'success');
+                        detailsElement.textContent = 'Saved. Returning to POS...';
+                    } catch (saveErr) {
                         addDebug('Save result', 'failed');
+                        addDebug('Save error', String(saveErr && saveErr.message ? saveErr.message : saveErr));
+                        detailsElement.textContent = 'Payment saved failed. Returning to POS...';
+                        showDebugPanel();
                     }
                     
                     // Redirect to ProSurf
                     setTimeout(() => {
-                        redirectToProSurf();
+                        const txId = transactionInfo.transaction_id || transactionInfo.client_transaction_id || '';
+                        const query = `?square_success=1&transaction_id=${encodeURIComponent(txId)}`;
+                        redirectToProSurf(query);
                     }, 2000);
                     
                 } else if (transactionInfo.error_code) {
@@ -300,12 +274,10 @@
                     showDebugPanel();
                     addDebug('Error code', transactionInfo.error_code);
                     
-                    // Save failed payment
-                    await saveFailedPayment(transactionInfo, transactionInfo.error_code);
-                    
                     // Redirect to ProSurf
                     setTimeout(() => {
-                        redirectToProSurf();
+                        const query = `?square_error=${encodeURIComponent(transactionInfo.error_code)}${orderNumber?`&orderNumber=${encodeURIComponent(orderNumber)}`:''}${total?`&total=${encodeURIComponent(total)}`:''}`;
+                        redirectToProSurf(query);
                     }, 3000);
                     
                 } else {
@@ -316,12 +288,10 @@
                     showDebugPanel();
                     addDebug('Outcome', 'cancelled');
                     
-                    // Save failed payment
-                    await saveFailedPayment(transactionInfo, 'cancelled');
-                    
                     // Redirect to ProSurf
                     setTimeout(() => {
-                        redirectToProSurf();
+                        const query = `?square_cancelled=1${orderNumber?`&orderNumber=${encodeURIComponent(orderNumber)}`:''}${total?`&total=${encodeURIComponent(total)}`:''}`;
+                        redirectToProSurf(query);
                     }, 3000);
                 }
                 
@@ -335,7 +305,7 @@
                 
                 // Still try to redirect to ProSurf
                 setTimeout(() => {
-                    redirectToProSurf();
+                    redirectToProSurf('');
                 }, 3000);
             }
         }
