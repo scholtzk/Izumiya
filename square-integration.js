@@ -4,7 +4,7 @@
 // Square Configuration
 const SQUARE_CONFIG = {
     appId: 'sq0idp-MVzo31QnyyzHTP4SrxoOoQ',
-    callbackUrl: 'https://scholtzk.github.io/Izumiya/',
+    callbackUrl: 'https://scholtzk.github.io/Izumiya/square-callback.html',
     currency: 'JPY',
     version: '1.3'
 };
@@ -325,13 +325,25 @@ class SquareIntegration {
             return;
         }
         
+        // Get current order data
+        const currentOrder = window.currentOrder;
+        if (!currentOrder) {
+            if (window.showCustomAlert) {
+                window.showCustomAlert('No current order found', 'error');
+            }
+            return;
+        }
+        
+        // Create callback URL with order data
+        const callbackUrl = `${SQUARE_CONFIG.callbackUrl}?orderNumber=${currentOrder.orderNumber}&total=${amount}&items=${encodeURIComponent(JSON.stringify(currentOrder.items))}`;
+        
         // Prepare Square payment data according to official documentation
         const dataParameter = {
             amount_money: {
                 amount: Math.round(amount), // Amount in cents for JPY
                 currency_code: SQUARE_CONFIG.currency
             },
-            callback_url: SQUARE_CONFIG.callbackUrl,
+            callback_url: callbackUrl,
             client_id: SQUARE_CONFIG.appId,
             version: SQUARE_CONFIG.version,
             notes: "POS Transaction",

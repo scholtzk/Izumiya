@@ -242,6 +242,257 @@ function selectPaymentMethod(method) {
 }
 window.selectPaymentMethod = selectPaymentMethod;
 
+// Square Payment Verification Functions
+let squarePaymentWaiting = false;
+let squarePaymentTimeout = null;
+let squarePaymentOrderNumber = null;
+
+// Show Square payment waiting popup
+function showSquarePaymentWaiting(orderNumber) {
+    squarePaymentWaiting = true;
+    squarePaymentOrderNumber = orderNumber;
+    
+    // Create waiting overlay
+    const waitingOverlay = document.createElement('div');
+    waitingOverlay.id = 'squarePaymentWaiting';
+    waitingOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 2000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    `;
+    
+    waitingOverlay.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 10px; text-align: center; max-width: 400px;">
+            <div style="font-size: 18px; margin-bottom: 15px; color: #6F4E37;">Processing Card Payment...</div>
+            <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #6F4E37; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+            <div style="font-size: 14px; color: #666; margin-bottom: 20px;">Please complete payment in Square app</div>
+            <button id="cancelSquarePayment" style="background: #ff6b6b; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px;">Cancel Payment</button>
+            <style>
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+        </div>
+    `;
+    
+    document.body.appendChild(waitingOverlay);
+    
+    // Add cancel button handler
+    document.getElementById('cancelSquarePayment').addEventListener('click', () => {
+        cancelSquarePayment();
+    });
+    
+    // Start verification polling
+    startSquarePaymentVerification();
+    
+    // Set timeout for cancel button
+    squarePaymentTimeout = setTimeout(() => {
+        if (squarePaymentWaiting) {
+            const cancelBtn = document.getElementById('cancelSquarePayment');
+            if (cancelBtn) {
+                cancelBtn.style.display = 'block';
+            }
+        }
+    }, 10000); // Show cancel button after 10 seconds
+}
+
+// Start polling for payment verification
+function startSquarePaymentVerification() {
+    const checkInterval = setInterval(async () => {
+        if (!squarePaymentWaiting) {
+            clearInterval(checkInterval);
+            return;
+        }
+        
+        try {
+            const paymentCompleted = await checkSquarePaymentStatus();
+            if (paymentCompleted) {
+                clearInterval(checkInterval);
+                handleSquarePaymentSuccess();
+            }
+        } catch (error) {
+            console.error('Error checking Square payment status:', error);
+        }
+    }, 2000); // Check every 2 seconds
+}
+
+// Check if Square payment was completed
+async function checkSquarePaymentStatus() {
+    try {
+        if (!squarePaymentOrderNumber) return false;
+        
+        // Get today's orders from Firebase
+        const dailyOrdersRef = await getDailyOrdersDoc();
+        const doc = await window.firebaseServices.getDoc(dailyOrdersRef);
+        const data = doc.data();
+        
+        if (!data || !data.orders) return false;
+        
+        // Check if our order number exists in completed orders with Card payment
+        const completedOrder = data.orders[squarePaymentOrderNumber];
+        if (completedOrder && 
+            completedOrder.paymentMethod === 'Card' && 
+            completedOrder.paymentStatus === 'paid') {
+            return true;
+        }
+        
+        return false;
+    } catch (error) {
+        console.error('Error checking Square payment status:', error);
+        return false;
+    }
+}
+
+// Handle successful Square payment
+function handleSquarePaymentSuccess() {
+    squarePaymentWaiting = false;
+    
+    // Remove waiting overlay
+    const waitingOverlay = document.getElementById('squarePaymentWaiting');
+    if (waitingOverlay) {
+        waitingOverlay.remove();
+    }
+    
+    // Show success message (same as cash payment)
+    showCustomAlert('Card payment successful!', 'success');
+    
+    // Close payment modal
+    const paymentModal = document.getElementById('paymentModal');
+    if (paymentModal) {
+        paymentModal.style.display = 'none';
+    }
+    
+    // Clear current order and start new one
+    if (window.startNewOrder) {
+        window.startNewOrder();
+    }
+    
+    // Clear timeout
+    if (squarePaymentTimeout) {
+        clearTimeout(squarePaymentTimeout);
+        squarePaymentTimeout = null;
+    }
+}
+
+// Cancel Square payment
+function cancelSquarePayment() {
+    squarePaymentWaiting = false;
+    
+    // Remove waiting overlay
+    const waitingOverlay = document.getElementById('squarePaymentWaiting');
+    if (waitingOverlay) {
+        waitingOverlay.remove();
+    }
+    
+    // Clear timeout
+    if (squarePaymentTimeout) {
+        clearTimeout(squarePaymentTimeout);
+        squarePaymentTimeout = null;
+    }
+    
+    // Show cancellation message
+    showCustomAlert('Card payment cancelled', 'info');
+    
+    // Return to payment modal
+    const paymentModal = document.getElementById('paymentModal');
+    if (paymentModal) {
+        paymentModal.style.display = 'flex';
+    }
+}
+
+// Check for failed payments on page load
+async function checkForFailedPayments() {
+    try {
+        // Get failed payments from Firebase
+        const failedPaymentsRef = window.firebaseServices.collection('failed_payments');
+        const querySnapshot = await window.firebaseServices.getDocs(
+            window.firebaseServices.query(
+                failedPaymentsRef,
+                window.firebaseServices.orderBy('timestamp', 'desc'),
+                window.firebaseServices.limit(1)
+            )
+        );
+        
+        if (!querySnapshot.empty) {
+            const latestFailed = querySnapshot.docs[0].data();
+            
+            // Check if this failed payment is recent (within last 5 minutes)
+            const now = new Date();
+            const failedTime = latestFailed.timestamp.toDate();
+            const timeDiff = now - failedTime;
+            
+            if (timeDiff < 5 * 60 * 1000) { // 5 minutes
+                showFailedPaymentDialog(latestFailed);
+            }
+        }
+    } catch (error) {
+        console.error('Error checking for failed payments:', error);
+    }
+}
+
+// Show failed payment dialog with retry option
+function showFailedPaymentDialog(failedPayment) {
+    const retryDialog = document.createElement('div');
+    retryDialog.id = 'failedPaymentDialog';
+    retryDialog.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 2000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    `;
+    
+    retryDialog.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 10px; text-align: center; max-width: 400px;">
+            <div style="font-size: 18px; margin-bottom: 15px; color: #ff6b6b;">Card Payment Failed</div>
+            <div style="font-size: 14px; color: #666; margin-bottom: 20px;">
+                Amount: ¥${failedPayment.amount}<br>
+                Reason: ${failedPayment.reason}
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="retrySquarePayment" style="background: #6F4E37; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Retry Payment</button>
+                <button id="cancelFailedPayment" style="background: #666; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Cancel</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(retryDialog);
+    
+    // Add button handlers
+    document.getElementById('retrySquarePayment').addEventListener('click', () => {
+        retryDialog.remove();
+        // Open payment modal with card option selected
+        const paymentModal = document.getElementById('paymentModal');
+        if (paymentModal) {
+            paymentModal.style.display = 'flex';
+            if (window.selectPaymentMethod) {
+                window.selectPaymentMethod('card');
+            }
+        }
+    });
+    
+    document.getElementById('cancelFailedPayment').addEventListener('click', () => {
+        retryDialog.remove();
+    });
+}
+
+// Make Square functions available globally
+window.showSquarePaymentWaiting = showSquarePaymentWaiting;
+window.cancelSquarePayment = cancelSquarePayment;
+
 // --- App Initialization and Event Listeners ---
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -492,6 +743,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('processCardBtn').addEventListener('click', function() {
         // Use Square integration for card payment
         if (window.SquareIntegration && window.SquareIntegration.processCardPayment) {
+            // Show waiting popup before opening Square
+            const currentOrder = window.currentOrder;
+            if (currentOrder && currentOrder.orderNumber) {
+                showSquarePaymentWaiting(currentOrder.orderNumber);
+            }
+            
+            // Open Square app
             window.SquareIntegration.processCardPayment();
         } else {
             showCustomAlert('Square integration not available', 'error');
@@ -680,4 +938,9 @@ function loadCategoryItems(category) {
     if (category === 'Drinks' || category === 'Food') {
         loadMenuItems(category, renderOrderItems, updateOrderSummary, saveCurrentOrder, showCustomItemModal, window.showDiscountModal);
     }
+    
+    // Check for failed payments on page load
+    checkForFailedPayments().catch(error => {
+        console.error('Error checking for failed payments:', error);
+    });
 } 
