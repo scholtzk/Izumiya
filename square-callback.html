@@ -43,6 +43,40 @@
         .success {
             color: #51cf66;
         }
+        .debug-panel {
+            position: fixed;
+            bottom: 12px;
+            left: 12px;
+            right: 12px;
+            background: rgba(0,0,0,0.85);
+            color: #aef1ae;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.35;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+            text-align: left;
+            max-height: 40vh;
+            overflow: auto;
+            display: none; /* auto-show on non-success */
+        }
+        .debug-panel h3 {
+            margin: 0 0 8px 0;
+            font-size: 12px;
+            color: #fff;
+        }
+        .debug-row { margin-bottom: 6px; }
+        .debug-key { color: #ffd166; }
+        .debug-actions { margin-top: 8px; display: flex; gap: 8px; }
+        .debug-btn {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+        }
     </style>
 </head>
 <body>
@@ -50,6 +84,14 @@
         <div class="spinner"></div>
         <div class="status" id="status">Processing Square payment...</div>
         <div id="details"></div>
+    </div>
+    <div id="debugPanel" class="debug-panel">
+        <h3>Square Callback Debug</h3>
+        <div id="debugContent"></div>
+        <div class="debug-actions">
+            <button id="copyDebugBtn" class="debug-btn">Copy Debug</button>
+            <button id="hideDebugBtn" class="debug-btn">Hide</button>
+        </div>
     </div>
 
     <script>
@@ -69,6 +111,25 @@
             console.log('Firebase services not available, using fallback');
         }
 
+        // Simple debug helpers
+        function showDebugPanel() {
+            const panel = document.getElementById('debugPanel');
+            if (panel) panel.style.display = 'block';
+        }
+        function addDebug(key, value) {
+            const el = document.getElementById('debugContent');
+            if (!el) return;
+            const pretty = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+            const row = document.createElement('div');
+            row.className = 'debug-row';
+            row.innerHTML = `<span class="debug-key">${key}:</span> <pre style="margin:4px 0 0; white-space:pre-wrap;">${pretty}</pre>`;
+            el.appendChild(row);
+        }
+        function clearDebug() {
+            const el = document.getElementById('debugContent');
+            if (el) el.innerHTML = '';
+        }
+
         // Parse Square callback data
         function parseSquareCallback() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -82,9 +143,11 @@
                 const decodedData = decodeURIComponent(dataParam);
                 const transactionInfo = JSON.parse(decodedData);
                 console.log('Square callback data:', transactionInfo);
+                addDebug('Decoded data', transactionInfo);
                 return transactionInfo;
             } catch (error) {
                 console.error('Error parsing Square callback data:', error);
+                addDebug('Parse error', String(error && error.message ? error.message : error));
                 throw new Error('Invalid Square callback data format');
             }
         }
@@ -203,6 +266,10 @@
                 const transactionInfo = parseSquareCallback();
                 const statusElement = document.getElementById('status');
                 const detailsElement = document.getElementById('details');
+                clearDebug();
+                addDebug('URL', window.location.href);
+                addDebug('Query', Object.fromEntries(new URLSearchParams(window.location.search).entries()));
+                addDebug('Transaction info', transactionInfo);
                 
                 // Check for success
                 if (transactionInfo.status === 'ok' || transactionInfo.transaction_id || transactionInfo.client_transaction_id) {
@@ -216,6 +283,8 @@
                         detailsElement.textContent = 'Payment saved successfully. Returning to POS...';
                     } else {
                         detailsElement.textContent = 'Payment successful but failed to save. Returning to POS...';
+                        showDebugPanel();
+                        addDebug('Save result', 'failed');
                     }
                     
                     // Redirect to ProSurf
@@ -228,6 +297,8 @@
                     statusElement.textContent = 'Payment failed';
                     statusElement.className = 'status error';
                     detailsElement.textContent = `Error: ${transactionInfo.error_code}`;
+                    showDebugPanel();
+                    addDebug('Error code', transactionInfo.error_code);
                     
                     // Save failed payment
                     await saveFailedPayment(transactionInfo, transactionInfo.error_code);
@@ -242,6 +313,8 @@
                     statusElement.textContent = 'Payment cancelled';
                     statusElement.className = 'status error';
                     detailsElement.textContent = 'Payment was cancelled by user';
+                    showDebugPanel();
+                    addDebug('Outcome', 'cancelled');
                     
                     // Save failed payment
                     await saveFailedPayment(transactionInfo, 'cancelled');
@@ -257,6 +330,8 @@
                 document.getElementById('status').textContent = 'Error processing payment';
                 document.getElementById('status').className = 'status error';
                 document.getElementById('details').textContent = error.message;
+                showDebugPanel();
+                addDebug('Fatal error', String(error && error.message ? error.message : error));
                 
                 // Still try to redirect to ProSurf
                 setTimeout(() => {
@@ -267,6 +342,33 @@
 
         // Start processing when page loads
         document.addEventListener('DOMContentLoaded', () => {
+            // Wire debug panel controls
+            const copyBtn = document.getElementById('copyDebugBtn');
+            const hideBtn = document.getElementById('hideDebugBtn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', async () => {
+                    try {
+                        const text = document.getElementById('debugContent').innerText || '';
+                        await navigator.clipboard.writeText(text);
+                        alert('Debug copied');
+                    } catch (e) {
+                        alert('Copy failed');
+                    }
+                });
+            }
+            if (hideBtn) {
+                hideBtn.addEventListener('click', () => {
+                    const panel = document.getElementById('debugPanel');
+                    if (panel) panel.style.display = 'none';
+                });
+            }
+
+            // Allow forcing debug via ?debug=1
+            const qp = new URLSearchParams(window.location.search);
+            if (qp.get('debug') === '1') {
+                showDebugPanel();
+                addDebug('Forced debug', true);
+            }
             processSquareCallback();
         });
     </script>

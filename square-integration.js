@@ -181,20 +181,25 @@ class SquareIntegration {
         }
 
         // Process the payment through the existing POS system
-        if (window.currentOrder && window.processPayment) {
-            // Update the order with Square payment details
-            const squareOrder = {
+        if (window.currentOrder && window.moveCurrentOrderToCompleted && window.firebaseServices && window.getDailyOrdersDoc) {
+            // Build completed order for Firestore save
+            const completedOrder = {
                 ...window.currentOrder,
-                paymentMethod: 'Square',
+                paymentMethod: 'Card',
                 paymentId: transactionId || clientTransactionId,
-                total: window.currentOrder.total,
-                timestamp: new Date(),
                 paymentStatus: 'paid',
+                timestamp: window.firebaseServices.Timestamp.now(),
                 squareStatus: status
             };
 
-            // Process through existing payment system
-            window.processPayment(squareOrder);
+            // Save directly to Firestore using existing helper
+            window.moveCurrentOrderToCompleted(completedOrder)
+                .then(() => {
+                    console.log('Square order saved to Firestore');
+                })
+                .catch((err) => {
+                    console.error('Failed to save Square order:', err);
+                });
         }
 
         // Clean up URL parameters

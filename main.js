@@ -72,6 +72,10 @@ window.loadCurrentOrder = loadCurrentOrder;
 window.saveCurrentOrder = saveCurrentOrder;
 window.clearCurrentOrder = clearCurrentOrder;
 window.startNewOrder = startNewOrder;
+// Expose moveCurrentOrderToCompleted for external integrations (e.g., Square)
+window.moveCurrentOrderToCompleted = moveCurrentOrderToCompleted;
+// Keep a direct reference for legacy callers; external flows should use the
+// bound wrapper provided to the payment modal or call moveCurrentOrderToCompleted directly.
 window.processPayment = processPayment;
 window.processPayLater = processPayLater;
 window.updatePaymentModal = updatePaymentModal;
