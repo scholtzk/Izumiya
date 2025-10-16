@@ -267,16 +267,27 @@ window.renderAnalysisTab = function renderAnalysisTab() {
         const end = new Date(year, month, 0, 23, 59, 59, 999); // last day of month
         // Fetch orders for the month
         const orders = await fetchOrders(start, end);
-        // Group sales by day
+        // Group sales by day and payment method
         const salesByDate = {};
         orders.forEach(order => {
             const date = formatDate(order.timestamp.toDate());
-            salesByDate[date] = (salesByDate[date] || 0) + order.total;
+            if (!salesByDate[date]) {
+                salesByDate[date] = { cash: 0, card: 0, other: 0, total: 0 };
+            }
+            const paymentMethod = order.paymentMethod || 'other';
+            if (paymentMethod === 'Cash') {
+                salesByDate[date].cash += order.total;
+            } else if (paymentMethod === 'Card') {
+                salesByDate[date].card += order.total;
+            } else {
+                salesByDate[date].other += order.total;
+            }
+            salesByDate[date].total += order.total;
         });
         // Prepare CSV content
-        let csv = 'Date,Total Sales\n';
-        Object.entries(salesByDate).forEach(([date, total]) => {
-            csv += `${date},${total}\n`;
+        let csv = 'Date,Cash Sales,Card Sales,Other Sales,Total Sales\n';
+        Object.entries(salesByDate).forEach(([date, sales]) => {
+            csv += `${date},${sales.cash},${sales.card},${sales.other},${sales.total}\n`;
         });
         // Download as CSV file
         const blob = new Blob([csv], { type: 'text/csv' });

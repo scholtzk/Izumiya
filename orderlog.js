@@ -269,6 +269,12 @@ export async function exportTodayOrders(showCustomAlert, getDisplayName) {
         const today = new Date();
         let exportText = `Daily Sales Report - ${today.toLocaleDateString()}\n\n`;
         let totalSales = 0;
+        let cashSales = 0;
+        let cardSales = 0;
+        let otherSales = 0;
+        let cashOrders = 0;
+        let cardOrders = 0;
+        let otherOrders = 0;
         
         todayOrders.forEach(order => {
             exportText += `Order #${order.orderNumber}\n`;
@@ -287,10 +293,31 @@ export async function exportTodayOrders(showCustomAlert, getDisplayName) {
             exportText += `Payment: ${order.paymentMethod} (Tendered: ¥${order.tenderedAmount}, Change: ¥${order.change})\n\n`;
             
             totalSales += order.total;
+            
+            // Track by payment method
+            const paymentMethod = order.paymentMethod || 'other';
+            if (paymentMethod === 'Cash') {
+                cashSales += order.total;
+                cashOrders++;
+            } else if (paymentMethod === 'Card') {
+                cardSales += order.total;
+                cardOrders++;
+            } else {
+                otherSales += order.total;
+                otherOrders++;
+            }
         });
         
-        exportText += `\nTotal Sales: ¥${totalSales}`;
-        exportText += `\nNumber of Orders: ${todayOrders.length}`;
+        exportText += `\n=== SALES SUMMARY ===\n`;
+        exportText += `Total Sales: ¥${totalSales}\n`;
+        exportText += `Total Orders: ${todayOrders.length}\n\n`;
+        exportText += `Cash Sales: ¥${cashSales} (${cashOrders} orders)\n`;
+        exportText += `Card Sales: ¥${cardSales} (${cardOrders} orders)\n`;
+        if (otherSales > 0) {
+            exportText += `Other Sales: ¥${otherSales} (${otherOrders} orders)\n`;
+        }
+        exportText += `\nCash %: ${totalSales > 0 ? ((cashSales / totalSales) * 100).toFixed(1) : 0}%\n`;
+        exportText += `Card %: ${totalSales > 0 ? ((cardSales / totalSales) * 100).toFixed(1) : 0}%`;
         
         // Create and download the file
         const blob = new Blob([exportText], { type: 'text/plain' });
@@ -398,8 +425,12 @@ export async function displayOrderLog(container, getDisplayName, t, updateOrderI
                     </div>
                     <div class="payment-details-right">
                         ${order.paymentStatus === 'paid' ? `
-                            <span><span class="payment-detail-label">${t('Cash Given:')}</span> <span class="payment-detail-value">¥${order.tenderedAmount}</span></span>
-                            <span><span class="payment-detail-label">${t('Change:')}</span> <span class="payment-detail-value">¥${order.change}</span></span>
+                            ${order.paymentMethod === 'Card' ? `
+                                <span><span class="payment-detail-label">${t('Card Payment:')}</span> <span class="payment-detail-value">¥${order.total}</span></span>
+                            ` : `
+                                <span><span class="payment-detail-label">${t('Cash Given:')}</span> <span class="payment-detail-value">¥${order.tenderedAmount}</span></span>
+                                <span><span class="payment-detail-label">${t('Change:')}</span> <span class="payment-detail-value">¥${order.change}</span></span>
+                            `}
                         ` : `
                             <button class="pay-now-btn" data-order-number="${order.orderNumber}">${t('Pay Now')}</button>
                         `}

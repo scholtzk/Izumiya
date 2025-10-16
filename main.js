@@ -417,10 +417,8 @@ function handleSquarePaymentSuccess() {
     const dismiss = async () => {
         if (document.body.contains(overlay)) document.body.removeChild(overlay);
         if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
-        // Clear current order and start new one
-        if (window.startNewOrder) {
-            window.startNewOrder();
-        }
+        // Refresh the page to update the UI with the completed order
+        window.location.reload();
     };
     overlay.addEventListener('click', dismiss);
     successMessage.addEventListener('click', dismiss);
