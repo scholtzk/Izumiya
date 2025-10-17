@@ -29,6 +29,7 @@ import {
     updatePaymentModal
 } from './orderlog.js';
 import { initPaymentModal } from './payment.js';
+import { initTableSelection } from './table-selection.js';
 import { initializeLanguage, toggleLanguage, getCategoryDisplayName, translate } from './language.js';
 import {
   showJamOptions,
@@ -207,12 +208,26 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Check if critical global variables are still valid
             if (!window.currentOrder || typeof window.currentOrder !== 'object') {
                 console.warn('window.currentOrder corrupted, attempting recovery');
+                // Don't set orderNumber to 0 - let the system generate a proper one
                 window.currentOrder = {
                     items: [],
                     subtotal: 0,
                     total: 0,
-                    orderNumber: 0
+                    orderNumber: null  // Will be generated properly
                 };
+                // Trigger proper order initialization
+                if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
+                    console.log('Triggering order recovery...');
+                    window.initializeOrder(window.generateOrderNumber, window.showCustomAlert)
+                        .then((recoveredOrder) => {
+                            if (recoveredOrder) {
+                                console.log('Order recovery successful:', recoveredOrder);
+                            }
+                        })
+                        .catch((error) => {
+                            console.error('Order recovery failed:', error);
+                        });
+                }
             }
             
             // Check if DOM elements are still accessible
@@ -317,7 +332,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         items: [],
         subtotal: 0,
         total: 0,
-        orderNumber: 0
+        orderNumber: null  // Will be generated properly
     };
 
     // Restore last active category if it exists
@@ -495,6 +510,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Store cleanup function for memory management
     if (paymentModalResult && paymentModalResult.cleanup) {
         paymentModalCleanup = paymentModalResult.cleanup;
+    }
+    
+    // Initialize table selection functionality
+    const tableSelectionResult = initTableSelection();
+    if (tableSelectionResult) {
+        window.tableSelection = tableSelectionResult;
     }
     
     // Set up page unload cleanup

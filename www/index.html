@@ -1812,6 +1812,271 @@
             color: inherit;
             background: none;
         }
+
+        /* Table Selection Styles */
+        .payment-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .table-select-btn {
+            position: relative;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .table-select-btn:hover {
+            background: var(--secondary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .table-number-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--accent);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Override for table selection modal to allow full layout width */
+        #tableSelectionModal {
+            display: block !important;
+            align-items: unset !important;
+            justify-content: unset !important;
+        }
+        
+        .table-selection-content {
+            width: 1239px;
+            height: 1500px; /* 768px + ~52px for header */
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            margin: 0;
+        }
+
+        .table-selection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--light);
+        }
+
+        .close-table-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--dark);
+            padding: 5px;
+        }
+
+        .table-layout-container {
+            width: 1239px;
+            height: 768px;
+            overflow: hidden;
+            background: #f8f9fa;
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            margin: 0 auto;
+        }
+
+        .table-layout {
+            position: relative;
+            width: 1239px;
+            height: 768px;
+            background: none;
+            border: none;
+            border-radius: 0;
+            margin: 0;
+            overflow: visible;
+        }
+
+        .table-section {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .upper-section {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+        }
+
+        .table-divider {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--primary);
+            transform: translateY(-50%);
+        }
+
+        .lower-section {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 50%;
+        }
+
+        .table-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            color: var(--primary);
+            transition: all 0.2s ease;
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .table-item:hover {
+            background: var(--light);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .table-item.selected {
+            background: var(--primary);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        /* Table positioning with original coordinates */
+        .table-1 {
+            position: absolute;
+            left: 180px;
+            top: 450px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+        }
+
+        .table-2 {
+            position: absolute;
+            left: 180px;
+            top: 330px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+        }
+
+        .table-3 {
+            position: absolute;
+            left: 430px;
+            top: 300px;
+            width: 140px;
+            height: 160px;
+        }
+
+        .table-4 {
+            position: absolute;
+            left: 600px;
+            top: 300px;
+            width: 140px;
+            height: 160px;
+        }
+
+        .table-5 {
+            position: absolute;
+            left: 820px;
+            top: 300px;
+            width: 260px;
+            height: 160px;
+        }
+
+        .table-6 {
+            position: absolute;
+            left: 900px;
+            top: 500px;
+            width: 160px;
+            height: 220px;
+        }
+
+        .table-7 {
+            position: absolute;
+            left: 630px;
+            top: 500px;
+            width: 160px;
+            height: 160px;
+        }
+
+        .table-8 {
+            position: absolute;
+            left: 150px;
+            top: 60px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+        }
+
+        .table-9 {
+            position: absolute;
+            left: 430px;
+            top: 60px;
+            width: 360px;
+            height: 100px;
+        }
+
+        .table-10 {
+            position: absolute;
+            left: 1040px;
+            top: 60px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+        }
+
+        .table-counter {
+            position: absolute;
+            left: 40px;
+            top: 180px;
+            width: 240px;
+            height: 400px;
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .table-counter:hover {
+            background: var(--secondary);
+        }
+
+        .table-counter.selected {
+            background: var(--dark);
+        }
     </style>
 </head>
 <body>
@@ -1911,7 +2176,18 @@
     <!-- Payment Modal -->
     <div class="modal" id="paymentModal">
         <div class="modal-content">
-            <h2>Cash Payment</h2>
+            <div class="payment-modal-header">
+                <h2>Cash Payment</h2>
+                <button class="table-select-btn" id="tableSelectBtn" title="Select Table">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <path d="M9 9h6v6H9z"/>
+                        <path d="M3 9h18"/>
+                        <path d="M9 3v18"/>
+                    </svg>
+                    <span class="table-number-badge" id="tableNumberBadge" style="display: none;"></span>
+                </button>
+            </div>
             
             <div class="payment-details">
                 <div class="total-amount">Total: ¥<span id="totalAmount">0</span></div>
@@ -2015,6 +2291,19 @@
             <div class="action-buttons">
                 <button class="action-btn cancel-btn" id="cancelDiscountBtn">Cancel</button>
                 <button class="action-btn process-btn" id="applyDiscountBtn">Apply Discount</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Selection Modal -->
+    <div class="modal" id="tableSelectionModal">
+        <div class="modal-content table-selection-content">
+            <div class="table-selection-header">
+                <h2>Select Table</h2>
+                <button class="close-table-modal" id="closeTableModal">×</button>
+            </div>
+            <div class="table-layout-container">
+                <iframe src="table-layout.html" width="1239" height="768" frameborder="0" style="border: none;"></iframe>
             </div>
         </div>
     </div>

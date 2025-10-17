@@ -118,11 +118,6 @@
     </script>
 
     <script>
-        // Firebase configuration (same as main app)
-        const firebaseConfig = {
-            // Your Firebase config will be loaded from the main app
-        };
-
         // Initialize Firebase
         let firebaseServices = null;
         
@@ -196,10 +191,8 @@
             const prosurfUrl = 'prosurf://' + base + (query || '');
             console.log('Redirecting to ProSurf:', prosurfUrl);
             
-            // Try multiple methods to open ProSurf
-            setTimeout(() => {
-                window.location.href = prosurfUrl;
-            }, 500);
+            // Try to open ProSurf immediately
+            window.location.href = prosurfUrl;
             
             // Fallback after 3 seconds
             setTimeout(() => {
@@ -226,13 +219,38 @@
 
                     // Move current order to completed (reuse app structure)
                     try {
-                        const dailyOrdersRef = await getDailyOrdersDoc();
-                        const d = await window.firebaseServices.getDoc(dailyOrdersRef);
-                        const data = d.data() || { orders: {} };
-                        const current = data.orders ? data.orders.current : null;
-                        if (!current || !current.items || !current.orderNumber) {
-                            throw new Error('No current order found');
+                        addDebug('Firebase check', 'Starting Firebase operations...');
+                        
+                        // Check if Firebase services are available
+                        if (!window.firebaseServices) {
+                            throw new Error('Firebase services not available');
                         }
+                        addDebug('Firebase services', 'Available');
+                        
+                        const dailyOrdersRef = await getDailyOrdersDoc();
+                        addDebug('Daily orders ref', 'Retrieved');
+                        
+                        const d = await window.firebaseServices.getDoc(dailyOrdersRef);
+                        addDebug('Document fetch', d.exists() ? 'Success' : 'Document does not exist');
+                        
+                        const data = d.data() || { orders: {} };
+                        addDebug('Document data', data);
+                        
+                        const current = data.orders ? data.orders.current : null;
+                        addDebug('Current order', current);
+                        
+                        if (!current) {
+                            throw new Error('No current order found in Firebase');
+                        }
+                        if (!current.items) {
+                            throw new Error('Current order has no items');
+                        }
+                        if (!current.orderNumber) {
+                            throw new Error('Current order has no order number');
+                        }
+                        
+                        addDebug('Order validation', 'Passed');
+                        
                         const completedOrder = {
                             ...current,
                             paymentMethod: 'Card',
@@ -243,9 +261,13 @@
                             squareTransactionId: transactionInfo.transaction_id || transactionInfo.client_transaction_id,
                             squareStatus: transactionInfo.status || 'ok'
                         };
+                        addDebug('Completed order', completedOrder);
+                        
                         const updated = { ...(data.orders || {}) };
                         delete updated.current;
                         updated[completedOrder.orderNumber] = completedOrder;
+                        addDebug('Updated orders', updated);
+                        
                         await window.firebaseServices.updateDoc(dailyOrdersRef, {
                             orders: updated,
                             lastUpdated: window.firebaseServices.Timestamp.now()
@@ -254,17 +276,19 @@
                         detailsElement.textContent = 'Saved. Returning to POS...';
                     } catch (saveErr) {
                         addDebug('Save result', 'failed');
-                        addDebug('Save error', String(saveErr && saveErr.message ? saveErr.message : saveErr));
-                        detailsElement.textContent = 'Payment saved failed. Returning to POS...';
+                        addDebug('Save error type', typeof saveErr);
+                        addDebug('Save error message', saveErr && saveErr.message ? saveErr.message : 'No message');
+                        addDebug('Save error code', saveErr && saveErr.code ? saveErr.code : 'No code');
+                        addDebug('Save error stack', saveErr && saveErr.stack ? saveErr.stack : 'No stack');
+                        addDebug('Full error object', saveErr);
+                        detailsElement.textContent = 'Payment save failed. Returning to POS...';
                         showDebugPanel();
                     }
                     
-                    // Redirect to ProSurf
-                    setTimeout(() => {
-                        const txId = transactionInfo.transaction_id || transactionInfo.client_transaction_id || '';
-                        const query = `?square_success=1&transaction_id=${encodeURIComponent(txId)}`;
-                        redirectToProSurf(query);
-                    }, 2000);
+                    // Redirect to ProSurf immediately
+                    const txId = transactionInfo.transaction_id || transactionInfo.client_transaction_id || '';
+                    const query = `?square_success=1&transaction_id=${encodeURIComponent(txId)}`;
+                    redirectToProSurf(query);
                     
                 } else if (transactionInfo.error_code) {
                     // Handle error
@@ -274,11 +298,9 @@
                     showDebugPanel();
                     addDebug('Error code', transactionInfo.error_code);
                     
-                    // Redirect to ProSurf
-                    setTimeout(() => {
-                        const query = `?square_error=${encodeURIComponent(transactionInfo.error_code)}${orderNumber?`&orderNumber=${encodeURIComponent(orderNumber)}`:''}${total?`&total=${encodeURIComponent(total)}`:''}`;
-                        redirectToProSurf(query);
-                    }, 3000);
+                    // Redirect to ProSurf immediately
+                    const query = `?square_error=${encodeURIComponent(transactionInfo.error_code)}${orderNumber?`&orderNumber=${encodeURIComponent(orderNumber)}`:''}${total?`&total=${encodeURIComponent(total)}`:''}`;
+                    redirectToProSurf(query);
                     
                 } else {
                     // Handle cancellation or unknown status
@@ -288,11 +310,9 @@
                     showDebugPanel();
                     addDebug('Outcome', 'cancelled');
                     
-                    // Redirect to ProSurf
-                    setTimeout(() => {
-                        const query = `?square_cancelled=1${orderNumber?`&orderNumber=${encodeURIComponent(orderNumber)}`:''}${total?`&total=${encodeURIComponent(total)}`:''}`;
-                        redirectToProSurf(query);
-                    }, 3000);
+                    // Redirect to ProSurf immediately
+                    const query = `?square_cancelled=1${orderNumber?`&orderNumber=${encodeURIComponent(orderNumber)}`:''}${total?`&total=${encodeURIComponent(total)}`:''}`;
+                    redirectToProSurf(query);
                 }
                 
             } catch (error) {
@@ -303,10 +323,8 @@
                 showDebugPanel();
                 addDebug('Fatal error', String(error && error.message ? error.message : error));
                 
-                // Still try to redirect to ProSurf
-                setTimeout(() => {
-                    redirectToProSurf('');
-                }, 3000);
+                // Still try to redirect to ProSurf immediately
+                redirectToProSurf('');
             }
         }
 

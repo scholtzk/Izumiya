@@ -763,6 +763,23 @@
             -webkit-backface-visibility: hidden;
             backface-visibility: hidden;
         }
+        /* Override for table selection modal to allow full layout width */
+        #tableSelectionModal {
+            display: block !important;
+            align-items: unset !important;
+            justify-content: unset !important;
+        }
+        
+        #tableSelectionModal .modal-content.table-selection-content {
+            width: 1300px; /* wide enough to contain 1239px-inner */
+            max-width: none;
+            overflow: hidden; /* inner container handles scroll if needed */
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            margin: 0;
+        }
         
         .payment-options {
             display: flex;
@@ -1913,6 +1930,259 @@
         .card-process-btn:hover {
             background-color: #0056b3;
         }
+
+        /* Table Selection Styles */
+        .payment-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .table-select-btn {
+            position: relative;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .table-select-btn:hover {
+            background: var(--secondary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .table-number-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--accent);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .table-selection-content {
+            width: 1239px;
+            height: 900px; /* 768px + ~52px for header */
+        }
+
+        .table-selection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--light);
+        }
+
+        .close-table-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--dark);
+            padding: 5px;
+        }
+
+        .table-layout-container {
+            width: 1239px;
+            height: 768px;
+            overflow: hidden;
+            background: #f8f9fa;
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            margin: 0 auto;
+        }
+
+        .table-layout {
+            position: relative;
+            width: 1239px;
+            height: 768px;
+            background: none;
+            border: none;
+            border-radius: 0;
+            margin: 0;
+            overflow: visible;
+        }
+
+        .table-section {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .upper-section {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+        }
+
+        .table-divider {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--primary);
+            transform: translateY(-50%);
+        }
+
+        .lower-section {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 50%;
+        }
+
+        .table-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            color: var(--primary);
+            transition: all 0.2s ease;
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .table-item:hover {
+            background: var(--light);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .table-item.selected {
+            background: var(--primary);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        /* Table positioning with original coordinates */
+        .table-1 {
+            position: absolute;
+            left: 180px;
+            top: 450px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+        }
+
+        .table-2 {
+            position: absolute;
+            left: 180px;
+            top: 330px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+        }
+
+        .table-3 {
+            position: absolute;
+            left: 430px;
+            top: 300px;
+            width: 140px;
+            height: 160px;
+        }
+
+        .table-4 {
+            position: absolute;
+            left: 600px;
+            top: 300px;
+            width: 140px;
+            height: 160px;
+        }
+
+        .table-5 {
+            position: absolute;
+            left: 820px;
+            top: 300px;
+            width: 260px;
+            height: 160px;
+        }
+
+        .table-6 {
+            position: absolute;
+            left: 900px;
+            top: 500px;
+            width: 160px;
+            height: 220px;
+        }
+
+        .table-7 {
+            position: absolute;
+            left: 630px;
+            top: 500px;
+            width: 160px;
+            height: 160px;
+        }
+
+        .table-8 {
+            position: absolute;
+            left: 150px;
+            top: 60px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+        }
+
+        .table-9 {
+            position: absolute;
+            left: 430px;
+            top: 60px;
+            width: 360px;
+            height: 100px;
+        }
+
+        .table-10 {
+            position: absolute;
+            left: 1040px;
+            top: 60px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+        }
+
+        .table-counter {
+            position: absolute;
+            left: 40px;
+            top: 180px;
+            width: 240px;
+            height: 400px;
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .table-counter:hover {
+            background: var(--secondary);
+        }
+
+        .table-counter.selected {
+            background: var(--dark);
+        }
     </style>
 </head>
 <body>
@@ -1960,25 +2230,6 @@
       <span id="availabilityBtnText">Manage Item Availability</span>
     </button>
     
-    <!-- Card Payment Toggle Section -->
-    <div style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
-      <h3 style="margin-bottom: 15px; color: #333; font-size: 18px; font-weight: 600;">
-        <span id="cardPaymentTitle">Card Payment Settings</span>
-      </h3>
-      
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-        <span id="cardPaymentLabel" style="font-size: 16px; color: #333; font-weight: 500;">Enable Card Payments</span>
-        
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <label style="position: relative; display: inline-block; width: 60px; height: 30px;">
-            <input type="checkbox" id="cardPaymentToggle" style="opacity: 0; width: 0; height: 0;">
-            <span id="cardPaymentSlider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--primary); transition: 0.3s; border-radius: 30px;"></span>
-            <span id="cardPaymentKnob" style="position: absolute; content: ''; height: 24px; width: 24px; left: 32px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
-          </label>
-          <span id="cardPaymentStatus" style="font-size: 14px; color: #28a745; font-weight: 500;">Enabled</span>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -2012,7 +2263,18 @@
     <!-- Payment Modal -->
     <div class="modal" id="paymentModal">
         <div class="modal-content">
-            <h2>Cash Payment</h2>
+            <div class="payment-modal-header">
+                <h2>Cash Payment</h2>
+                <button class="table-select-btn" id="tableSelectBtn" title="Select Table">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <path d="M9 9h6v6H9z"/>
+                        <path d="M3 9h18"/>
+                        <path d="M9 3v18"/>
+                    </svg>
+                    <span class="table-number-badge" id="tableNumberBadge" style="display: none;"></span>
+                </button>
+            </div>
             
             <div class="payment-details">
                 <div class="total-amount">Total: ¥<span id="totalAmount">0</span></div>
@@ -2076,6 +2338,18 @@
         </div>
     </div>
 
+    <!-- Table Selection Modal -->
+    <div class="modal" id="tableSelectionModal">
+        <div class="modal-content table-selection-content">
+            <div class="table-selection-header">
+                <h2>Select Table</h2>
+                <button class="close-table-modal" id="closeTableModal">×</button>
+            </div>
+            <div class="table-layout-container">
+                <iframe src="table-layout.html" width="1239" height="768" frameborder="0" style="border: none;"></iframe>
+            </div>
+        </div>
+    </div>
 
     <!-- Add Custom Item Modal -->
     <div class="custom-item-modal" id="customItemModal">
@@ -2183,39 +2457,6 @@
     });
     
     function initializeSettings() {
-        // Initialize card payment toggle
-        const cardPaymentToggle = document.getElementById('cardPaymentToggle');
-        const cardPaymentSlider = document.getElementById('cardPaymentSlider');
-        const cardPaymentKnob = document.getElementById('cardPaymentKnob');
-        const cardPaymentStatus = document.getElementById('cardPaymentStatus');
-        
-        // Load card payment setting
-        const cardPaymentEnabled = loadCardPaymentSetting();
-        cardPaymentToggle.checked = cardPaymentEnabled;
-        
-        // Set initial toggle appearance
-        cardPaymentSlider.style.backgroundColor = cardPaymentEnabled ? 'var(--primary)' : '#ccc';
-        cardPaymentKnob.style.left = cardPaymentEnabled ? '32px' : '3px';
-        cardPaymentStatus.textContent = cardPaymentEnabled ? 
-            (window.currentLang === 'ja' ? '有効' : 'Enabled') : 
-            (window.currentLang === 'ja' ? '無効' : 'Disabled');
-        cardPaymentStatus.style.color = cardPaymentEnabled ? '#28a745' : '#dc3545';
-        
-        // Add toggle change listener
-        cardPaymentToggle.addEventListener('change', function() {
-            cardPaymentSlider.style.backgroundColor = this.checked ? 'var(--primary)' : '#ccc';
-            cardPaymentKnob.style.left = this.checked ? '32px' : '3px';
-            
-            // Update status text
-            cardPaymentStatus.textContent = this.checked ? 
-                (window.currentLang === 'ja' ? '有効' : 'Enabled') : 
-                (window.currentLang === 'ja' ? '無効' : 'Disabled');
-            cardPaymentStatus.style.color = this.checked ? '#28a745' : '#dc3545';
-            
-            // Save setting and update card button
-            saveCardPaymentSetting(this.checked);
-            updateCardButtonState(this.checked);
-        });
         
         // Initialize availability button
         const availabilityBtn = document.getElementById('availabilityBtn');
@@ -2231,46 +2472,14 @@
         updateSettingsLanguage();
     }
     
-    function loadCardPaymentSetting() {
-        const setting = localStorage.getItem('cardPaymentEnabled');
-        return setting === null ? true : setting === 'true'; // Default to enabled
-    }
-    
-    function saveCardPaymentSetting(enabled) {
-        localStorage.setItem('cardPaymentEnabled', enabled.toString());
-        console.log('Card payment setting saved:', enabled);
-    }
-    
-    function updateCardButtonState(enabled) {
-        const cardMethodBtn = document.getElementById('cardMethodBtn');
-        if (cardMethodBtn) {
-            if (enabled) {
-                cardMethodBtn.style.opacity = '1';
-                cardMethodBtn.style.cursor = 'pointer';
-                cardMethodBtn.style.pointerEvents = 'auto';
-                cardMethodBtn.disabled = false;
-            } else {
-                cardMethodBtn.style.opacity = '0.5';
-                cardMethodBtn.style.cursor = 'not-allowed';
-                cardMethodBtn.style.pointerEvents = 'none';
-                cardMethodBtn.disabled = true;
-            }
-        }
-    }
     
     function updateSettingsLanguage() {
         const availabilityBtnText = document.getElementById('availabilityBtnText');
-        const cardPaymentTitle = document.getElementById('cardPaymentTitle');
-        const cardPaymentLabel = document.getElementById('cardPaymentLabel');
         
         if (window.currentLang === 'ja') {
             if (availabilityBtnText) availabilityBtnText.textContent = 'アイテムの利用可能性を管理';
-            if (cardPaymentTitle) cardPaymentTitle.textContent = 'カード決済設定';
-            if (cardPaymentLabel) cardPaymentLabel.textContent = 'カード決済を有効にする';
         } else {
             if (availabilityBtnText) availabilityBtnText.textContent = 'Manage Item Availability';
-            if (cardPaymentTitle) cardPaymentTitle.textContent = 'Card Payment Settings';
-            if (cardPaymentLabel) cardPaymentLabel.textContent = 'Enable Card Payments';
         }
     }
     
@@ -2279,10 +2488,6 @@
         updateSettingsLanguage();
     });
     
-    // Make functions globally available
-    window.loadCardPaymentSetting = loadCardPaymentSetting;
-    window.saveCardPaymentSetting = saveCardPaymentSetting;
-    window.updateCardButtonState = updateCardButtonState;
     </script>
 </body>
 </html>

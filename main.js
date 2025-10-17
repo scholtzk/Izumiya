@@ -29,6 +29,7 @@ import {
     updatePaymentModal
 } from './orderlog.js';
 import { initPaymentModal } from './payment.js';
+import { initTableSelection } from './table-selection.js';
 import { initializeLanguage, toggleLanguage, getCategoryDisplayName, translate } from './language.js';
 import {
   showJamOptions,
@@ -277,7 +278,10 @@ function showSquarePaymentWaiting(orderNumber) {
             <div style="font-size: 18px; margin-bottom: 15px; color: #6F4E37;">Processing Card Payment...</div>
             <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #6F4E37; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
             <div style="font-size: 14px; color: #666; margin-bottom: 20px;">Please complete payment in Square app</div>
-            <button id="cancelSquarePayment" style="background: #ff6b6b; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px;">Cancel Payment</button>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button id="cancelSquarePayment" style="background: #ff6b6b; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px;">Cancel Payment</button>
+                <button id="acceptAsPaid" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px;">Accept as Paid</button>
+            </div>
             <style>
                 @keyframes spin {
                     0% { transform: rotate(0deg); }
@@ -289,9 +293,13 @@ function showSquarePaymentWaiting(orderNumber) {
     
     document.body.appendChild(waitingOverlay);
     
-    // Add cancel button handler
+    // Add button handlers
     document.getElementById('cancelSquarePayment').addEventListener('click', () => {
         cancelSquarePayment();
+    });
+    
+    document.getElementById('acceptAsPaid').addEventListener('click', () => {
+        acceptAsPaid();
     });
     
     // Start verification polling
@@ -456,6 +464,96 @@ function cancelSquarePayment() {
     }
 }
 
+// Accept payment as paid manually
+function acceptAsPaid() {
+    squarePaymentWaiting = false;
+    
+    // Remove waiting overlay
+    const waitingOverlay = document.getElementById('squarePaymentWaiting');
+    if (waitingOverlay) {
+        waitingOverlay.remove();
+    }
+    
+    // Clear timeout
+    if (squarePaymentTimeout) {
+        clearTimeout(squarePaymentTimeout);
+        squarePaymentTimeout = null;
+    }
+    
+    // Process the payment manually using the same flow as successful Square payment
+    try {
+        if (window.moveCurrentOrderToCompleted && window.currentOrder) {
+            // Create a completed order object that matches the normal card payment structure
+            // Use the exact same structure as square-callback.html
+            const completedOrder = {
+                ...window.currentOrder,  // Spread all current order fields (items, orderNumber, etc.)
+                paymentMethod: 'Card',
+                tenderedAmount: window.currentOrder.total,
+                change: 0,
+                paymentStatus: 'paid',
+                timestamp: window.firebaseServices.Timestamp.now(),
+                squareTransactionId: 'manual_' + Date.now(),
+                squareStatus: 'manual_accept'
+            };
+            
+            window.moveCurrentOrderToCompleted(completedOrder);
+            
+            // Show the same success popup as normal card payments
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            overlay.style.zIndex = '999';
+            overlay.style.cursor = 'pointer';
+            const successMessage = document.createElement('div');
+            successMessage.style.position = 'fixed';
+            successMessage.style.top = '50%';
+            successMessage.style.left = '50%';
+            successMessage.style.transform = 'translate(-50%, -50%)';
+            successMessage.style.backgroundColor = '#4CAF50';
+            successMessage.style.color = 'white';
+            successMessage.style.padding = '40px';
+            successMessage.style.borderRadius = '15px';
+            successMessage.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+            successMessage.style.zIndex = '1000';
+            successMessage.style.textAlign = 'center';
+            successMessage.style.minWidth = '300px';
+
+            const paidAmount = window.currentOrder ? window.currentOrder.total : 0;
+            successMessage.innerHTML = `
+                <div style="font-size: 28px; font-weight: bold; margin-bottom: 6px;">Card payment successful</div>
+                <div style="font-size: 18px; opacity: 0.9;">Paid: ¥${paidAmount}</div>
+            `;
+            document.body.appendChild(overlay);
+            document.body.appendChild(successMessage);
+            
+            // Close payment modal
+            const paymentModal = document.getElementById('paymentModal');
+            if (paymentModal) {
+                paymentModal.style.display = 'none';
+            }
+            
+            const dismiss = async () => {
+                if (document.body.contains(overlay)) document.body.removeChild(overlay);
+                if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
+                // Refresh the page to update the UI with the completed order
+                window.location.reload();
+            };
+            overlay.addEventListener('click', dismiss);
+            successMessage.addEventListener('click', dismiss);
+            
+        } else {
+            showCustomAlert('Error: Cannot process payment', 'error');
+        }
+    } catch (error) {
+        console.error('Error accepting payment manually:', error);
+        showCustomAlert('Error accepting payment', 'error');
+    }
+}
+
 // Check for failed payments on page load
 async function checkForFailedPayments() {
     try {
@@ -558,12 +656,26 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Check if critical global variables are still valid
             if (!window.currentOrder || typeof window.currentOrder !== 'object') {
                 console.warn('window.currentOrder corrupted, attempting recovery');
+                // Don't set orderNumber to 0 - let the system generate a proper one
                 window.currentOrder = {
                     items: [],
                     subtotal: 0,
                     total: 0,
-                    orderNumber: 0
+                    orderNumber: null  // Will be generated properly
                 };
+                // Trigger proper order initialization
+                if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
+                    console.log('Triggering order recovery...');
+                    window.initializeOrder(window.generateOrderNumber, window.showCustomAlert)
+                        .then((recoveredOrder) => {
+                            if (recoveredOrder) {
+                                console.log('Order recovery successful:', recoveredOrder);
+                            }
+                        })
+                        .catch((error) => {
+                            console.error('Order recovery failed:', error);
+                        });
+                }
             }
             
             // Check if DOM elements are still accessible
@@ -668,7 +780,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         items: [],
         subtotal: 0,
         total: 0,
-        orderNumber: 0
+        orderNumber: null  // Will be generated properly
     };
 
     // Restore last active category if it exists
@@ -800,7 +912,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Open Square app
             window.SquareIntegration.processCardPayment();
         } else {
-            showCustomAlert('Square integration not available', 'error');
+            // Silently fall back to cash payment
+            console.log('Square integration not available, falling back to cash payment');
+            selectPaymentMethod('cash');
         }
     });
 
@@ -871,6 +985,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Store cleanup function for memory management
     if (paymentModalResult && paymentModalResult.cleanup) {
         paymentModalCleanup = paymentModalResult.cleanup;
+    }
+    
+    // Initialize table selection functionality
+    const tableSelectionResult = initTableSelection();
+    if (tableSelectionResult) {
+        window.tableSelection = tableSelectionResult;
     }
     
     // Set up page unload cleanup

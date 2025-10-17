@@ -468,24 +468,10 @@ class SquareIntegration {
 
     // Handle case where Square app is not installed
     handleSquareNotInstalled() {
-        console.log('Square app not found, showing fallback options');
+        console.log('Square app not found, showing manual payment option');
         
-        if (window.showCustomAlert) {
-            const userChoice = confirm(
-                'Square app not found. Would you like to:\n\n' +
-                '• Download Square Point of Sale app\n' +
-                '• Return to cash payment\n\n' +
-                'Click OK to download Square app, or Cancel to return to cash payment.'
-            );
-            
-            if (userChoice) {
-                // Open App Store to download Square app
-                window.open('https://apps.apple.com/jp/app/square-point-of-sale/id1116598129', '_blank');
-            } else {
-                // Return to cash payment
-                this.returnToCashPayment();
-            }
-        }
+        // Don't return to cash - let the processing modal stay open with "Accept as Paid" button
+        // The user can manually accept the payment or cancel
     }
 
     // Return to cash payment mode
