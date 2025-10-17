@@ -8,102 +8,9 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
     const totalAmountEl = document.getElementById('totalAmount');
     let tenderedAmount = '';
     
-    // Remove any existing debug panels first
-    const existingPanels = document.querySelectorAll('.payment-debug-panel, .debug-panel');
-    existingPanels.forEach(panel => panel.remove());
     
-    // Global flag to prevent multiple debug panels
-    if (window.paymentDebugPanelExists) {
-        console.log('Payment debug panel already exists, skipping initialization');
-        return;
-    }
-    window.paymentDebugPanelExists = true;
     
-    // Add debug panel to payment modal
-    function addDebugPanel() {
-        // Remove any existing panels first
-        const existing = document.querySelector('.payment-debug-panel');
-        if (existing) {
-            existing.remove();
-        }
-        
-        const debugPanel = document.createElement('div');
-        debugPanel.className = 'payment-debug-panel';
-        debugPanel.id = 'paymentDebugPanel';
-        debugPanel.style.cssText = `
-            position: fixed;
-            top: 60px;
-            right: 15px;
-            background: #000;
-            color: #00ff00;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 11px;
-            font-family: monospace;
-            z-index: 10000;
-            min-width: 180px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            border: 1px solid #333;
-        `;
-        
-        const debugTitle = document.createElement('div');
-        debugTitle.textContent = 'Debug';
-        debugTitle.style.cssText = 'font-weight: bold; margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 3px; font-size: 12px;';
-        
-        const debugContent = document.createElement('div');
-        debugContent.id = 'debugContent';
-        debugContent.style.cssText = 'line-height: 1.3; margin-bottom: 8px;';
-        
-        const resetBtn = document.createElement('button');
-        resetBtn.textContent = 'Reset';
-        resetBtn.style.cssText = `
-            background: #333;
-            color: #00ff00;
-            border: 1px solid #00ff00;
-            padding: 4px 8px;
-            border-radius: 3px;
-            font-size: 10px;
-            cursor: pointer;
-            width: 100%;
-        `;
-        resetBtn.onclick = () => {
-            tenderedAmount = '';
-            updateDisplay();
-            showCustomAlert('Payment state reset', 'info');
-        };
-        
-        debugPanel.appendChild(debugTitle);
-        debugPanel.appendChild(debugContent);
-        debugPanel.appendChild(resetBtn);
-        document.body.appendChild(debugPanel);
-    }
     
-    // Hide debug panel
-    function hideDebugPanel() {
-        const debugPanel = document.getElementById('paymentDebugPanel');
-        if (debugPanel) {
-            debugPanel.remove();
-        }
-    }
-    
-    // Update debug panel with current state
-    function updateDebugPanel() {
-        const debugContent = document.getElementById('debugContent');
-        if (!debugContent) return;
-        
-        const total = totalAmountEl ? totalAmountEl.textContent : 'N/A';
-        const tendered = tenderedAmountEl ? tenderedAmountEl.textContent : 'N/A';
-        const change = changeAmountEl ? changeAmountEl.textContent : 'N/A';
-        const tenderedVar = tenderedAmount || 'empty';
-        
-        debugContent.innerHTML = `
-            Total: ${total}<br>
-            Tendered: ${tendered}<br>
-            Change: ${change}<br>
-            Variable: ${tenderedVar}<br>
-            <small style="color: #666;">${new Date().toLocaleTimeString()}</small>
-        `;
-    }
     
     // Ensure tenderedAmount is always a string
     function ensureString(value) {
@@ -428,12 +335,11 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
         });
     }
 
-    // When modal opens, reset tendered amount and add debug panel
+    // When modal opens, reset tendered amount
     paymentModal.addEventListener('show', () => {
         try {
             tenderedAmount = '';
             updateDisplay();
-            addDebugPanel();
             updateButtonState();
             // Initialize payment method selection to cash
             if (window.selectPaymentMethod) {
@@ -446,15 +352,13 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
         }
     });
 
-    // Also add debug panel when modal becomes visible (more reliable)
+    // Monitor modal visibility changes
     const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
             if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
                 const modal = mutation.target;
                 if (modal.style.display === 'flex' || modal.style.display === 'block') {
                     setTimeout(() => {
-                        addDebugPanel();
-                        updateDebugPanel();
                         updateButtonState();
                         // Initialize payment method selection to cash
                         if (window.selectPaymentMethod) {
