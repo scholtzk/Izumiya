@@ -765,13 +765,12 @@
         }
         /* Override for table selection modal to allow full layout width */
         #tableSelectionModal {
-            display: block !important;
             align-items: unset !important;
             justify-content: unset !important;
         }
         
         #tableSelectionModal .modal-content.table-selection-content {
-            width: 1300px; /* wide enough to contain 1239px-inner */
+            width: 910px; /* 1300px * 0.7 = 910px (30% reduction) */
             max-width: none;
             overflow: hidden; /* inner container handles scroll if needed */
             position: fixed;
@@ -2000,8 +1999,8 @@
         }
 
         .table-layout-container {
-            width: 1239px;
-            height: 768px;
+            width: 867px;
+            height: 537px;
             overflow: hidden;
             background: #f8f9fa;
             border: 2px solid var(--primary);
@@ -2345,9 +2344,9 @@
                 <h2>Select Table</h2>
                 <button class="close-table-modal" id="closeTableModal">×</button>
             </div>
-            <div class="table-layout-container">
-                <iframe src="table-layout.html" width="1239" height="768" frameborder="0" style="border: none;"></iframe>
-            </div>
+                <div class="table-layout-container">
+                    <iframe src="table-layout.html" width="867" height="537" frameborder="0" style="border: none;"></iframe>
+                </div>
         </div>
     </div>
 
