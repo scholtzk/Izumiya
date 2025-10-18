@@ -207,44 +207,49 @@ export async function getOrderByNumber(orderNumber) {
     }
 }
 
-// Generate progressive order number with atomic operation
+// Generate simple continuous order number
 export async function generateOrderNumber() {
     try {
         const dailyOrdersRef = await getDailyOrdersDoc();
+        const doc = await window.firebaseServices.getDoc(dailyOrdersRef);
+        const data = doc.data();
         
-        // Use Firebase transaction for atomic operation
-        const result = await window.firebaseServices.runTransaction(dailyOrdersRef, async (transaction) => {
-            const doc = await transaction.get(dailyOrdersRef);
-            const data = doc.data();
+        if (!data || !data.orders) {
+            // No orders today, start with 1
+            return 1;
+        }
+        
+        // Get all completed orders (exclude 'current')
+        const orders = data.orders;
+        const completedOrders = Object.entries(orders)
+            .filter(([key, order]) => key !== 'current' && order.orderNumber)
+            .map(([key, order]) => order);
+        
+        if (completedOrders.length === 0) {
+            // No completed orders today, start with 1
+            return 1;
+        }
+        
+        // Find the most recent order by timestamp
+        const mostRecentOrder = completedOrders.reduce((latest, current) => {
+            if (!latest.timestamp) return current;
+            if (!current.timestamp) return latest;
             
-            if (!data) {
-                // First order of the day
-                return 1;
-            }
+            // Compare timestamps (newer is greater)
+            const latestTime = latest.timestamp.seconds || 0;
+            const currentTime = current.timestamp.seconds || 0;
             
-            // Get all completed orders (exclude 'current')
-            const orders = data.orders || {};
-            const completedOrders = Object.entries(orders)
-                .filter(([key, order]) => key !== 'current' && order.orderNumber)
-                .map(([key, order]) => order);
-            
-            if (completedOrders.length === 0) {
-                return 1;
-            }
-            
-            // Find highest order number
-            const maxOrderNumber = Math.max(...completedOrders.map(order => order.orderNumber));
-            return maxOrderNumber + 1;
+            return currentTime > latestTime ? current : latest;
         });
         
-        console.log('Generated atomic order number:', result);
-        return result;
+        // Return the most recent order number + 1
+        const nextOrderNumber = (mostRecentOrder.orderNumber || 0) + 1;
+        console.log('Most recent order:', mostRecentOrder.orderNumber, 'Next order:', nextOrderNumber);
+        return nextOrderNumber;
+        
     } catch (error) {
         console.error('Error generating order number:', error);
-        // Fallback to timestamp-based number if transaction fails
-        const fallbackNumber = Date.now() % 1000000;
-        console.warn('Using fallback order number:', fallbackNumber);
-        return fallbackNumber;
+        return 1; // Simple fallback
     }
 }
 
@@ -1344,13 +1349,7 @@ export function updateOrderSummary(currentOrder) {
 
 export async function initializeOrder(generateOrderNumber, showCustomAlert) {
     try {
-        let orderNumber = await generateOrderNumber();
-        
-        // Validate order number
-        if (!orderNumber || orderNumber < 1 || !Number.isInteger(orderNumber)) {
-            console.warn('Invalid order number generated:', orderNumber, 'using fallback');
-            orderNumber = Date.now() % 1000000; // Fallback to timestamp-based number
-        }
+        const orderNumber = await generateOrderNumber();
         
         const currentOrder = {
             items: [],
@@ -1395,8 +1394,8 @@ export async function loadCurrentOrder(getDailyOrdersDoc, showCustomAlert) {
             const currentOrderData = data.orders.current;
             let orderNumber = currentOrderData.orderNumber;
             
-            // If order number is 0, null, or invalid, generate a new one
-            if (!orderNumber || orderNumber < 1 || !Number.isInteger(orderNumber)) {
+            // If order number is invalid, generate a new one
+            if (!orderNumber || orderNumber < 1) {
                 console.warn('Invalid order number in current order:', orderNumber, 'generating new one');
                 orderNumber = await generateOrderNumber();
             }

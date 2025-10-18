@@ -425,6 +425,25 @@ function handleSquarePaymentSuccess() {
     const dismiss = async () => {
         if (document.body.contains(overlay)) document.body.removeChild(overlay);
         if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
+        
+        // Clear current order and initialize new one (same as cash payment flow)
+        try {
+            if (window.clearCurrentOrder) {
+                await window.clearCurrentOrder();
+                console.log('Current order cleared after Square payment');
+            }
+            
+            if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
+                const newOrder = await window.initializeOrder(window.generateOrderNumber, window.showCustomAlert);
+                if (newOrder) {
+                    window.currentOrder = newOrder;
+                    console.log('New order initialized after Square payment');
+                }
+            }
+        } catch (error) {
+            console.error('Error clearing/initializing order after Square payment:', error);
+        }
+        
         // Refresh the page to update the UI with the completed order
         window.location.reload();
     };
