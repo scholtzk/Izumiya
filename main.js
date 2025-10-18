@@ -503,7 +503,18 @@ function acceptAsPaid() {
     
     // Process the payment manually using the same flow as successful Square payment
     try {
+        console.log('Manual card payment - window.currentOrder:', window.currentOrder);
+        console.log('Manual card payment - window.currentOrder.orderNumber:', window.currentOrder?.orderNumber);
+        
         if (window.moveCurrentOrderToCompleted && window.currentOrder) {
+            // Ensure we have a valid order number
+            if (!window.currentOrder.orderNumber || isNaN(parseInt(window.currentOrder.orderNumber, 10))) {
+                console.error('Current order has no valid order number, cannot process manual payment');
+                console.error('Order number value:', window.currentOrder.orderNumber, 'Type:', typeof window.currentOrder.orderNumber);
+                alert('Error: Current order has no valid order number. Please start a new order.');
+                return;
+            }
+            
             // Create a completed order object that matches the normal card payment structure
             // Use the exact same structure as square-callback.html
             const completedOrder = {
@@ -516,6 +527,9 @@ function acceptAsPaid() {
                 squareTransactionId: 'manual_' + Date.now(),
                 squareStatus: 'manual_accept'
             };
+            
+            console.log('Manual card payment - completedOrder:', completedOrder);
+            console.log('Manual card payment - orderNumber:', completedOrder.orderNumber);
             
             window.moveCurrentOrderToCompleted(completedOrder);
             

@@ -216,6 +216,7 @@ export async function generateOrderNumber() {
         
         if (!data || !data.orders) {
             // No orders today, start with 1
+            console.log('No orders today, starting with 1');
             return 1;
         }
         
@@ -234,19 +235,28 @@ export async function generateOrderNumber() {
             return 1;
         }
         
-        // Find the highest order number (simpler approach)
+        // Find the highest order number (with proper type conversion)
         let highestOrderNumber = 0;
         
         completedOrders.forEach(order => {
             console.log('Checking order:', order.orderNumber, 'type:', typeof order.orderNumber);
-            if (order.orderNumber && order.orderNumber > highestOrderNumber) {
-                highestOrderNumber = order.orderNumber;
+            // Convert to number and validate
+            const orderNum = parseInt(order.orderNumber, 10);
+            if (!isNaN(orderNum) && orderNum > highestOrderNumber) {
+                highestOrderNumber = orderNum;
             }
         });
         
         // Return the highest order number + 1
         const nextOrderNumber = highestOrderNumber + 1;
         console.log('Highest order number found:', highestOrderNumber, 'Next order will be:', nextOrderNumber);
+        
+        // Validate the result
+        if (isNaN(nextOrderNumber) || nextOrderNumber < 1) {
+            console.warn('Invalid order number generated, using fallback');
+            return 1;
+        }
+        
         return nextOrderNumber;
         
     } catch (error) {
