@@ -13,7 +13,14 @@ export function initTableSelection() {
     // Open table selection modal
     tableSelectBtn.addEventListener('click', () => {
         tableSelectionModal.style.display = 'block';
-        updateTableSelectionDisplay();
+        // Ensure iframe content is loaded before updating display
+        const iframe = tableSelectionModal.querySelector('iframe');
+        if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.onload = () => updateTableSelectionDisplay();
+            if (iframe.contentWindow.document.readyState === 'complete') {
+                updateTableSelectionDisplay();
+            }
+        }
     });
     
     // Close table selection modal
@@ -28,40 +35,50 @@ export function initTableSelection() {
         }
     });
     
-    // Handle table selection
-    tableItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const tableNumber = item.getAttribute('data-table');
-            
-            // If clicking the same table, deselect it
-            if (currentTableNumber === tableNumber) {
-                currentTableNumber = null;
-            } else {
-                currentTableNumber = tableNumber;
-            }
-            
-            // Update current order with table number
-            updateCurrentOrderTableNumber(currentTableNumber);
-            
-            // Update UI
-            updateTableSelectionDisplay();
-            updateTableButtonDisplay();
-            
-            // Close modal
-            tableSelectionModal.style.display = 'none';
+    // Handle table selection from iframe
+    const iframe = tableSelectionModal.querySelector('iframe');
+    if (iframe) {
+        iframe.addEventListener('load', () => {
+            const iframeDocument = iframe.contentWindow.document;
+            iframeDocument.querySelectorAll('.table-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const tableNumber = this.getAttribute('data-table');
+                    
+                    // If clicking the same table, deselect it
+                    if (currentTableNumber === tableNumber) {
+                        currentTableNumber = null;
+                    } else {
+                        currentTableNumber = tableNumber;
+                    }
+                    
+                    // Update current order with table number
+                    updateCurrentOrderTableNumber(currentTableNumber);
+                    
+                    // Update UI
+                    updateTableSelectionDisplay();
+                    updateTableButtonDisplay();
+                    
+                    // Close modal immediately after selection
+                    tableSelectionModal.style.display = 'none';
+                });
+            });
         });
-    });
+    }
     
     // Update table selection display in modal
     function updateTableSelectionDisplay() {
-        tableItems.forEach(item => {
-            const tableNumber = item.getAttribute('data-table');
-            if (tableNumber === currentTableNumber) {
-                item.classList.add('selected');
-            } else {
-                item.classList.remove('selected');
-            }
-        });
+        const iframe = tableSelectionModal.querySelector('iframe');
+        if (iframe && iframe.contentWindow && iframe.contentWindow.document) {
+            const iframeDocument = iframe.contentWindow.document;
+            iframeDocument.querySelectorAll('.table-item').forEach(item => {
+                const tableNumber = item.getAttribute('data-table');
+                if (tableNumber === currentTableNumber) {
+                    item.classList.add('selected');
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+        }
     }
     
     // Update table button display
