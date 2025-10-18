@@ -81,6 +81,8 @@ window.processPayment = processPayment;
 window.processPayLater = processPayLater;
 window.updatePaymentModal = updatePaymentModal;
 window.getDailyOrdersDoc = getDailyOrdersDoc;
+window.getOrderByNumber = getOrderByNumber;
+window.generateOrderNumber = generateOrderNumber;
 
 // Robust fallback: ensure window.updateOrderInDaily is always set
 if (!window.updateOrderInDaily || typeof window.updateOrderInDaily !== 'function') {
@@ -436,19 +438,43 @@ function handleSquarePaymentSuccess() {
         
         console.log('Square payment success popup dismissed - starting UI refresh');
         
+        // Check if all required functions are available
+        console.log('Checking required functions:');
+        console.log('- window.displayOrderLog:', typeof window.displayOrderLog);
+        console.log('- window.getDisplayName:', typeof window.getDisplayName);
+        console.log('- window.translate:', typeof window.translate);
+        console.log('- window.updateOrderInDaily:', typeof window.updateOrderInDaily);
+        console.log('- window.getOrderByNumber:', typeof window.getOrderByNumber);
+        console.log('- window.showCustomAlert:', typeof window.showCustomAlert);
+        
         // Update order log (callback page already moved current order to completed)
         const container = document.querySelector('.order-log-container');
+        console.log('Order log container found:', !!container);
+        
         if (container && window.displayOrderLog) {
             console.log('Refreshing order log...');
-            await window.displayOrderLog(container);
-            console.log('Order log refreshed');
+            try {
+                await window.displayOrderLog(container, window.getDisplayName, window.translate, window.updateOrderInDaily, window.getOrderByNumber, window.showCustomAlert);
+                console.log('Order log refreshed successfully');
+            } catch (error) {
+                console.error('Error refreshing order log:', error);
+            }
+        } else {
+            console.log('Order log container not found - this is normal if Order Log tab is not active');
+            console.log('Order log will be updated when user switches to Order Log tab');
         }
         
         // Initialize new order (callback page already cleared current order)
         try {
+            console.log('Checking initializeOrder functions:');
+            console.log('- window.initializeOrder:', typeof window.initializeOrder);
+            console.log('- window.generateOrderNumber:', typeof window.generateOrderNumber);
+            console.log('- window.showCustomAlert:', typeof window.showCustomAlert);
+            
             if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
                 console.log('Initializing new order...');
                 const newOrder = await window.initializeOrder(window.generateOrderNumber, window.showCustomAlert);
+                console.log('initializeOrder returned:', newOrder);
                 if (newOrder) {
                     console.log('New order initialized after Square payment:', newOrder);
                     
@@ -469,11 +495,42 @@ function handleSquarePaymentSuccess() {
                         console.log('Order items cleared');
                     }
                     
-                    // Update order summary
+                    // Update order summary - try multiple approaches
                     if (window.updateOrderSummary) {
                         window.updateOrderSummary(newOrder);
-                        console.log('Order summary updated');
+                        console.log('Order summary updated via window.updateOrderSummary');
+                    } else {
+                        // Fallback: manually update summary elements
+                        const subtotalEl = document.querySelector('.subtotal-amount');
+                        const totalEl = document.querySelector('.total-amount');
+                        if (subtotalEl) {
+                            subtotalEl.textContent = `¥${newOrder.subtotal}`;
+                            console.log('Subtotal updated manually to:', subtotalEl.textContent);
+                        }
+                        if (totalEl) {
+                            totalEl.textContent = `¥${newOrder.total}`;
+                            console.log('Total updated manually to:', totalEl.textContent);
+                        }
                     }
+                    
+                    // Force a visual refresh by triggering a reflow
+                    document.body.offsetHeight;
+                    
+                    // Additional aggressive refresh - try to re-render everything
+                    console.log('Attempting additional UI refresh...');
+                    
+                    // Try to refresh the current order display by calling renderOrderItems
+                    if (window.renderOrderItems && newOrder.items) {
+                        const orderItemsContainer = document.querySelector('.order-items');
+                        if (orderItemsContainer) {
+                            window.renderOrderItems(newOrder.items, orderItemsContainer);
+                            console.log('Order items re-rendered');
+                        }
+                    }
+                    
+                    // Force update the global currentOrder reference
+                    window.currentOrder = newOrder;
+                    console.log('window.currentOrder updated to:', window.currentOrder);
                     
                     console.log('UI refresh completed for Square payment');
                 }
@@ -611,18 +668,11 @@ function acceptAsPaid() {
                 // Update order log first
                 const container = document.querySelector('.order-log-container');
                 if (container && window.displayOrderLog) {
-                    await window.displayOrderLog(container);
+                    await window.displayOrderLog(container, window.getDisplayName, window.translate, window.updateOrderInDaily, window.getOrderByNumber, window.showCustomAlert);
                 }
                 
-                // Clear current order (same as cash payment)
-                try {
-                    if (window.clearCurrentOrder) {
-                        await window.clearCurrentOrder();
-                        console.log('Current order cleared after manual card payment');
-                    }
-                } catch (error) {
-                    console.error('Error clearing current order:', error);
-                }
+                // Note: For Square payments, the callback page already clears the current order
+                // No need to clear it again here
                 
                 // Initialize new order (same as cash payment)
                 try {
