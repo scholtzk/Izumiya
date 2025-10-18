@@ -103,14 +103,23 @@
     </div>
     
     <script>
-        // Add click functionality for testing
+        // Add click functionality and communicate with parent window
         document.querySelectorAll('.table-item').forEach(item => {
             item.addEventListener('click', function() {
+                const tableNumber = this.getAttribute('data-table');
+                
                 // Remove selected class from all items
                 document.querySelectorAll('.table-item').forEach(el => el.classList.remove('selected'));
                 // Add selected class to clicked item
                 this.classList.add('selected');
-                console.log('Selected table:', this.getAttribute('data-table'));
+                
+                // Send message to parent window
+                window.parent.postMessage({
+                    type: 'tableSelected',
+                    tableNumber: tableNumber
+                }, '*');
+                
+                console.log('Selected table:', tableNumber);
             });
         });
     </script>

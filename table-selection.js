@@ -35,35 +35,29 @@ export function initTableSelection() {
         }
     });
     
-    // Handle table selection from iframe
-    const iframe = tableSelectionModal.querySelector('iframe');
-    if (iframe) {
-        iframe.addEventListener('load', () => {
-            const iframeDocument = iframe.contentWindow.document;
-            iframeDocument.querySelectorAll('.table-item').forEach(item => {
-                item.addEventListener('click', function() {
-                    const tableNumber = this.getAttribute('data-table');
-                    
-                    // If clicking the same table, deselect it
-                    if (currentTableNumber === tableNumber) {
-                        currentTableNumber = null;
-                    } else {
-                        currentTableNumber = tableNumber;
-                    }
-                    
-                    // Update current order with table number
-                    updateCurrentOrderTableNumber(currentTableNumber);
-                    
-                    // Update UI
-                    updateTableSelectionDisplay();
-                    updateTableButtonDisplay();
-                    
-                    // Close modal immediately after selection
-                    tableSelectionModal.style.display = 'none';
-                });
-            });
-        });
-    }
+    // Handle table selection from iframe via postMessage
+    window.addEventListener('message', (event) => {
+        if (event.data.type === 'tableSelected') {
+            const tableNumber = event.data.tableNumber;
+            
+            // If clicking the same table, deselect it
+            if (currentTableNumber === tableNumber) {
+                currentTableNumber = null;
+            } else {
+                currentTableNumber = tableNumber;
+            }
+            
+            // Update current order with table number
+            updateCurrentOrderTableNumber(currentTableNumber);
+            
+            // Update UI
+            updateTableSelectionDisplay();
+            updateTableButtonDisplay();
+            
+            // Close modal immediately after selection
+            tableSelectionModal.style.display = 'none';
+        }
+    });
     
     // Update table selection display in modal
     function updateTableSelectionDisplay() {
