@@ -438,14 +438,20 @@ function handleSquarePaymentSuccess() {
                 if (newOrder) {
                     window.currentOrder = newOrder;
                     console.log('New order initialized after Square payment');
+                    
+                    // Update UI without page reload (same as cash payments)
+                    if (window.renderOrderItems && window.updateOrderSummary) {
+                        document.querySelector('.order-title').textContent = `Current Order #${newOrder.orderNumber}`;
+                        window.renderOrderItems(newOrder, window.currentLang, window.getDisplayName, window.showMilkTypeButtons, window.hideMilkTypeButtons, window.updateItemQuantity, window.getDailyOrdersDoc);
+                        window.updateOrderSummary(newOrder);
+                    }
                 }
             }
         } catch (error) {
             console.error('Error clearing/initializing order after Square payment:', error);
         }
         
-        // Refresh the page to update the UI with the completed order
-        window.location.reload();
+        // No page reload needed - UI is updated above
     };
     overlay.addEventListener('click', dismiss);
     successMessage.addEventListener('click', dismiss);
@@ -558,8 +564,33 @@ function acceptAsPaid() {
             const dismiss = async () => {
                 if (document.body.contains(overlay)) document.body.removeChild(overlay);
                 if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
-                // Refresh the page to update the UI with the completed order
-                window.location.reload();
+                
+                // Clear current order and initialize new one (same as cash payment flow)
+                try {
+                    if (window.clearCurrentOrder) {
+                        await window.clearCurrentOrder();
+                        console.log('Current order cleared after manual card payment');
+                    }
+                    
+                    if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
+                        const newOrder = await window.initializeOrder(window.generateOrderNumber, window.showCustomAlert);
+                        if (newOrder) {
+                            window.currentOrder = newOrder;
+                            console.log('New order initialized after manual card payment');
+                            
+                            // Update UI without page reload (same as cash payments)
+                            if (window.renderOrderItems && window.updateOrderSummary) {
+                                document.querySelector('.order-title').textContent = `Current Order #${newOrder.orderNumber}`;
+                                window.renderOrderItems(newOrder, window.currentLang, window.getDisplayName, window.showMilkTypeButtons, window.hideMilkTypeButtons, window.updateItemQuantity, window.getDailyOrdersDoc);
+                                window.updateOrderSummary(newOrder);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error clearing/initializing order after manual card payment:', error);
+                }
+                
+                // No page reload needed - UI is updated above
             };
             overlay.addEventListener('click', dismiss);
             successMessage.addEventListener('click', dismiss);

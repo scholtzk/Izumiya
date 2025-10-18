@@ -121,12 +121,21 @@
         // Initialize Firebase
         let firebaseServices = null;
         
-        // Load Firebase services from main app
-        if (window.firebaseServices) {
-            firebaseServices = window.firebaseServices;
-        } else {
-            // Fallback: try to load from localStorage or use basic fetch
-            console.log('Firebase services not available, using fallback');
+        // Wait for Firebase to be fully loaded
+        function waitForFirebase() {
+            return new Promise((resolve) => {
+                const checkFirebase = () => {
+                    if (window.firebaseServices && window.firebaseDb) {
+                        firebaseServices = window.firebaseServices;
+                        console.log('Firebase services loaded successfully');
+                        resolve();
+                    } else {
+                        console.log('Waiting for Firebase services...');
+                        setTimeout(checkFirebase, 100);
+                    }
+                };
+                checkFirebase();
+            });
         }
 
         // Simple debug helpers
@@ -185,24 +194,26 @@
             return dailyOrdersRef;
         }
 
-        // Redirect to ProSurf with query parameters for the POS to process
+        // Open ProSurf with query parameters (no redirect to main website)
         function redirectToProSurf(query) {
             const base = 'https://scholtzk.github.io/Izumiya/';
             const prosurfUrl = 'prosurf://' + base + (query || '');
-            console.log('Redirecting to ProSurf:', prosurfUrl);
+            console.log('Opening ProSurf:', prosurfUrl);
             
             // Try to open ProSurf immediately
             window.location.href = prosurfUrl;
             
-            // Fallback after 3 seconds
-            setTimeout(() => {
-                window.location.href = base + (query || '');
-            }, 3000);
+            // No fallback redirect - stay on callback page
+            console.log('ProSurf opened. Staying on callback page.');
         }
 
         // Main processing function
         async function processSquareCallback() {
             try {
+                // Wait for Firebase to be fully loaded
+                document.getElementById('details').textContent = 'Connecting to Firebase services...';
+                await waitForFirebase();
+                
                 const transactionInfo = parseSquareCallback();
                 const statusElement = document.getElementById('status');
                 const detailsElement = document.getElementById('details');
