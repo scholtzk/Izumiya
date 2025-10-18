@@ -402,36 +402,8 @@ class SquareIntegration {
     
     // Show debug information on screen for iPad
     showDebugInfo(message) {
-        // Create or update debug display
-        let debugDiv = document.getElementById('square-debug');
-        if (!debugDiv) {
-            debugDiv = document.createElement('div');
-            debugDiv.id = 'square-debug';
-            debugDiv.style.cssText = `
-                position: fixed;
-                top: 10px;
-                left: 10px;
-                background: rgba(0,0,0,0.8);
-                color: white;
-                padding: 10px;
-                border-radius: 5px;
-                font-size: 12px;
-                z-index: 10000;
-                max-width: 300px;
-                word-wrap: break-word;
-            `;
-            document.body.appendChild(debugDiv);
-        }
-        
-        const timestamp = new Date().toLocaleTimeString();
-        debugDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
-        
-        // Auto-remove after 10 seconds
-        setTimeout(() => {
-            if (debugDiv && debugDiv.parentNode) {
-                debugDiv.parentNode.removeChild(debugDiv);
-            }
-        }, 10000);
+        // Debug overlay removed - only log to console
+        console.log('Square Debug:', message);
     }
 
     // Handle case where Square app is not installed

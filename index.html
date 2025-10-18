@@ -771,6 +771,7 @@
         
         #tableSelectionModal .modal-content.table-selection-content {
             width: 910px; /* 1300px * 0.7 = 910px (30% reduction) */
+            height: 655px; /* 536px + ~52px for header + 1px for exact fit */
             max-width: none;
             overflow: hidden; /* inner container handles scroll if needed */
             position: fixed;
@@ -2000,7 +2001,7 @@
 
         .table-layout-container {
             width: 867px;
-            height: 537px;
+            height: 536px;
             overflow: hidden;
             background: #f8f9fa;
             border: 2px solid var(--primary);
@@ -2265,11 +2266,10 @@
             <div class="payment-modal-header">
                 <h2>Cash Payment</h2>
                 <button class="table-select-btn" id="tableSelectBtn" title="Select Table">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                        <path d="M9 9h6v6H9z"/>
-                        <path d="M3 9h18"/>
-                        <path d="M9 3v18"/>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="6" width="20" height="2" rx="1"/>
+                        <path d="M4 8v12"/>
+                        <path d="M20 8v12"/>
                     </svg>
                     <span class="table-number-badge" id="tableNumberBadge" style="display: none;"></span>
                 </button>
@@ -2345,7 +2345,7 @@
                 <button class="close-table-modal" id="closeTableModal">×</button>
             </div>
                 <div class="table-layout-container">
-                    <iframe src="table-layout.html" width="867" height="537" frameborder="0" style="border: none;"></iframe>
+                    <iframe src="table-layout.html" width="867" height="536" frameborder="0" style="border: none;"></iframe>
                 </div>
         </div>
     </div>

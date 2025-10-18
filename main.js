@@ -255,8 +255,23 @@ let squarePaymentOrderNumber = null;
 
 // Show Square payment waiting popup
 function showSquarePaymentWaiting(orderNumber) {
+    console.log('Showing Square payment waiting popup for order:', orderNumber);
+    
+    // Set the waiting flag immediately
     squarePaymentWaiting = true;
     squarePaymentOrderNumber = orderNumber;
+    
+    // Remove any existing waiting overlay first
+    const existingOverlay = document.getElementById('squarePaymentWaiting');
+    if (existingOverlay) {
+        existingOverlay.remove();
+    }
+    
+    // Clear any existing timeout
+    if (squarePaymentTimeout) {
+        clearTimeout(squarePaymentTimeout);
+        squarePaymentTimeout = null;
+    }
     
     // Create waiting overlay
     const waitingOverlay = document.createElement('div');
@@ -306,15 +321,7 @@ function showSquarePaymentWaiting(orderNumber) {
     // Start verification polling
     startSquarePaymentVerification();
     
-    // Set timeout for cancel button
-    squarePaymentTimeout = setTimeout(() => {
-        if (squarePaymentWaiting) {
-            const cancelBtn = document.getElementById('cancelSquarePayment');
-            if (cancelBtn) {
-                cancelBtn.style.display = 'block';
-            }
-        }
-    }, 10000); // Show cancel button after 10 seconds
+    console.log('Square payment waiting popup displayed successfully');
 }
 
 // Start polling for payment verification
@@ -952,12 +959,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     document.getElementById('processCardBtn').addEventListener('click', function() {
+        console.log('Card payment button clicked');
+        
         // Use Square integration for card payment
         if (window.SquareIntegration && window.SquareIntegration.processCardPayment) {
+            console.log('Square integration available, processing card payment');
+            
             // Show waiting popup before opening Square
             const currentOrder = window.currentOrder;
             if (currentOrder && currentOrder.orderNumber) {
+                console.log('Current order found, showing waiting popup');
                 showSquarePaymentWaiting(currentOrder.orderNumber);
+            } else {
+                console.warn('No current order or order number found, showing waiting popup anyway');
+                showSquarePaymentWaiting('unknown');
             }
             
             // Open Square app

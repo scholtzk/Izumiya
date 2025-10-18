@@ -13,11 +13,18 @@
             --dark: #2A2118;
         }
         
+        html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
         body {
             margin: 0;
             padding: 0;
             background-color: transparent;
             font-family: 'Helvetica Neue', Arial, sans-serif;
+            overflow: hidden;
         }
 
             .table-layout {
@@ -25,10 +32,11 @@
                 width: 1239px;
                 height: 768px;
                 background: #f8f9fa;
-                border: 2px solid var(--primary);
+                border: none;
                 border-radius: 12px;
                 margin: 0;
-                overflow: visible;
+                padding: 0;
+                overflow: hidden;
                 transform: scale(0.7);
                 transform-origin: top left;
             }
@@ -43,7 +51,7 @@
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 20px;
             color: var(--primary);
             transition: all 0.2s ease;
             user-select: none;
@@ -66,40 +74,40 @@
 <body>
     <div class="table-layout">
             <!-- Table 1: Circle at (180, 450) -->
-            <div class="table-item table-1" data-table="1" style="left: 180px; top: 450px; width: 120px; height: 120px; border-radius: 50%;">1</div>
+            <div class="table-item table-1" data-table="1" style="left: 120px; top: 450px; width: 120px; height: 120px; border-radius: 50%;">1</div>
             
             <!-- Table 2: Circle at (180, 330) -->
-            <div class="table-item table-2" data-table="2" style="left: 180px; top: 330px; width: 120px; height: 120px; border-radius: 50%;">2</div>
+            <div class="table-item table-2" data-table="2" style="left: 120px; top: 250px; width: 120px; height: 120px; border-radius: 50%;">2</div>
             
             <!-- Table 3: Square at (430, 300) -->
-            <div class="table-item table-3" data-table="3" style="left: 430px; top: 300px; width: 140px; height: 160px;">3</div>
+            <div class="table-item table-3" data-table="3" style="left: 430px; top: 190px; width: 160px; height: 200px;">3</div>
             
             <!-- Table 4: Square at (600, 300) -->
-            <div class="table-item table-4" data-table="4" style="left: 600px; top: 300px; width: 140px; height: 160px;">4</div>
+            <div class="table-item table-4" data-table="4" style="left: 680px; top: 190px; width: 160px; height: 200px;">4</div>
             
                 <!-- Table 5: Rectangle moved to right edge -->
-                <div class="table-item table-5" data-table="5" style="left: 1079px; top: 300px; width: 260px; height: 160px;">5</div>
+                <div class="table-item table-5" data-table="5" style="left: 950px; top: 190px; width: 260px; height: 180px;">5</div>
 
                 <!-- Table 6: Rectangle moved to right edge -->
-                <div class="table-item table-6" data-table="6" style="left: 1079px; top: 500px; width: 160px; height: 220px;">6</div>
+                <div class="table-item table-6" data-table="6" style="left: 1000px; top: 480px; width: 200px; height: 260px;">6</div>
             
             <!-- Table 7: Square at (630, 500) -->
-            <div class="table-item table-7" data-table="7" style="left: 630px; top: 500px; width: 160px; height: 160px;">7</div>
+            <div class="table-item table-7" data-table="7" style="left: 630px; top: 480px; width: 170px; height: 170px;">7</div>
             
             <!-- Table 8: Circle at (150, 60) -->
-            <div class="table-item table-8" data-table="8" style="left: 150px; top: 60px; width: 120px; height: 120px; border-radius: 50%;">8</div>
+            <div class="table-item table-8" data-table="8" style="left: 120px; top: 20px; width: 120px; height: 120px; border-radius: 50%;">8</div>
             
             <!-- Table 9: Long rectangle at (430, 60) -->
-            <div class="table-item table-9" data-table="9" style="left: 430px; top: 60px; width: 360px; height: 100px;">9</div>
+            <div class="table-item table-9" data-table="9" style="left: 430px; top: 25px; width: 360px; height: 100px;">9</div>
             
             <!-- Table 10: Circle at (1040, 60) -->
-            <div class="table-item table-10" data-table="10" style="left: 1040px; top: 60px; width: 120px; height: 120px; border-radius: 50%;">10</div>
+            <div class="table-item table-10" data-table="10" style="left: 1020px; top: 10px; width: 120px; height: 120px; border-radius: 50%;">10</div>
             
             <!-- Dividing line underneath tables 8, 9, 10 -->
-            <div class="dividing-line" style="position: absolute; left: 0px; top: 230px; width: 1239px; height: 2px; background-color: var(--primary);"></div>
+            <div class="dividing-line" style="position: absolute; left: 0px; top: 160px; width: 1239px; height: 2px; background-color: var(--primary);"></div>
             
                 <!-- Table 11: Tall rectangle - 75% smaller width, moved to left edge -->
-                <div class="table-item table-11" data-table="11" style="left: 0px; top: 180px; width: 60px; height: 400px;">11</div>
+                <div class="table-item table-11" data-table="11" style="left: 10px; top: 190px; width: 60px; height: 450px;">11</div>
     </div>
     
     <script>
