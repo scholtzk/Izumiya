@@ -434,19 +434,48 @@ function handleSquarePaymentSuccess() {
         if (document.body.contains(overlay)) document.body.removeChild(overlay);
         if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
         
+        console.log('Square payment success popup dismissed - starting UI refresh');
+        
         // Update order log (callback page already moved current order to completed)
         const container = document.querySelector('.order-log-container');
         if (container && window.displayOrderLog) {
+            console.log('Refreshing order log...');
             await window.displayOrderLog(container);
+            console.log('Order log refreshed');
         }
         
         // Initialize new order (callback page already cleared current order)
         try {
             if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
+                console.log('Initializing new order...');
                 const newOrder = await window.initializeOrder(window.generateOrderNumber, window.showCustomAlert);
                 if (newOrder) {
-                    console.log('New order initialized after Square payment');
-                    // initializeOrder() already handles UI refresh
+                    console.log('New order initialized after Square payment:', newOrder);
+                    
+                    // Force refresh of all UI elements
+                    console.log('Force refreshing UI elements...');
+                    
+                    // Update order title
+                    const orderTitle = document.querySelector('.order-title');
+                    if (orderTitle) {
+                        orderTitle.textContent = `Current Order #${newOrder.orderNumber}`;
+                        console.log('Order title updated to:', orderTitle.textContent);
+                    }
+                    
+                    // Clear order items
+                    const orderItems = document.querySelector('.order-items');
+                    if (orderItems) {
+                        orderItems.innerHTML = '';
+                        console.log('Order items cleared');
+                    }
+                    
+                    // Update order summary
+                    if (window.updateOrderSummary) {
+                        window.updateOrderSummary(newOrder);
+                        console.log('Order summary updated');
+                    }
+                    
+                    console.log('UI refresh completed for Square payment');
                 }
             }
         } catch (error) {
