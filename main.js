@@ -434,13 +434,8 @@ function handleSquarePaymentSuccess() {
         if (document.body.contains(overlay)) document.body.removeChild(overlay);
         if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
         
-        // Clear current order and initialize new one (same as cash payment flow)
+        // Initialize new order (callback page already handled Firebase operations)
         try {
-            if (window.clearCurrentOrder) {
-                await window.clearCurrentOrder();
-                console.log('Current order cleared after Square payment');
-            }
-            
             if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
                 const newOrder = await window.initializeOrder(window.generateOrderNumber, window.showCustomAlert);
                 if (newOrder) {
@@ -456,7 +451,7 @@ function handleSquarePaymentSuccess() {
                 }
             }
         } catch (error) {
-            console.error('Error clearing/initializing order after Square payment:', error);
+            console.error('Error initializing order after Square payment:', error);
         }
         
         // No page reload needed - UI is updated above
@@ -573,13 +568,8 @@ function acceptAsPaid() {
                 if (document.body.contains(overlay)) document.body.removeChild(overlay);
                 if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
                 
-                // Clear current order and initialize new one (same as cash payment flow)
+                // Initialize new order (moveCurrentOrderToCompleted already handled Firebase operations)
                 try {
-                    if (window.clearCurrentOrder) {
-                        await window.clearCurrentOrder();
-                        console.log('Current order cleared after manual card payment');
-                    }
-                    
                     if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
                         const newOrder = await window.initializeOrder(window.generateOrderNumber, window.showCustomAlert);
                         if (newOrder) {
@@ -595,7 +585,7 @@ function acceptAsPaid() {
                         }
                     }
                 } catch (error) {
-                    console.error('Error clearing/initializing order after manual card payment:', error);
+                    console.error('Error initializing order after manual card payment:', error);
                 }
                 
                 // No page reload needed - UI is updated above
