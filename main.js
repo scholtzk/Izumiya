@@ -439,15 +439,8 @@ function handleSquarePaymentSuccess() {
             if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
                 const newOrder = await window.initializeOrder(window.generateOrderNumber, window.showCustomAlert);
                 if (newOrder) {
-                    window.currentOrder = newOrder;
                     console.log('New order initialized after Square payment');
-                    
-                    // Update UI without page reload (same as cash payments)
-                    if (window.renderOrderItems && window.updateOrderSummary) {
-                        document.querySelector('.order-title').textContent = `Current Order #${newOrder.orderNumber}`;
-                        window.renderOrderItems(newOrder, window.currentLang, window.getDisplayName, window.showMilkTypeButtons, window.hideMilkTypeButtons, window.updateItemQuantity, window.getDailyOrdersDoc);
-                        window.updateOrderSummary(newOrder);
-                    }
+                    // initializeOrder() already handles UI refresh
                 }
             }
         } catch (error) {
@@ -573,15 +566,8 @@ function acceptAsPaid() {
                     if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
                         const newOrder = await window.initializeOrder(window.generateOrderNumber, window.showCustomAlert);
                         if (newOrder) {
-                            window.currentOrder = newOrder;
                             console.log('New order initialized after manual card payment');
-                            
-                            // Update UI without page reload (same as cash payments)
-                            if (window.renderOrderItems && window.updateOrderSummary) {
-                                document.querySelector('.order-title').textContent = `Current Order #${newOrder.orderNumber}`;
-                                window.renderOrderItems(newOrder, window.currentLang, window.getDisplayName, window.showMilkTypeButtons, window.hideMilkTypeButtons, window.updateItemQuantity, window.getDailyOrdersDoc);
-                                window.updateOrderSummary(newOrder);
-                            }
+                            // initializeOrder() already handles UI refresh
                         }
                     }
                 } catch (error) {
