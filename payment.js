@@ -59,7 +59,6 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                 tenderedAmount = '';
                 if (tenderedAmountEl) tenderedAmountEl.textContent = '0';
                 if (changeAmountEl) changeAmountEl.textContent = '0';
-                updateDebugPanel();
                 updateButtonState();
                 return;
             }
@@ -77,7 +76,6 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                 changeAmountEl.textContent = change >= 0 ? change : 0;
             }
             
-            updateDebugPanel();
             updateButtonState();
         } catch (error) {
             console.error('Error in updateDisplay:', error);
@@ -85,7 +83,6 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
             tenderedAmount = '';
             if (tenderedAmountEl) tenderedAmountEl.textContent = '0';
             if (changeAmountEl) changeAmountEl.textContent = '0';
-            updateDebugPanel();
             updateButtonState();
         }
     }
@@ -163,7 +160,6 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                 if (this.id === 'payLaterBtn') {
                     processPayLater();
                     paymentModal.style.display = 'none';
-                    hideDebugPanel();
                     return;
                 } else if (value === '⌫') {
                     // Backspace functionality
@@ -206,70 +202,13 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                 paymentModal.style.display = 'none';
                 tenderedAmount = '';
                 updateDisplay();
-                hideDebugPanel();
             } catch (error) {
                 console.error('Error in cancel button handler:', error);
                 paymentModal.style.display = 'none';
-                hideDebugPanel();
             }
         });
     }
 
-    // Double-check function to read debug panel values and validate payment
-    function doubleCheckPaymentValues() {
-        try {
-            const debugContent = document.getElementById('debugContent');
-            if (!debugContent) {
-                console.log('Debug panel not found, using standard validation');
-                return null;
-            }
-            
-            const debugText = debugContent.innerHTML;
-            console.log('Debug panel content:', debugText);
-            
-            // Extract values from debug panel using regex
-            const totalMatch = debugText.match(/Total:\s*(\d+)/);
-            const tenderedMatch = debugText.match(/Tendered:\s*(\d+)/);
-            const changeMatch = debugText.match(/Change:\s*(\d+)/);
-            const variableMatch = debugText.match(/Variable:\s*(.+?)(?:<br>|$)/);
-            
-            if (totalMatch && tenderedMatch) {
-                const debugTotal = parseInt(totalMatch[1], 10);
-                const debugTendered = parseInt(tenderedMatch[1], 10);
-                const debugChange = changeMatch ? parseInt(changeMatch[1], 10) : 0;
-                const debugVariable = variableMatch ? variableMatch[1].trim() : 'empty';
-                
-                console.log('Double-check values - Total:', debugTotal, 'Tendered:', debugTendered, 'Change:', debugChange, 'Variable:', debugVariable);
-                
-                // Check if the debug values show sufficient payment
-                if (debugTendered >= debugTotal) {
-                    console.log('Double-check PASSED: Payment is sufficient according to debug panel');
-                    return {
-                        total: debugTotal,
-                        tendered: debugTendered,
-                        change: debugChange,
-                        variable: debugVariable,
-                        isValid: true
-                    };
-                } else {
-                    console.log('Double-check FAILED: Payment is insufficient according to debug panel');
-                    return {
-                        total: debugTotal,
-                        tendered: debugTendered,
-                        change: debugChange,
-                        variable: debugVariable,
-                        isValid: false
-                    };
-                }
-            }
-            
-            console.log('Could not parse debug panel values, falling back to standard validation');
-            return null;
-        } catch (error) {
-            console.error('Error in double-check function:', error);
-            return null;
-        }
-    }
 
     // Complete Payment button
     const completeBtn = document.getElementById('completePaymentBtn');
@@ -292,12 +231,8 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                     return;
                 }
                 
-                // Double-check using debug panel values
-                const doubleCheckResult = doubleCheckPaymentValues();
-                if (doubleCheckResult && doubleCheckResult.isValid) {
-                    console.log('Double-check override: Payment is sufficient according to debug panel, proceeding with payment');
-                    // Override the insufficient payment check and proceed
-                } else if (tendered < total) {
+                // Validate payment amount
+                if (tendered < total) {
                     showCustomAlert('Insufficient payment amount', 'warning');
                     return;
                 }
@@ -314,7 +249,6 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                     paymentModal.style.display = 'none';
                     tenderedAmount = '';
                     updateDisplay();
-                    hideDebugPanel();
                 } catch (paymentError) {
                     console.error('Payment processing failed:', paymentError);
                     showCustomAlert('Payment failed. Please try again.', 'error');
@@ -366,7 +300,7 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                         }
                     }, 100);
                 } else if (modal.style.display === 'none') {
-                    hideDebugPanel();
+                    // Modal closed - no debug panel to hide
                 }
             }
         });
@@ -382,7 +316,6 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
                 tenderedAmount = '';
                 updateDisplay();
             }
-            updateDebugPanel();
         }
     }, 30000); // Check every 30 seconds
 
@@ -390,9 +323,6 @@ export function initPaymentModal({ processPayment, processPayLater, updatePaymen
     const cleanup = () => {
         clearInterval(validationInterval);
         observer.disconnect();
-        // Remove debug panel on cleanup
-        const debugPanel = document.getElementById('paymentDebugPanel');
-        if (debugPanel) debugPanel.remove();
     };
 
     // Expose a reset function
