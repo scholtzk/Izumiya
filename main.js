@@ -203,7 +203,8 @@ function selectPaymentMethod(method) {
     const cashNumpadElements = document.getElementById('cashNumpadElements');
     const completePaymentBtn = document.getElementById('completePaymentBtn');
     const processCardBtn = document.getElementById('processCardBtn');
-    const totalAmount = parseInt(document.getElementById('totalAmount').textContent);
+    // Get the exact order total from the current order object to avoid floating point issues
+    const totalAmount = window.currentOrder ? window.currentOrder.total : parseInt(document.getElementById('totalAmount').textContent);
     
     // Update button states
     if (method === 'cash') {
@@ -237,7 +238,7 @@ function selectPaymentMethod(method) {
         // Update modal title
         document.querySelector('#paymentModal h2').textContent = 'Card Payment';
         
-        // Calculate and display card surcharge
+        // Calculate and display card surcharge (2.5%)
         const surcharge = Math.round(totalAmount * 0.025);
         const cardTotal = totalAmount + surcharge;
         

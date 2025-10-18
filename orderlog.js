@@ -991,7 +991,7 @@ export async function openEditOrderModal(orderNumber, getOrderByNumber, showCust
             totalElement.style.fontWeight = 'bold';
             totalElement.style.fontSize = '18px';
             totalElement.style.textAlign = 'center';
-            const total = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const total = Math.round(order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0));
             totalElement.textContent = `Total: ¥${total}`;
             editOrderItems.appendChild(totalElement);
             // Render Add Item button
@@ -1329,12 +1329,13 @@ export function updateOrderSummary(currentOrder) {
         subtotal += item.price * item.quantity;
     });
     
-    currentOrder.subtotal = subtotal;
-    currentOrder.total = subtotal;
+    // Round to prevent floating point precision issues
+    currentOrder.subtotal = Math.round(subtotal);
+    currentOrder.total = Math.round(subtotal);
     
-    document.querySelector('.summary-row:nth-child(1) div:nth-child(2)').textContent = `¥${subtotal}`;
-    document.querySelector('.total-row div:nth-child(2)').textContent = `¥${subtotal}`;
-    document.querySelector('#paymentModal h2').textContent = `Payment - ¥${subtotal}`;
+    document.querySelector('.summary-row:nth-child(1) div:nth-child(2)').textContent = `¥${currentOrder.subtotal}`;
+    document.querySelector('.total-row div:nth-child(2)').textContent = `¥${currentOrder.total}`;
+    document.querySelector('#paymentModal h2').textContent = `Payment - ¥${currentOrder.total}`;
     
     const checkoutBtn = document.querySelector('.checkout-btn');
     checkoutBtn.disabled = currentOrder.items.length === 0;
@@ -2049,7 +2050,7 @@ function addItemToEditOrder(item) {
     // Re-render modal
     if (typeof window._editOrderModalRender === 'function') window._editOrderModalRender();
     // Update total
-    const updatedTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const updatedTotal = Math.round(order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0));
     const totalElement = document.querySelector('.edit-order-total');
     if (totalElement) {
         totalElement.textContent = `Total: ¥${updatedTotal}`;
