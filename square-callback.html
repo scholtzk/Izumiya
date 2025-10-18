@@ -208,7 +208,7 @@
         }
 
         // Main processing function
-        async function processSquareCallback() {
+        async function processSquareCallback(retryCount = 0) {
             try {
                 // Wait for Firebase to be fully loaded
                 document.getElementById('details').textContent = 'Connecting to Firebase services...';
@@ -238,53 +238,63 @@
                         }
                         addDebug('Firebase services', 'Available');
                         
-                        const dailyOrdersRef = await getDailyOrdersDoc();
-                        addDebug('Daily orders ref', 'Retrieved');
+                        // Add timeout protection for Firebase operations
+                        const firebaseTimeout = new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Firebase operation timeout')), 10000)
+                        );
                         
-                        const d = await window.firebaseServices.getDoc(dailyOrdersRef);
-                        addDebug('Document fetch', d.exists() ? 'Success' : 'Document does not exist');
-                        
-                        const data = d.data() || { orders: {} };
-                        addDebug('Document data', data);
-                        
-                        const current = data.orders ? data.orders.current : null;
-                        addDebug('Current order', current);
-                        
-                        if (!current) {
-                            throw new Error('No current order found in Firebase');
-                        }
-                        if (!current.items) {
-                            throw new Error('Current order has no items');
-                        }
-                        if (!current.orderNumber) {
-                            throw new Error('Current order has no order number');
-                        }
-                        
-                        addDebug('Order validation', 'Passed');
-                        
-                        const completedOrder = {
-                            ...current,
-                            paymentMethod: 'Card',
-                            tenderedAmount: current.total,
-                            change: 0,
-                            paymentStatus: 'paid',
-                            timestamp: window.firebaseServices.Timestamp.now(),
-                            squareTransactionId: transactionInfo.transaction_id || transactionInfo.client_transaction_id,
-                            squareStatus: transactionInfo.status || 'ok'
+                        const firebaseOperation = async () => {
+                            const dailyOrdersRef = await getDailyOrdersDoc();
+                            addDebug('Daily orders ref', 'Retrieved');
+                            
+                            const d = await window.firebaseServices.getDoc(dailyOrdersRef);
+                            addDebug('Document fetch', d.exists() ? 'Success' : 'Document does not exist');
+                            
+                            const data = d.data() || { orders: {} };
+                            addDebug('Document data', data);
+                            
+                            const current = data.orders ? data.orders.current : null;
+                            addDebug('Current order', current);
+                            
+                            if (!current) {
+                                throw new Error('No current order found in Firebase');
+                            }
+                            if (!current.items) {
+                                throw new Error('Current order has no items');
+                            }
+                            if (!current.orderNumber) {
+                                throw new Error('Current order has no order number');
+                            }
+                            
+                            addDebug('Order validation', 'Passed');
+                            
+                            const completedOrder = {
+                                ...current,
+                                paymentMethod: 'Card',
+                                tenderedAmount: current.total,
+                                change: 0,
+                                paymentStatus: 'paid',
+                                timestamp: window.firebaseServices.Timestamp.now(),
+                                squareTransactionId: transactionInfo.transaction_id || transactionInfo.client_transaction_id,
+                                squareStatus: transactionInfo.status || 'ok'
+                            };
+                            addDebug('Completed order', completedOrder);
+                            
+                            const updated = { ...(data.orders || {}) };
+                            delete updated.current;
+                            updated[completedOrder.orderNumber] = completedOrder;
+                            addDebug('Updated orders', updated);
+                            
+                            await window.firebaseServices.updateDoc(dailyOrdersRef, {
+                                orders: updated,
+                                lastUpdated: window.firebaseServices.Timestamp.now()
+                            });
+                            addDebug('Save result', 'success');
+                            detailsElement.textContent = 'Saved. Returning to POS...';
                         };
-                        addDebug('Completed order', completedOrder);
                         
-                        const updated = { ...(data.orders || {}) };
-                        delete updated.current;
-                        updated[completedOrder.orderNumber] = completedOrder;
-                        addDebug('Updated orders', updated);
-                        
-                        await window.firebaseServices.updateDoc(dailyOrdersRef, {
-                            orders: updated,
-                            lastUpdated: window.firebaseServices.Timestamp.now()
-                        });
-                        addDebug('Save result', 'success');
-                        detailsElement.textContent = 'Saved. Returning to POS...';
+                        // Run Firebase operation with timeout protection
+                        await Promise.race([firebaseOperation(), firebaseTimeout]);
                     } catch (saveErr) {
                         addDebug('Save result', 'failed');
                         addDebug('Save error type', typeof saveErr);
@@ -292,11 +302,32 @@
                         addDebug('Save error code', saveErr && saveErr.code ? saveErr.code : 'No code');
                         addDebug('Save error stack', saveErr && saveErr.stack ? saveErr.stack : 'No stack');
                         addDebug('Full error object', saveErr);
-                        detailsElement.textContent = 'Payment save failed. Returning to POS...';
+                        detailsElement.textContent = 'Payment save failed. Retrying...';
                         showDebugPanel();
+                        
+                        // Retry after 1 second (max 3 retries)
+                        if (retryCount < 3) {
+                            setTimeout(() => {
+                                console.log(`Retrying Firebase save operation... (attempt ${retryCount + 1}/3)`);
+                                detailsElement.textContent = `Retrying payment save... (attempt ${retryCount + 1}/3)`;
+                                // Recursively retry the same operation
+                                processSquareCallback(retryCount + 1);
+                            }, 1000);
+                        } else {
+                            // Max retries reached, show error and redirect
+                            detailsElement.textContent = 'Payment save failed after 3 attempts. Returning to POS...';
+                            console.log('Max retries reached, redirecting to ProSurf for manual handling');
+                            
+                            // Redirect to ProSurf for manual handling
+                            const txId = transactionInfo.transaction_id || transactionInfo.client_transaction_id || '';
+                            const query = `?square_success=1&transaction_id=${encodeURIComponent(txId)}`;
+                            redirectToProSurf(query);
+                        }
+                        
+                        return; // Don't redirect on failure
                     }
                     
-                    // Redirect to ProSurf immediately
+                    // Only redirect to ProSurf on successful save
                     const txId = transactionInfo.transaction_id || transactionInfo.client_transaction_id || '';
                     const query = `?square_success=1&transaction_id=${encodeURIComponent(txId)}`;
                     redirectToProSurf(query);
