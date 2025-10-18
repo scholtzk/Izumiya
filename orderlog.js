@@ -225,26 +225,28 @@ export async function generateOrderNumber() {
             .filter(([key, order]) => key !== 'current' && order.orderNumber)
             .map(([key, order]) => order);
         
+        console.log('All orders in Firestore:', orders);
+        console.log('Completed orders found:', completedOrders);
+        
         if (completedOrders.length === 0) {
             // No completed orders today, start with 1
+            console.log('No completed orders, starting with 1');
             return 1;
         }
         
-        // Find the most recent order by timestamp
-        const mostRecentOrder = completedOrders.reduce((latest, current) => {
-            if (!latest.timestamp) return current;
-            if (!current.timestamp) return latest;
-            
-            // Compare timestamps (newer is greater)
-            const latestTime = latest.timestamp.seconds || 0;
-            const currentTime = current.timestamp.seconds || 0;
-            
-            return currentTime > latestTime ? current : latest;
+        // Find the highest order number (simpler approach)
+        let highestOrderNumber = 0;
+        
+        completedOrders.forEach(order => {
+            console.log('Checking order:', order.orderNumber, 'type:', typeof order.orderNumber);
+            if (order.orderNumber && order.orderNumber > highestOrderNumber) {
+                highestOrderNumber = order.orderNumber;
+            }
         });
         
-        // Return the most recent order number + 1
-        const nextOrderNumber = (mostRecentOrder.orderNumber || 0) + 1;
-        console.log('Most recent order:', mostRecentOrder.orderNumber, 'Next order:', nextOrderNumber);
+        // Return the highest order number + 1
+        const nextOrderNumber = highestOrderNumber + 1;
+        console.log('Highest order number found:', highestOrderNumber, 'Next order will be:', nextOrderNumber);
         return nextOrderNumber;
         
     } catch (error) {
@@ -1351,6 +1353,7 @@ export function updateOrderSummary(currentOrder) {
 export async function initializeOrder(generateOrderNumber, showCustomAlert) {
     try {
         const orderNumber = await generateOrderNumber();
+        console.log('Generated order number:', orderNumber, 'type:', typeof orderNumber);
         
         const currentOrder = {
             items: [],
