@@ -1362,8 +1362,15 @@ export function updateOrderSummary(currentOrder) {
 
 export async function initializeOrder(generateOrderNumber, showCustomAlert) {
     try {
+        console.log('initializeOrder called');
         const orderNumber = await generateOrderNumber();
         console.log('Generated order number:', orderNumber, 'type:', typeof orderNumber);
+        
+        // Validate order number before using it
+        if (!orderNumber || isNaN(orderNumber) || orderNumber < 1) {
+            console.error('Invalid order number generated:', orderNumber);
+            throw new Error('Invalid order number generated');
+        }
         
         const currentOrder = {
             items: [],
@@ -1372,6 +1379,8 @@ export async function initializeOrder(generateOrderNumber, showCustomAlert) {
             orderNumber: orderNumber,
             tableNumber: null
         };
+        
+        console.log('Created currentOrder:', currentOrder);
         
         // Update order number display
         document.querySelector('.order-title').textContent = `Current Order #${currentOrder.orderNumber}`;
@@ -1384,10 +1393,12 @@ export async function initializeOrder(generateOrderNumber, showCustomAlert) {
         
         // Assign to global variable
         window.currentOrder = currentOrder;
+        console.log('Set window.currentOrder to:', window.currentOrder);
         
         // Save the new current order to Firebase
         await saveCurrentOrder(currentOrder);
         console.log('Initialized new current order:', currentOrder);
+        console.log('Final window.currentOrder after save:', window.currentOrder);
         
         return currentOrder;
     } catch (error) {

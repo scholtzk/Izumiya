@@ -434,7 +434,13 @@ function handleSquarePaymentSuccess() {
         if (document.body.contains(overlay)) document.body.removeChild(overlay);
         if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
         
-        // Initialize new order (callback page already handled Firebase operations)
+        // Update order log (callback page already moved current order to completed)
+        const container = document.querySelector('.order-log-container');
+        if (container && window.displayOrderLog) {
+            await window.displayOrderLog(container);
+        }
+        
+        // Initialize new order (callback page already cleared current order)
         try {
             if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
                 const newOrder = await window.initializeOrder(window.generateOrderNumber, window.showCustomAlert);
@@ -446,8 +452,6 @@ function handleSquarePaymentSuccess() {
         } catch (error) {
             console.error('Error initializing order after Square payment:', error);
         }
-        
-        // No page reload needed - UI is updated above
     };
     overlay.addEventListener('click', dismiss);
     successMessage.addEventListener('click', dismiss);
@@ -575,7 +579,23 @@ function acceptAsPaid() {
                 if (document.body.contains(overlay)) document.body.removeChild(overlay);
                 if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
                 
-                // Initialize new order (moveCurrentOrderToCompleted already handled Firebase operations)
+                // Update order log first
+                const container = document.querySelector('.order-log-container');
+                if (container && window.displayOrderLog) {
+                    await window.displayOrderLog(container);
+                }
+                
+                // Clear current order (same as cash payment)
+                try {
+                    if (window.clearCurrentOrder) {
+                        await window.clearCurrentOrder();
+                        console.log('Current order cleared after manual card payment');
+                    }
+                } catch (error) {
+                    console.error('Error clearing current order:', error);
+                }
+                
+                // Initialize new order (same as cash payment)
                 try {
                     if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
                         const newOrder = await window.initializeOrder(window.generateOrderNumber, window.showCustomAlert);
@@ -587,8 +607,6 @@ function acceptAsPaid() {
                 } catch (error) {
                     console.error('Error initializing order after manual card payment:', error);
                 }
-                
-                // No page reload needed - UI is updated above
             };
             overlay.addEventListener('click', dismiss);
             successMessage.addEventListener('click', dismiss);
@@ -704,25 +722,37 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Check if critical global variables are still valid
             if (!window.currentOrder || typeof window.currentOrder !== 'object') {
                 console.warn('window.currentOrder corrupted, attempting recovery');
-                // Don't set orderNumber to 0 - let the system generate a proper one
-                window.currentOrder = {
-                    items: [],
-                    subtotal: 0,
-                    total: 0,
-                    orderNumber: null  // Will be generated properly
-                };
-                // Trigger proper order initialization
-                if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
-                    console.log('Triggering order recovery...');
-                    window.initializeOrder(window.generateOrderNumber, window.showCustomAlert)
-                        .then((recoveredOrder) => {
-                            if (recoveredOrder) {
-                                console.log('Order recovery successful:', recoveredOrder);
-                            }
+                // Don't set orderNumber to null - generate it immediately
+                if (window.generateOrderNumber) {
+                    window.generateOrderNumber()
+                        .then((orderNumber) => {
+                            console.log('Generated recovery order number:', orderNumber);
+                            window.currentOrder = {
+                                items: [],
+                                subtotal: 0,
+                                total: 0,
+                                orderNumber: orderNumber
+                            };
+                            console.log('Order recovery successful with number:', orderNumber);
                         })
                         .catch((error) => {
                             console.error('Order recovery failed:', error);
+                            // Fallback to order number 1
+                            window.currentOrder = {
+                                items: [],
+                                subtotal: 0,
+                                total: 0,
+                                orderNumber: 1
+                            };
                         });
+                } else {
+                    // Fallback if generateOrderNumber is not available
+                    window.currentOrder = {
+                        items: [],
+                        subtotal: 0,
+                        total: 0,
+                        orderNumber: 1
+                    };
                 }
             }
             
@@ -828,7 +858,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         items: [],
         subtotal: 0,
         total: 0,
-        orderNumber: null  // Will be generated properly
+        orderNumber: 1  // Temporary, will be replaced by loadCurrentOrder
     };
 
     // Restore last active category if it exists
