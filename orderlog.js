@@ -471,6 +471,8 @@ export async function displayOrderLog(container, getDisplayName, t, updateOrderI
                         ${order.paymentStatus === 'paid' ? `
                             ${order.paymentMethod === 'Card' ? `
                                 <span><span class="payment-detail-label">${t('Card Payment:')}</span> <span class="payment-detail-value">¥${order.total}</span></span>
+                                <span><span class="payment-detail-label">${t('Surcharge:')}</span> <span class="payment-detail-value">¥${Math.round(order.total * 0.025)}</span></span>
+                                <span><span class="payment-detail-label">${t('Total:')}</span> <span class="payment-detail-value">¥${Math.round(order.total * 1.025)}</span></span>
                             ` : `
                                 <span><span class="payment-detail-label">${t('Cash Given:')}</span> <span class="payment-detail-value">¥${order.tenderedAmount}</span></span>
                                 <span><span class="payment-detail-label">${t('Change:')}</span> <span class="payment-detail-value">¥${order.change}</span></span>
