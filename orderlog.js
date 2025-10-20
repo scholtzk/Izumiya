@@ -1397,6 +1397,11 @@ export async function initializeOrder(generateOrderNumber, showCustomAlert) {
         window.currentOrder = currentOrder;
         console.log('Set window.currentOrder to:', window.currentOrder);
         
+        // Clear table selection UI when starting new order
+        if (window.tableSelection && window.tableSelection.clearTableNumber) {
+            window.tableSelection.clearTableNumber();
+        }
+        
         // Save the new current order to Firebase
         await saveCurrentOrder(currentOrder);
         console.log('Initialized new current order:', currentOrder);
