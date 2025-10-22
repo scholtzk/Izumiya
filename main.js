@@ -385,10 +385,69 @@ function startSquarePaymentVerification() {
         }
         
         try {
+            // Check Square payment status
             const paymentCompleted = await checkSquarePaymentStatus();
             if (paymentCompleted) {
                 clearInterval(checkInterval);
                 handleSquarePaymentSuccess();
+                return;
+            }
+            
+            // Also check card payment document status
+            const cardPaymentStatus = await window.checkCardPaymentStatus();
+            if (cardPaymentStatus) {
+                if (cardPaymentStatus.status === 'success') {
+                    clearInterval(checkInterval);
+                    // Dismiss popup and handle success
+                    squarePaymentWaiting = false;
+                    const waitingOverlay = document.getElementById('squarePaymentWaiting');
+                    if (waitingOverlay) {
+                        waitingOverlay.remove();
+                    }
+                    
+                    if (window.showCustomAlert) {
+                        window.showCustomAlert('Card payment completed successfully!', 'success');
+                    }
+                    
+                    // Refresh UI based on payment type
+                    if (cardPaymentStatus.isPayLater) {
+                        if (window.displayOrderLog) {
+                            window.displayOrderLog();
+                        }
+                    } else {
+                        if (window.initializeOrder) {
+                            window.initializeOrder();
+                        }
+                        if (window.displayOrderLog) {
+                            window.displayOrderLog();
+                        }
+                    }
+                    
+                    // Clear the card payment document
+                    await window.clearCardPaymentDocument();
+                    return;
+                } else if (cardPaymentStatus.status === 'failed') {
+                    clearInterval(checkInterval);
+                    // Dismiss popup and handle failure
+                    squarePaymentWaiting = false;
+                    const waitingOverlay = document.getElementById('squarePaymentWaiting');
+                    if (waitingOverlay) {
+                        waitingOverlay.remove();
+                    }
+                    
+                    if (window.showCustomAlert) {
+                        if (cardPaymentStatus.errorCode === 'payment_canceled') {
+                            window.showCustomAlert('Card payment cancelled', 'info');
+                        } else {
+                            const errorMsg = cardPaymentStatus.errorMessage || 'Payment failed';
+                            window.showCustomAlert(`Card payment failed: ${errorMsg}`, 'error');
+                        }
+                    }
+                    
+                    // Clear the card payment document
+                    await window.clearCardPaymentDocument();
+                    return;
+                }
             }
         } catch (error) {
             console.error('Error checking Square payment status:', error);
