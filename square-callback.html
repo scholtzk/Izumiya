@@ -257,20 +257,25 @@
                             const current = data.orders ? data.orders.current : null;
                             addDebug('Current order', current);
                             
+                            if (!current) {
+                                throw new Error('No current order found in Firebase');
+                            }
+                            if (!current.items) {
+                                throw new Error('Current order has no items');
+                            }
+                            if (!current.orderNumber) {
+                                throw new Error('Current order has no order number');
+                            }
+                            
+                            addDebug('Order validation', 'Passed');
+                            
                             // Get payment amount from URL parameters
                             const paymentAmount = parseFloat(transactionInfo.amount) || 0;
                             addDebug('Payment amount', paymentAmount);
                             
-                            let orderToUpdate = null;
-                            let isCurrentOrder = false;
-                            
                             // Check if current order amount matches payment amount
-                            if (current && current.total === paymentAmount) {
-                                orderToUpdate = current;
-                                isCurrentOrder = true;
-                                addDebug('Order match', 'Current order amount matches payment');
-                            } else {
-                                // Search through unpaid orders to find matching amount
+                            if (current.total !== paymentAmount) {
+                                // Amount doesn't match - search for Pay Later order with matching amount
                                 addDebug('Order search', 'Current order amount does not match, searching unpaid orders...');
                                 
                                 const allOrders = data.orders || {};
@@ -286,48 +291,58 @@
                                         return order.timestamp && order.timestamp > latest.timestamp ? order : latest;
                                     });
                                     
-                                    orderToUpdate = mostRecentOrder;
-                                    addDebug('Order match', `Found unpaid order ${orderToUpdate.orderNumber} with matching amount`);
+                                    addDebug('Order match', `Found unpaid order ${mostRecentOrder.orderNumber} with matching amount`);
+                                    
+                                    // Update the Pay Later order to paid
+                                    const updatedOrder = {
+                                        ...mostRecentOrder,
+                                        paymentMethod: 'Card',
+                                        tenderedAmount: mostRecentOrder.total,
+                                        change: 0,
+                                        paymentStatus: 'paid',
+                                        timestamp: mostRecentOrder.timestamp, // Preserve original timestamp
+                                        squareTransactionId: transactionInfo.transaction_id || transactionInfo.client_transaction_id,
+                                        squareStatus: transactionInfo.status || 'ok'
+                                    };
+                                    
+                                    const updated = { ...(data.orders || {}) };
+                                    updated[updatedOrder.orderNumber] = updatedOrder;
+                                    
+                                    await window.firebaseServices.updateDoc(dailyOrdersRef, {
+                                        orders: updated,
+                                        lastUpdated: window.firebaseServices.Timestamp.now()
+                                    });
+                                    addDebug('Save result', 'success - Pay Later order updated');
+                                    detailsElement.textContent = 'Pay Later order updated. Returning to POS...';
                                 } else {
                                     throw new Error(`No order found with amount ${paymentAmount}`);
                                 }
-                            }
-                            
-                            if (!orderToUpdate) {
-                                throw new Error('No matching order found for payment amount');
-                            }
-                            
-                            const completedOrder = {
-                                ...orderToUpdate,
-                                paymentMethod: 'Card',
-                                tenderedAmount: orderToUpdate.total,
-                                change: 0,
-                                paymentStatus: 'paid',
-                                timestamp: orderToUpdate.timestamp, // Preserve original timestamp
-                                squareTransactionId: transactionInfo.transaction_id || transactionInfo.client_transaction_id,
-                                squareStatus: transactionInfo.status || 'ok'
-                            };
-                            addDebug('Completed order', completedOrder);
-                            
-                            const updated = { ...(data.orders || {}) };
-                            
-                            if (isCurrentOrder) {
-                                // Remove current order and add to completed
+                            } else {
+                                // Regular current order payment - use original logic
+                                const completedOrder = {
+                                    ...current,
+                                    paymentMethod: 'Card',
+                                    tenderedAmount: current.total,
+                                    change: 0,
+                                    paymentStatus: 'paid',
+                                    timestamp: window.firebaseServices.Timestamp.now(),
+                                    squareTransactionId: transactionInfo.transaction_id || transactionInfo.client_transaction_id,
+                                    squareStatus: transactionInfo.status || 'ok'
+                                };
+                                addDebug('Completed order', completedOrder);
+                                
+                                const updated = { ...(data.orders || {}) };
                                 delete updated.current;
                                 updated[completedOrder.orderNumber] = completedOrder;
-                            } else {
-                                // Update existing order in place
-                                updated[completedOrder.orderNumber] = completedOrder;
+                                addDebug('Updated orders', updated);
+                                
+                                await window.firebaseServices.updateDoc(dailyOrdersRef, {
+                                    orders: updated,
+                                    lastUpdated: window.firebaseServices.Timestamp.now()
+                                });
+                                addDebug('Save result', 'success - Current order completed');
+                                detailsElement.textContent = 'Saved. Returning to POS...';
                             }
-                            
-                            addDebug('Updated orders', updated);
-                            
-                            await window.firebaseServices.updateDoc(dailyOrdersRef, {
-                                orders: updated,
-                                lastUpdated: window.firebaseServices.Timestamp.now()
-                            });
-                            addDebug('Save result', 'success');
-                            detailsElement.textContent = 'Saved. Returning to POS...';
                         };
                         
                         // Run Firebase operation with timeout protection
