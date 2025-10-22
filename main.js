@@ -631,7 +631,7 @@ function cancelSquarePayment() {
 }
 
 // Accept payment as paid manually
-function acceptAsPaid() {
+async function acceptAsPaid() {
     squarePaymentWaiting = false;
     
     // Remove waiting overlay
