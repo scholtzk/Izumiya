@@ -262,18 +262,30 @@
                             addDebug('Payment amount', paymentAmount);
                             
                             // Check if we have a current order and if it matches payment amount
+                            addDebug('Current order check', `Current exists: ${!!current}, Current total: ${current ? current.total : 'N/A'}, Payment amount: ${paymentAmount}`);
+                            
                             if (current && current.total === paymentAmount) {
+                                addDebug('Processing path', 'Regular current order payment');
+                                
                                 // Regular current order payment - validate and process
                                 if (!current.items) {
+                                    addDebug('Validation error', 'Current order has no items');
                                     throw new Error('Current order has no items');
                                 }
                                 if (!current.orderNumber) {
+                                    addDebug('Validation error', 'Current order has no order number');
                                     throw new Error('Current order has no order number');
                                 }
                                 
                                 addDebug('Order validation', 'Passed - Current order');
+                                addDebug('Current order details', {
+                                    orderNumber: current.orderNumber,
+                                    total: current.total,
+                                    itemsCount: current.items ? current.items.length : 0
+                                });
                                 
                                 // Regular current order payment - use original logic
+                                addDebug('Creating completed order', 'Starting...');
                                 const completedOrder = {
                                     ...current,
                                     paymentMethod: 'Card',
@@ -284,13 +296,17 @@
                                     squareTransactionId: transactionInfo.transaction_id || transactionInfo.client_transaction_id,
                                     squareStatus: transactionInfo.status || 'ok'
                                 };
-                                addDebug('Completed order', completedOrder);
+                                addDebug('Completed order created', completedOrder);
                                 
+                                addDebug('Preparing update', 'Starting...');
                                 const updated = { ...(data.orders || {}) };
+                                addDebug('Orders before update', Object.keys(updated));
                                 delete updated.current;
                                 updated[completedOrder.orderNumber] = completedOrder;
-                                addDebug('Updated orders', updated);
+                                addDebug('Orders after update', Object.keys(updated));
+                                addDebug('Updated orders structure', updated);
                                 
+                                addDebug('Firebase update', 'Starting updateDoc...');
                                 await window.firebaseServices.updateDoc(dailyOrdersRef, {
                                     orders: updated,
                                     lastUpdated: window.firebaseServices.Timestamp.now()
@@ -352,6 +368,10 @@
                         addDebug('Save error code', saveErr && saveErr.code ? saveErr.code : 'No code');
                         addDebug('Save error stack', saveErr && saveErr.stack ? saveErr.stack : 'No stack');
                         addDebug('Full error object', saveErr);
+                        addDebug('Error occurred at', new Date().toISOString());
+                        addDebug('Transaction info at error', transactionInfo);
+                        addDebug('Current order at error', current);
+                        addDebug('Payment amount at error', paymentAmount);
                         detailsElement.textContent = 'Payment save failed. Retrying...';
                         showDebugPanel();
                         
