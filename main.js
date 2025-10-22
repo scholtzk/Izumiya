@@ -648,6 +648,11 @@ function acceptAsPaid() {
                 window.payingOrderNumber = null;
                 window.payingOrderData = null;
                 
+                // Clear current order to prevent creating new orders
+                window.currentOrder = null;
+                window.processingPayLater = true; // Flag to prevent automatic order creation
+                console.log('Cleared current order after Pay Later payment to prevent new order creation');
+                
                 // Close payment modal immediately
                 const paymentModal = document.getElementById('paymentModal');
                 if (paymentModal) {
@@ -694,6 +699,9 @@ function acceptAsPaid() {
                 const dismiss = () => {
                     if (document.body.contains(overlay)) document.body.removeChild(overlay);
                     if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
+                    
+                    // Clear the Pay Later processing flag
+                    window.processingPayLater = false;
                 };
                 overlay.addEventListener('click', dismiss);
                 successMessage.addEventListener('click', dismiss);
@@ -933,6 +941,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             // Check if critical global variables are still valid
             if (!window.currentOrder || typeof window.currentOrder !== 'object') {
+                // Don't create new order if we're processing Pay Later orders
+                if (window.processingPayLater) {
+                    console.log('Skipping order recovery - processing Pay Later order');
+                    return true;
+                }
                 console.warn('window.currentOrder corrupted, attempting recovery');
                 // Don't set orderNumber to null - generate it immediately
                 if (window.generateOrderNumber) {
