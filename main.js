@@ -205,8 +205,40 @@ function selectPaymentMethod(method) {
     const cashNumpadElements = document.getElementById('cashNumpadElements');
     const completePaymentBtn = document.getElementById('completePaymentBtn');
     const processCardBtn = document.getElementById('processCardBtn');
-    // Get the exact order total from the current order object to avoid floating point issues
-    const totalAmount = window.currentOrder ? window.currentOrder.total : parseInt(document.getElementById('totalAmount').textContent);
+    
+    // Get the exact order total - handle both current orders and Pay Later orders
+    let totalAmount;
+    if (window.currentOrder && window.currentOrder.total) {
+        // Normal current order - use the order object
+        totalAmount = window.currentOrder.total;
+    } else {
+        // Pay Later order or fallback - read from DOM with robust parsing
+        const totalElement = document.getElementById('totalAmount');
+        if (totalElement && totalElement.textContent) {
+            // Parse the text content, removing any non-numeric characters
+            const totalText = totalElement.textContent.replace(/[^0-9]/g, '');
+            totalAmount = parseInt(totalText, 10) || 0;
+            
+            // Additional validation for Pay Later orders
+            if (totalAmount === 0) {
+                console.warn('Pay Later order: totalAmount is 0, checking DOM element again...');
+                // Try to get the value again after a brief delay to ensure DOM is updated
+                setTimeout(() => {
+                    const retryTotal = parseInt(document.getElementById('totalAmount').textContent.replace(/[^0-9]/g, ''), 10) || 0;
+                    if (retryTotal > 0) {
+                        console.log('Pay Later order: retry successful, totalAmount now:', retryTotal);
+                        // Update the card total with the correct amount
+                        const surcharge = Math.round(retryTotal * 0.025);
+                        const cardTotal = retryTotal + surcharge;
+                        document.getElementById('cardSurcharge').textContent = surcharge;
+                        document.getElementById('cardTotal').textContent = cardTotal;
+                    }
+                }, 100);
+            }
+        } else {
+            totalAmount = 0;
+        }
+    }
     
     // Update button states
     if (method === 'cash') {

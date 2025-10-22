@@ -1338,10 +1338,9 @@ export function removeItemFromOrder(itemId, renderOrderItems, updateOrderSummary
 
 export function updateOrderSummary(currentOrder) {
     if (!currentOrder || !Array.isArray(currentOrder.items)) return;
-    let subtotal = 0;
-    currentOrder.items.forEach(item => {
-        subtotal += item.price * item.quantity;
-    });
+    
+    // Use reduce method for consistent calculation (same as loadCurrentOrder)
+    const subtotal = currentOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
     // Round to prevent floating point precision issues
     currentOrder.subtotal = Math.round(subtotal);
