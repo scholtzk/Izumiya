@@ -430,6 +430,13 @@ class SquareIntegration {
 
     // Get payment amount for Square
     getSquarePaymentAmount() {
+        // Check if we're processing a Pay Later order from Order Log
+        if (window.payingOrderData && window.payingOrderData.total) {
+            console.log('Using Pay Later order total:', window.payingOrderData.total);
+            return window.payingOrderData.total;
+        }
+        
+        // Fallback to current order
         if (!window.currentOrder) {
             console.error('No current order found');
             return 0;
