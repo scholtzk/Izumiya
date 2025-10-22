@@ -215,6 +215,39 @@ export class ErrorLogger {
 // Create global error logger instance
 window.errorLogger = new ErrorLogger();
 
+// Enhanced console.log to automatically log to Firebase for debugging
+const originalConsoleLog = console.log;
+console.log = function(...args) {
+    // Call original console.log
+    originalConsoleLog.apply(console, args);
+    
+    // Log to Firebase if error logger is available and it's a debug message
+    if (window.errorLogger && window.errorLogger.isInitialized) {
+        const logMessage = args.join(' ');
+        
+        // Only log debug messages related to Pay Later processing
+        if (logMessage.includes('Pay Later') || 
+            logMessage.includes('System health check') || 
+            logMessage.includes('Updating Pay Later order') ||
+            logMessage.includes('Order update result') ||
+            logMessage.includes('Pay Later variables') ||
+            logMessage.includes('Processing manual card payment')) {
+            
+            const debugInfo = {
+                message: logMessage,
+                timestamp: new Date().toISOString(),
+                source: 'console.log',
+                args: args
+            };
+            
+            window.errorLogger.logError(new Error(debugInfo.message), {
+                source: 'debug_log',
+                debugInfo: debugInfo
+            });
+        }
+    }
+};
+
 // Only log card payment related errors automatically
 // Other errors will be logged manually when needed
 

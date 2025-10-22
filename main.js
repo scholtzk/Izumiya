@@ -403,6 +403,7 @@ async function checkSquarePaymentStatus() {
 
 // Handle successful Square payment
 async function handleSquarePaymentSuccess() {
+    console.log('Square payment success handler called');
     squarePaymentWaiting = false;
     
     // Remove waiting overlay
@@ -939,6 +940,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Function to check for memory issues and state corruption
     function checkSystemHealth() {
+        console.log('System health check running...');
         try {
             // Check if critical global variables are still valid
             if (!window.currentOrder || typeof window.currentOrder !== 'object') {
@@ -963,6 +965,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                                 orderNumber: orderNumber
                             };
                             console.log('Order recovery successful with number:', orderNumber);
+                            console.log('NEW ORDER CREATED BY SYSTEM HEALTH CHECK - Order Number:', orderNumber);
                         })
                         .catch((error) => {
                             console.error('Order recovery failed:', error);
@@ -973,6 +976,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                                 total: 0,
                                 orderNumber: 1
                             };
+                            console.log('NEW ORDER CREATED BY SYSTEM HEALTH CHECK (FALLBACK) - Order Number: 1');
                         });
                 } else {
                     // Fallback if generateOrderNumber is not available
@@ -982,6 +986,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         total: 0,
                         orderNumber: 1
                     };
+                    console.log('NEW ORDER CREATED BY SYSTEM HEALTH CHECK (FINAL FALLBACK) - Order Number: 1');
                 }
             }
             
