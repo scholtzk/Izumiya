@@ -284,8 +284,35 @@ let squarePaymentTimeout = null;
 let squarePaymentOrderNumber = null;
 
 // Show Square payment waiting popup
-function showSquarePaymentWaiting(orderNumber) {
+async function showSquarePaymentWaiting(orderNumber) {
     console.log('Showing Square payment waiting popup for order:', orderNumber);
+    
+    // Create card payment document before showing popup
+    try {
+        let orderData;
+        let isPayLater = false;
+        
+        if (window.payingOrderNumber && window.payingOrderData && window.updateOrderInDaily) {
+            // Pay Later order
+            orderData = window.payingOrderData;
+            isPayLater = true;
+        } else if (window.currentOrder) {
+            // Current order
+            orderData = window.currentOrder;
+            isPayLater = false;
+        } else {
+            console.warn('No order data available for card payment document');
+        }
+        
+        if (orderData) {
+            const cardPaymentCreated = await window.createCardPaymentDocument(orderData, isPayLater);
+            if (!cardPaymentCreated) {
+                console.error('Failed to create card payment document');
+            }
+        }
+    } catch (error) {
+        console.error('Error creating card payment document:', error);
+    }
     
     // Set the waiting flag immediately
     squarePaymentWaiting = true;
@@ -623,6 +650,28 @@ function acceptAsPaid() {
     try {
         console.log('Manual card payment - window.payingOrderNumber:', window.payingOrderNumber);
         console.log('Manual card payment - window.payingOrderData:', window.payingOrderData);
+        
+        // Create card payment document before processing
+        let orderData;
+        let isPayLater = false;
+        
+        if (window.payingOrderNumber && window.payingOrderData && window.updateOrderInDaily) {
+            // Pay Later order
+            orderData = window.payingOrderData;
+            isPayLater = true;
+        } else if (window.currentOrder) {
+            // Current order
+            orderData = window.currentOrder;
+            isPayLater = false;
+        } else {
+            throw new Error('No order data available for card payment');
+        }
+        
+        // Create card payment document
+        const cardPaymentCreated = await window.createCardPaymentDocument(orderData, isPayLater);
+        if (!cardPaymentCreated) {
+            throw new Error('Failed to create card payment document');
+        }
         
         // Check if we're paying an existing order from Order Log
         if (window.payingOrderNumber && window.payingOrderData && window.updateOrderInDaily) {
@@ -1417,4 +1466,113 @@ function loadCategoryItems(category) {
     checkForFailedPayments().catch(error => {
         console.error('Error checking for failed payments:', error);
     });
-} 
+    
+    // Check for card payment status on page load
+    checkCardPaymentStatusOnLoad().catch(error => {
+        console.error('Error checking card payment status:', error);
+    });
+}
+
+// Card payment processing functions
+async function createCardPaymentDocument(orderData, isPayLater = false) {
+    try {
+        const cardPaymentRef = window.firebaseServices.doc(window.firebaseDb, 'cardPaymentProcessing', 'current');
+        const cardPaymentData = {
+            status: 'processing',
+            orderNumber: orderData.orderNumber,
+            total: orderData.total,
+            isPayLater: isPayLater,
+            timestamp: window.firebaseServices.Timestamp.now(),
+            squareTransactionId: null,
+            squareStatus: null
+        };
+        
+        await window.firebaseServices.setDoc(cardPaymentRef, cardPaymentData);
+        console.log('Card payment document created:', cardPaymentData);
+        return true;
+    } catch (error) {
+        console.error('Error creating card payment document:', error);
+        return false;
+    }
+}
+
+async function checkCardPaymentStatus() {
+    try {
+        const cardPaymentRef = window.firebaseServices.doc(window.firebaseDb, 'cardPaymentProcessing', 'current');
+        const doc = await window.firebaseServices.getDoc(cardPaymentRef);
+        
+        if (doc.exists()) {
+            const data = doc.data();
+            console.log('Card payment status:', data);
+            return data;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error checking card payment status:', error);
+        return null;
+    }
+}
+
+async function clearCardPaymentDocument() {
+    try {
+        const cardPaymentRef = window.firebaseServices.doc(window.firebaseDb, 'cardPaymentProcessing', 'current');
+        await window.firebaseServices.deleteDoc(cardPaymentRef);
+        console.log('Card payment document cleared');
+        return true;
+    } catch (error) {
+        console.error('Error clearing card payment document:', error);
+        return false;
+    }
+}
+
+// Check card payment status on app load
+async function checkCardPaymentStatusOnLoad() {
+    try {
+        const cardPaymentStatus = await window.checkCardPaymentStatus();
+        if (cardPaymentStatus) {
+            console.log('Card payment status found:', cardPaymentStatus);
+            
+            if (cardPaymentStatus.status === 'success') {
+                // Card payment was successful
+                console.log('Card payment completed successfully');
+                
+                // Show success message
+                if (window.showCustomAlert) {
+                    window.showCustomAlert('Card payment completed successfully!', 'success');
+                }
+                
+                // Refresh UI based on payment type
+                if (cardPaymentStatus.isPayLater) {
+                    // Pay Later order - refresh order log
+                    if (window.displayOrderLog) {
+                        window.displayOrderLog();
+                    }
+                } else {
+                    // Current order - refresh current order and order log
+                    if (window.initializeOrder) {
+                        window.initializeOrder();
+                    }
+                    if (window.displayOrderLog) {
+                        window.displayOrderLog();
+                    }
+                }
+                
+                // Clear the card payment document
+                await window.clearCardPaymentDocument();
+                
+            } else if (cardPaymentStatus.status === 'processing') {
+                // Card payment is still processing - this shouldn't happen on app load
+                console.log('Card payment still processing - clearing document');
+                await window.clearCardPaymentDocument();
+            }
+        }
+    } catch (error) {
+        console.error('Error checking card payment status on load:', error);
+    }
+}
+
+// Export card payment functions
+window.createCardPaymentDocument = createCardPaymentDocument;
+window.checkCardPaymentStatus = checkCardPaymentStatus;
+window.clearCardPaymentDocument = clearCardPaymentDocument;
+window.checkCardPaymentStatusOnLoad = checkCardPaymentStatusOnLoad; 

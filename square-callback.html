@@ -267,64 +267,78 @@
                         );
                         
                         const firebaseOperation = async () => {
+                            // Get card payment processing document
+                            const cardPaymentRef = window.firebaseServices.doc(window.firebaseDb, 'cardPaymentProcessing', 'current');
+                            addDebug('Card payment ref', 'Retrieved');
+                            
+                            const cardPaymentDoc = await window.firebaseServices.getDoc(cardPaymentRef);
+                            addDebug('Card payment fetch', cardPaymentDoc.exists() ? 'Success' : 'Document does not exist');
+                            
+                            if (!cardPaymentDoc.exists()) {
+                                throw new Error('No card payment processing document found');
+                            }
+                            
+                            const cardPaymentData = cardPaymentDoc.data();
+                            addDebug('Card payment data', cardPaymentData);
+                            
+                            // Update card payment document with Square transaction info
+                            const updatedCardPayment = {
+                                ...cardPaymentData,
+                                status: 'success',
+                                squareTransactionId: transactionInfo.transaction_id || transactionInfo.client_transaction_id,
+                                squareStatus: transactionInfo.status || 'ok',
+                                completedAt: window.firebaseServices.Timestamp.now()
+                            };
+                            
+                            await window.firebaseServices.updateDoc(cardPaymentRef, updatedCardPayment);
+                            addDebug('Card payment updated', 'Success');
+                            
+                            // Process the order based on card payment data
                             const dailyOrdersRef = await getDailyOrdersDoc();
-                            addDebug('Daily orders ref', 'Retrieved');
+                            const dailyDoc = await window.firebaseServices.getDoc(dailyOrdersRef);
+                            const dailyData = dailyDoc.data() || { orders: {} };
                             
-                            const d = await window.firebaseServices.getDoc(dailyOrdersRef);
-                            addDebug('Document fetch', d.exists() ? 'Success' : 'Document does not exist');
-                            
-                            const data = d.data() || { orders: {} };
-                            addDebug('Document data', data);
-                            
-                            const current = data.orders ? data.orders.current : null;
-                            addDebug('Current order', current);
-                            
-                            // Get payment amount from current order (Square doesn't return amount in callback)
-                            const paymentAmount = current ? current.total : 0;
-                            addDebug('Payment amount', paymentAmount);
-                            addDebug('Payment amount source', 'Current order total (Square callback does not include amount)');
-                            
-                            // Check if we have a valid current order with items and matching amount
-                            addDebug('Current order check', `Current exists: ${!!current}, Current total: ${current ? current.total : 'N/A'}, Payment amount: ${paymentAmount}`);
-                            
-                            // Validate current order has items and valid total
-                            const hasValidCurrentOrder = current && 
-                                                       current.items && 
-                                                       current.items.length > 0 && 
-                                                       current.total > 0 && 
-                                                       current.total === paymentAmount;
-                            
-                            addDebug('Current order validation', `Has valid current order: ${hasValidCurrentOrder}`);
-                            addDebug('Current order details', {
-                                exists: !!current,
-                                hasItems: current ? !!current.items : false,
-                                itemsCount: current ? (current.items ? current.items.length : 0) : 0,
-                                total: current ? current.total : 0,
-                                totalMatches: current ? (current.total === paymentAmount) : false
-                            });
-                            
-                            if (hasValidCurrentOrder) {
-                                addDebug('Processing path', 'Regular current order payment');
+                            if (cardPaymentData.isPayLater) {
+                                // Pay Later order - update existing order
+                                addDebug('Processing path', 'Pay Later order');
                                 
-                                // Regular current order payment - validate and process
-                                if (!current.items) {
-                                    addDebug('Validation error', 'Current order has no items');
-                                    throw new Error('Current order has no items');
-                                }
-                                if (!current.orderNumber) {
-                                    addDebug('Validation error', 'Current order has no order number');
-                                    throw new Error('Current order has no order number');
+                                const orderNumber = cardPaymentData.orderNumber;
+                                const existingOrder = dailyData.orders[orderNumber];
+                                
+                                if (!existingOrder) {
+                                    throw new Error(`Pay Later order ${orderNumber} not found`);
                                 }
                                 
-                                addDebug('Order validation', 'Passed - Current order');
-                                addDebug('Current order details', {
-                                    orderNumber: current.orderNumber,
-                                    total: current.total,
-                                    itemsCount: current.items ? current.items.length : 0
+                                const updatedOrder = {
+                                    ...existingOrder,
+                                    paymentMethod: 'Card',
+                                    tenderedAmount: existingOrder.total,
+                                    change: 0,
+                                    paymentStatus: 'paid',
+                                    timestamp: existingOrder.timestamp, // Preserve original timestamp
+                                    squareTransactionId: transactionInfo.transaction_id || transactionInfo.client_transaction_id,
+                                    squareStatus: transactionInfo.status || 'ok'
+                                };
+                                
+                                const updated = { ...dailyData.orders };
+                                updated[orderNumber] = updatedOrder;
+                                
+                                await window.firebaseServices.updateDoc(dailyOrdersRef, {
+                                    orders: updated,
+                                    lastUpdated: window.firebaseServices.Timestamp.now()
                                 });
                                 
-                                // Regular current order payment - use original logic
-                                addDebug('Creating completed order', 'Starting...');
+                                addDebug('Save result', 'success - Pay Later order updated');
+                                detailsElement.textContent = 'Pay Later order updated. Returning to POS...';
+                            } else {
+                                // Current order - move to completed
+                                addDebug('Processing path', 'Current order');
+                                
+                                const current = dailyData.orders.current;
+                                if (!current) {
+                                    throw new Error('No current order found');
+                                }
+                                
                                 const completedOrder = {
                                     ...current,
                                     paymentMethod: 'Card',
@@ -335,66 +349,18 @@
                                     squareTransactionId: transactionInfo.transaction_id || transactionInfo.client_transaction_id,
                                     squareStatus: transactionInfo.status || 'ok'
                                 };
-                                addDebug('Completed order created', completedOrder);
                                 
-                                addDebug('Preparing update', 'Starting...');
-                                const updated = { ...(data.orders || {}) };
-                                addDebug('Orders before update', Object.keys(updated));
+                                const updated = { ...dailyData.orders };
                                 delete updated.current;
                                 updated[completedOrder.orderNumber] = completedOrder;
-                                addDebug('Orders after update', Object.keys(updated));
-                                addDebug('Updated orders structure', updated);
                                 
-                                addDebug('Firebase update', 'Starting updateDoc...');
                                 await window.firebaseServices.updateDoc(dailyOrdersRef, {
                                     orders: updated,
                                     lastUpdated: window.firebaseServices.Timestamp.now()
                                 });
+                                
                                 addDebug('Save result', 'success - Current order completed');
                                 detailsElement.textContent = 'Saved. Returning to POS...';
-                            } else {
-                                // No valid current order - search for Pay Later order with matching amount
-                                addDebug('Order search', 'No valid current order found, searching unpaid orders...');
-                                
-                                const allOrders = data.orders || {};
-                                const unpaidOrders = Object.values(allOrders).filter(order => 
-                                    order.paymentStatus === 'unpaid' && 
-                                    order.total === paymentAmount
-                                );
-                                
-                                if (unpaidOrders.length > 0) {
-                                    // Find the most recent unpaid order with matching amount
-                                    const mostRecentOrder = unpaidOrders.reduce((latest, order) => {
-                                        if (!latest) return order;
-                                        return order.timestamp && order.timestamp > latest.timestamp ? order : latest;
-                                    });
-                                    
-                                    addDebug('Order match', `Found unpaid order ${mostRecentOrder.orderNumber} with matching amount`);
-                                    
-                                    // Update the Pay Later order to paid
-                                    const updatedOrder = {
-                                        ...mostRecentOrder,
-                                        paymentMethod: 'Card',
-                                        tenderedAmount: mostRecentOrder.total,
-                                        change: 0,
-                                        paymentStatus: 'paid',
-                                        timestamp: mostRecentOrder.timestamp, // Preserve original timestamp
-                                        squareTransactionId: transactionInfo.transaction_id || transactionInfo.client_transaction_id,
-                                        squareStatus: transactionInfo.status || 'ok'
-                                    };
-                                    
-                                    const updated = { ...(data.orders || {}) };
-                                    updated[updatedOrder.orderNumber] = updatedOrder;
-                                    
-                                    await window.firebaseServices.updateDoc(dailyOrdersRef, {
-                                        orders: updated,
-                                        lastUpdated: window.firebaseServices.Timestamp.now()
-                                    });
-                                    addDebug('Save result', 'success - Pay Later order updated');
-                                    detailsElement.textContent = 'Pay Later order updated. Returning to POS...';
-                                } else {
-                                    throw new Error(`No order found with amount ${paymentAmount}`);
-                                }
                             }
                         };
                         
