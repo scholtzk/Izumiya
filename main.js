@@ -353,7 +353,6 @@ async function showSquarePaymentWaiting(orderNumber) {
             <div style="font-size: 14px; color: #666; margin-bottom: 20px;">Please complete payment in Square app</div>
             <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                 <button id="cancelSquarePayment" style="background: #ff6b6b; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px;">Cancel Payment</button>
-                <button id="acceptAsPaid" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px;">Accept as Paid</button>
             </div>
             <style>
                 @keyframes spin {
@@ -369,10 +368,6 @@ async function showSquarePaymentWaiting(orderNumber) {
     // Add button handlers
     document.getElementById('cancelSquarePayment').addEventListener('click', () => {
         cancelSquarePayment();
-    });
-    
-    document.getElementById('acceptAsPaid').addEventListener('click', () => {
-        acceptAsPaid();
     });
     
     // Start verification polling
@@ -605,7 +600,7 @@ async function handleSquarePaymentSuccess() {
 }
 
 // Cancel Square payment
-function cancelSquarePayment() {
+async function cancelSquarePayment() {
     squarePaymentWaiting = false;
     
     // Remove waiting overlay
@@ -620,6 +615,26 @@ function cancelSquarePayment() {
         squarePaymentTimeout = null;
     }
     
+    // Update card payment document with cancellation status
+    try {
+        const cardPaymentStatus = await window.checkCardPaymentStatus();
+        if (cardPaymentStatus) {
+            const cardPaymentRef = window.firebaseServices.doc(window.firebaseDb, 'cardPaymentProcessing', 'current');
+            const updatedCardPayment = {
+                ...cardPaymentStatus,
+                status: 'failed',
+                errorCode: 'payment_canceled',
+                errorMessage: 'Payment failed',
+                failedAt: window.firebaseServices.Timestamp.now()
+            };
+            
+            await window.firebaseServices.updateDoc(cardPaymentRef, updatedCardPayment);
+            console.log('Card payment marked as cancelled');
+        }
+    } catch (error) {
+        console.error('Error updating card payment document with cancellation:', error);
+    }
+    
     // Show cancellation message
     showCustomAlert('Card payment cancelled', 'info');
     
@@ -630,7 +645,8 @@ function cancelSquarePayment() {
     }
 }
 
-// Accept payment as paid manually
+// Accept payment as paid manually - REMOVED
+/*
 async function acceptAsPaid() {
     squarePaymentWaiting = false;
     
@@ -882,6 +898,7 @@ async function acceptAsPaid() {
         showCustomAlert('Error accepting payment', 'error');
     }
 }
+*/
 
 // Check for failed payments on page load
 async function checkForFailedPayments() {
