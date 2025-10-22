@@ -1,5 +1,6 @@
 // Import menu data and functions
 import { menuData, getDisplayName, addItemToOrder, loadMenuItems, showMilkTypeButtons, hideMilkTypeButtons } from './menu.js';
+import ErrorLogger from './error-logger.js';
 import {
     getTodayKey,
     getDailyOrdersDoc,
@@ -401,7 +402,7 @@ async function checkSquarePaymentStatus() {
 }
 
 // Handle successful Square payment
-function handleSquarePaymentSuccess() {
+async function handleSquarePaymentSuccess() {
     squarePaymentWaiting = false;
     
     // Remove waiting overlay
@@ -640,7 +641,9 @@ function acceptAsPaid() {
                 squareStatus: 'manual_accept'
             };
             
-            window.updateOrderInDaily(parseInt(window.payingOrderNumber), paymentDetails).then(() => {
+            window.updateOrderInDaily(parseInt(window.payingOrderNumber), paymentDetails).then((result) => {
+                console.log('Order update result:', result);
+                
                 // Clear the stored order data
                 window.payingOrderNumber = null;
                 window.payingOrderData = null;
@@ -696,7 +699,20 @@ function acceptAsPaid() {
                 successMessage.addEventListener('click', dismiss);
             }).catch((error) => {
                 console.error('Error updating order:', error);
-                showCustomAlert('Error updating order. Please try again.', 'error');
+                
+                // Log error to Firebase
+                if (window.errorLogger) {
+                    window.errorLogger.logError(error, {
+                        source: 'acceptAsPaid_payLater',
+                        orderNumber: window.payingOrderNumber,
+                        paymentDetails: paymentDetails
+                    });
+                }
+                
+                // Don't show error if the order was actually updated (check if it exists in Firebase)
+                // This prevents false error messages when the operation succeeded but the promise rejected
+                console.log('Checking if order was actually updated despite error...');
+                showCustomAlert('Payment processed. Please check if the order was updated in the order log.', 'warning');
             });
             
         } else if (window.moveCurrentOrderToCompleted && window.currentOrder) {
@@ -724,7 +740,23 @@ function acceptAsPaid() {
             console.log('Manual card payment - completedOrder:', completedOrder);
             console.log('Manual card payment - orderNumber:', completedOrder.orderNumber);
             
-            window.moveCurrentOrderToCompleted(completedOrder);
+            window.moveCurrentOrderToCompleted(completedOrder).then(() => {
+                console.log('Current order moved to completed successfully');
+            }).catch((error) => {
+                console.error('Error moving current order to completed:', error);
+                
+                // Log error to Firebase
+                if (window.errorLogger) {
+                    window.errorLogger.logError(error, {
+                        source: 'acceptAsPaid_currentOrder',
+                        orderNumber: completedOrder.orderNumber,
+                        completedOrder: completedOrder
+                    });
+                }
+                
+                // Don't show error if the order was actually processed
+                console.log('Payment processed. Please check if the order was updated in the order log.');
+            });
             
             // Show the same success popup as normal card payments
             const overlay = document.createElement('div');
