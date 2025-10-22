@@ -428,27 +428,14 @@ class SquareIntegration {
         }
     }
 
-    // Get payment amount for Square (with surcharge if applicable)
+    // Get payment amount for Square
     getSquarePaymentAmount() {
         if (!window.currentOrder) {
             console.error('No current order found');
             return 0;
         }
 
-        const originalTotal = window.currentOrder.total || 0;
-        
-        // Check if we're in card payment mode (with surcharge)
-        const cardInfo = document.getElementById('cardPaymentInfo');
-        if (cardInfo && cardInfo.style.display !== 'none') {
-            // Card payment mode - use the total with surcharge
-            const cardTotalElement = document.getElementById('cardTotal');
-            if (cardTotalElement) {
-                return parseInt(cardTotalElement.textContent) || originalTotal;
-            }
-        }
-        
-        // Cash payment mode - use original total
-        return originalTotal;
+        return window.currentOrder.total || 0;
     }
 }
 

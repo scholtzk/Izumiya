@@ -47,8 +47,14 @@ export function initTableSelection() {
                 currentTableNumber = tableNumber;
             }
             
-            // Update current order with table number
-            updateCurrentOrderTableNumber(currentTableNumber);
+            // Check if we're assigning to an existing order
+            if (window.assigningTableToOrder) {
+                // Handle table assignment for existing order
+                handleTableAssignmentForExistingOrder(currentTableNumber);
+            } else {
+                // Handle table selection for current order
+                updateCurrentOrderTableNumber(currentTableNumber);
+            }
             
             // Update UI
             updateTableSelectionDisplay();
@@ -99,6 +105,58 @@ export function initTableSelection() {
         }
     }
     
+    // Handle table assignment for existing order
+    async function handleTableAssignmentForExistingOrder(tableNumber) {
+        try {
+            const orderNumber = window.assigningTableToOrder;
+            const orderData = window.assigningTableData;
+            
+            if (!orderNumber || !window.updateOrderInDaily) {
+                console.error('Missing order number or update function');
+                return;
+            }
+            
+            // Update the order with the new table number
+            const updateData = {
+                tableNumber: tableNumber
+            };
+            
+            await window.updateOrderInDaily(parseInt(orderNumber), updateData);
+            
+            console.log(`Updated order ${orderNumber} with table number:`, tableNumber);
+            
+            // Show success message
+            if (window.showCustomAlert) {
+                const tableText = tableNumber === 'counter' ? 'Counter' : `Table ${tableNumber}`;
+                window.showCustomAlert(`Order #${orderNumber} assigned to ${tableText}`, 'success');
+            }
+            
+            // Refresh the order log if available
+            if (window.displayOrderLog && window.activeCategory === 'Order Log') {
+                const orderLogContainer = document.querySelector('.order-log-container');
+                if (orderLogContainer) {
+                    // Use the translation function from the global scope
+                    const t = window.t || ((k) => k);
+                    await window.displayOrderLog(orderLogContainer, window.getDisplayName, t, window.updateOrderInDaily, window.getOrderByNumber, window.showCustomAlert);
+                }
+            }
+            
+        } catch (error) {
+            console.error('Error updating order table number:', error);
+            if (window.showCustomAlert) {
+                window.showCustomAlert('Error updating table assignment. Please try again.', 'error');
+            }
+        } finally {
+            // Clear the assignment variables
+            window.assigningTableToOrder = null;
+            window.assigningTableData = null;
+            
+            // Clear the table selection state to prevent it from affecting current order
+            currentTableNumber = null;
+            updateTableButtonDisplay();
+        }
+    }
+    
     // Load table number from current order
     function loadTableNumberFromCurrentOrder() {
         if (window.currentOrder && window.currentOrder.tableNumber) {
@@ -125,6 +183,11 @@ export function initTableSelection() {
         setTableNumber: (tableNumber) => {
             currentTableNumber = tableNumber;
             updateCurrentOrderTableNumber(tableNumber);
+            updateTableButtonDisplay();
+        },
+        setTableSelectionOnly: (tableNumber) => {
+            // Set table selection without updating current order (for existing order assignments)
+            currentTableNumber = tableNumber;
             updateTableButtonDisplay();
         },
         clearTableNumber: () => {

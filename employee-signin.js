@@ -840,8 +840,8 @@ window.addEventListener('firebaseReady', function() {
                 day: '2-digit' 
             });
 
-            // Check if already signed in today
-            const existingSignIn = await getDocs(query(
+            // Check for existing shifts today (both active and completed)
+            const existingSignIns = await getDocs(query(
                 collection(db, 'employeeSignIns'),
                 where('employeeId', '==', employeeDoc.id),
                 where('date', '==', todayStr)
@@ -862,64 +862,13 @@ window.addEventListener('firebaseReady', function() {
             statusInfo.style.marginBottom = '20px';
             statusInfo.style.textAlign = 'left';
 
-            if (existingSignIn.empty) {
-                // Not signed in - show start shift button
-                statusInfo.innerHTML = `
-                    <div style="color: #666; margin-bottom: 15px;">
-                        Not signed in for today
-                    </div>
-                `;
+            // Check for active shift (not ended)
+            const activeShift = existingSignIns.docs.find(doc => !doc.data().endTime);
+            const completedShifts = existingSignIns.docs.filter(doc => doc.data().endTime);
 
-                const startShiftButton = document.createElement('button');
-                startShiftButton.textContent = 'Start Shift';
-                startShiftButton.style.padding = '10px 20px';
-                startShiftButton.style.backgroundColor = 'var(--primary)';
-                startShiftButton.style.color = 'white';
-                startShiftButton.style.border = 'none';
-                startShiftButton.style.borderRadius = '5px';
-                startShiftButton.style.cursor = 'pointer';
-                startShiftButton.style.width = '100%';
-
-                startShiftButton.addEventListener('click', async () => {
-                    try {
-                        const signInTime = Timestamp.now();
-                        await addDoc(collection(db, 'employeeSignIns'), {
-                            employeeId: employeeDoc.id,
-                            employeeName: employeeData.name,
-                            signInTime: signInTime,
-                            date: todayStr,
-                            breaks: []
-                        });
-
-                        // Remove scheduled shift for this employee for today if it exists
-                        const scheduledShiftQuery = await getDocs(query(
-                            collection(db, 'scheduledShifts'),
-                            where('employeeId', '==', employeeDoc.id),
-                            where('date', '==', todayStr)
-                        ));
-                        scheduledShiftQuery.forEach(async (doc) => {
-                            await deleteDoc(doc.ref);
-                        });
-
-                        // Close popup and refresh
-                        document.body.removeChild(document.querySelector('.popup-window'));
-                        displayTodaySignIns();
-                    } catch (error) {
-                        console.error('Error starting shift:', error);
-                        const errorContent = document.createElement('div');
-                        errorContent.textContent = 'Error starting shift. Please try again.';
-                        errorContent.style.textAlign = 'center';
-                        errorContent.style.color = '#dc3545';
-                        errorContent.style.padding = '20px';
-                        createPopupWindow('Error', errorContent);
-                    }
-                });
-
-                popupContent.appendChild(statusInfo);
-                popupContent.appendChild(startShiftButton);
-            } else {
-                // Already signed in - show current status and break/end shift buttons
-                const shiftData = existingSignIn.docs[0].data();
+            if (activeShift) {
+                // Active shift - show current status and break/end shift buttons
+                const shiftData = activeShift.data();
                 const signInTime = shiftData.signInTime.toDate();
                 const activeBreak = (shiftData.breaks || []).find(b => !b.endTime);
 
@@ -936,7 +885,7 @@ window.addEventListener('firebaseReady', function() {
 
                 statusInfo.innerHTML = `
                     <div style="margin-bottom: 10px;">
-                        <strong>Start Time:</strong> ${signInTime.toLocaleTimeString()}
+                        <strong>Current Shift Start Time:</strong> ${signInTime.toLocaleTimeString()}
                     </div>
                     <div style="margin-bottom: 10px;">
                         <strong>Duration:</strong> ${formatDuration(signInTime, shiftData.endTime)}
@@ -949,11 +898,6 @@ window.addEventListener('firebaseReady', function() {
                     ${completedBreaks ? `
                         <div style="color: #666; margin-bottom: 10px;">
                             <strong>Breaks taken:</strong><br>${completedBreaks}
-                        </div>
-                    ` : ''}
-                    ${shiftData.endTime ? `
-                        <div style="color: #28a745; margin-bottom: 10px;">
-                            Shift ended at ${shiftData.endTime.toDate().toLocaleTimeString()}
                         </div>
                     ` : ''}
                 `;
@@ -987,7 +931,7 @@ window.addEventListener('firebaseReady', function() {
                                         endTime: breakEndTime
                                     };
 
-                                    await updateDoc(existingSignIn.docs[0].ref, {
+                                    await updateDoc(activeShift.ref, {
                                         breaks: updatedBreaks
                                     });
                                 }
@@ -1026,7 +970,7 @@ window.addEventListener('firebaseReady', function() {
                                     endTime: null
                                 };
 
-                                await updateDoc(existingSignIn.docs[0].ref, {
+                                await updateDoc(activeShift.ref, {
                                     breaks: [...(shiftData.breaks || []), newBreak]
                                 });
 
@@ -1062,7 +1006,7 @@ window.addEventListener('firebaseReady', function() {
                             const endTime = Timestamp.now();
                             const totalDuration = Math.floor((endTime.toDate() - signInTime) / (1000 * 60));
 
-                            await updateDoc(existingSignIn.docs[0].ref, {
+                            await updateDoc(activeShift.ref, {
                                 endTime: endTime,
                                 totalDuration: totalDuration
                             });
@@ -1084,9 +1028,87 @@ window.addEventListener('firebaseReady', function() {
                     buttonContainer.appendChild(endShiftButton);
                     popupContent.appendChild(statusInfo);
                     popupContent.appendChild(buttonContainer);
-                } else {
-                    popupContent.appendChild(statusInfo);
                 }
+            } else {
+                // No active shift - show completed shifts and allow new shift
+                let statusHTML = '';
+                
+                if (completedShifts.length > 0) {
+                    statusHTML += '<div style="margin-bottom: 15px; color: #28a745; font-weight: bold;">Completed Shifts Today:</div>';
+                    
+                    completedShifts.forEach((shiftDoc, index) => {
+                        const shiftData = shiftDoc.data();
+                        const signInTime = shiftData.signInTime.toDate();
+                        const endTime = shiftData.endTime.toDate();
+                        const totalDuration = Math.floor((endTime - signInTime) / (1000 * 60));
+                        const hours = Math.floor(totalDuration / 60);
+                        const minutes = totalDuration % 60;
+                        
+                        statusHTML += `
+                            <div style="margin-bottom: 10px; padding: 10px; background-color: #f8f9fa; border-radius: 5px; border-left: 4px solid #28a745;">
+                                <div><strong>Shift ${index + 1}:</strong></div>
+                                <div>Start: ${signInTime.toLocaleTimeString()}</div>
+                                <div>End: ${endTime.toLocaleTimeString()}</div>
+                                <div>Duration: ${hours}h ${minutes}m</div>
+                                ${shiftData.totalDuration ? `<div>Total: ${Math.floor(shiftData.totalDuration / 60)}h ${shiftData.totalDuration % 60}m</div>` : ''}
+                            </div>
+                        `;
+                    });
+                } else {
+                    statusHTML += '<div style="color: #666; margin-bottom: 15px;">No shifts completed today</div>';
+                }
+
+                statusInfo.innerHTML = statusHTML;
+
+                // Add "Start New Shift" button
+                const startNewShiftButton = document.createElement('button');
+                startNewShiftButton.textContent = 'Start New Shift';
+                startNewShiftButton.style.padding = '10px 20px';
+                startNewShiftButton.style.backgroundColor = 'var(--primary)';
+                startNewShiftButton.style.color = 'white';
+                startNewShiftButton.style.border = 'none';
+                startNewShiftButton.style.borderRadius = '5px';
+                startNewShiftButton.style.cursor = 'pointer';
+                startNewShiftButton.style.width = '100%';
+                startNewShiftButton.style.marginTop = '10px';
+
+                startNewShiftButton.addEventListener('click', async () => {
+                    try {
+                        const signInTime = Timestamp.now();
+                        await addDoc(collection(db, 'employeeSignIns'), {
+                            employeeId: employeeDoc.id,
+                            employeeName: employeeData.name,
+                            signInTime: signInTime,
+                            date: todayStr,
+                            breaks: []
+                        });
+
+                        // Remove scheduled shift for this employee for today if it exists
+                        const scheduledShiftQuery = await getDocs(query(
+                            collection(db, 'scheduledShifts'),
+                            where('employeeId', '==', employeeDoc.id),
+                            where('date', '==', todayStr)
+                        ));
+                        scheduledShiftQuery.forEach(async (doc) => {
+                            await deleteDoc(doc.ref);
+                        });
+
+                        // Close popup and refresh
+                        document.body.removeChild(document.querySelector('.popup-window'));
+                        displayTodaySignIns();
+                    } catch (error) {
+                        console.error('Error starting new shift:', error);
+                        const errorContent = document.createElement('div');
+                        errorContent.textContent = 'Error starting new shift. Please try again.';
+                        errorContent.style.textAlign = 'center';
+                        errorContent.style.color = '#dc3545';
+                        errorContent.style.padding = '20px';
+                        createPopupWindow('Error', errorContent);
+                    }
+                });
+
+                popupContent.appendChild(statusInfo);
+                popupContent.appendChild(startNewShiftButton);
             }
 
             createPopupWindow('Employee Status', popupContent);

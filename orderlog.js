@@ -447,6 +447,13 @@ export async function displayOrderLog(container, getDisplayName, t, updateOrderI
                     <div class="order-number">${t('Order')} #${order.orderNumber}${tableText}</div>
                     <div class="order-time">
                         ${timeAgo}
+                        <button class="table-assign-btn" data-order-number="${order.orderNumber}" title="Assign Table">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="6" width="20" height="2" rx="1"/>
+                                <path d="M4 8v12"/>
+                                <path d="M20 8v12"/>
+                            </svg>
+                        </button>
                         <button class="edit-order-btn" data-order-number="${order.orderNumber}">✎</button>
                     </div>
                 </div>
@@ -471,8 +478,6 @@ export async function displayOrderLog(container, getDisplayName, t, updateOrderI
                         ${order.paymentStatus === 'paid' ? `
                             ${order.paymentMethod === 'Card' ? `
                                 <span><span class="payment-detail-label">${t('Card Payment:')}</span> <span class="payment-detail-value">¥${order.total}</span></span>
-                                <span><span class="payment-detail-label">${t('Surcharge:')}</span> <span class="payment-detail-value">¥${Math.round(order.total * 0.025)}</span></span>
-                                <span><span class="payment-detail-label">${t('Total:')}</span> <span class="payment-detail-value">¥${Math.round(order.total * 1.025)}</span></span>
                             ` : `
                                 <span><span class="payment-detail-label">${t('Cash Given:')}</span> <span class="payment-detail-value">¥${order.tenderedAmount}</span></span>
                                 <span><span class="payment-detail-label">${t('Change:')}</span> <span class="payment-detail-value">¥${order.change}</span></span>
@@ -487,8 +492,13 @@ export async function displayOrderLog(container, getDisplayName, t, updateOrderI
             // Add click handler for the order header to toggle completion status
             const header = orderLogItem.querySelector('.order-log-header');
             header.addEventListener('click', async (e) => {
-                // Don't toggle if clicking the edit button
-                if (e.target.classList.contains('edit-order-btn')) {
+                // Don't toggle if clicking the edit button or table assign button
+                if (e.target.classList.contains('edit-order-btn') || e.target.classList.contains('table-assign-btn')) {
+                    return;
+                }
+                
+                // Also check if clicking inside a button (for SVG elements)
+                if (e.target.closest('.edit-order-btn') || e.target.closest('.table-assign-btn')) {
                     return;
                 }
                 
@@ -519,6 +529,7 @@ export async function displayOrderLog(container, getDisplayName, t, updateOrderI
                 }
             });
 
+            
             // Add click handlers for individual items
             orderLogItem.querySelectorAll('.order-log-item-row').forEach(row => {
                 row.addEventListener('click', async (e) => {
@@ -597,6 +608,10 @@ export async function processPayNow(orderNumber, showCustomAlert, getOrderByNumb
         document.getElementById('changeAmount').textContent = '0';
         document.getElementById('paymentModal').style.display = 'flex';
         
+        // Store the order number being paid for use by acceptAsPaid
+        window.payingOrderNumber = orderNumber;
+        window.payingOrderData = orderData;
+        
         // Create new process button
         const processBtn = document.getElementById('completePaymentBtn');
         const newProcessBtn = processBtn.cloneNode(true);
@@ -606,63 +621,154 @@ export async function processPayNow(orderNumber, showCustomAlert, getOrderByNumb
         
         // Add new click handler
         newProcessBtn.addEventListener('click', async () => {
-            const tenderedText = (document.getElementById('tenderedAmount').textContent || '0');
-            const tenderedAmount = parseInt(tenderedText.replace(/[^0-9]/g, ''), 10) || 0;
+            // Check which payment method is selected
+            const cashBtn = document.getElementById('cashMethodBtn');
+            const cardBtn = document.getElementById('cardMethodBtn');
+            const isCardPayment = cardBtn && cardBtn.classList.contains('active');
+            const isCashPayment = cashBtn && cashBtn.classList.contains('active');
             
-            // Double-check using debug panel values
-            const debugContent = document.getElementById('debugContent');
-            let doubleCheckPassed = false;
+            console.log('Payment method selected for order', orderNumber, ':', { isCardPayment, isCashPayment });
             
-            if (debugContent) {
+            if (isCardPayment) {
+                // Handle card payment for existing order
                 try {
-                    const debugText = debugContent.innerHTML;
-                    const totalMatch = debugText.match(/Total:\s*(\d+)/);
-                    const tenderedMatch = debugText.match(/Tendered:\s*(\d+)/);
+                    console.log('Processing card payment for order:', orderNumber);
                     
-                    if (totalMatch && tenderedMatch) {
-                        const debugTotal = parseInt(totalMatch[1], 10);
-                        const debugTendered = parseInt(tenderedMatch[1], 10);
+                    // Update the order in Firestore with card payment details
+                    // Preserve original timestamp for Pay Later orders
+                    const paymentDetails = {
+                        paymentMethod: 'Card',
+                        tenderedAmount: totalAmount,
+                        change: 0,
+                        paymentStatus: 'paid',
+                        // Keep original timestamp - don't update it
+                        squareTransactionId: 'manual_' + Date.now(),
+                        squareStatus: 'manual_accept'
+                    };
+                    
+                    await window.updateOrderInDaily(parseInt(orderNumber), paymentDetails);
+                    
+                    // Close modal
+                    document.getElementById('paymentModal').style.display = 'none';
+                    
+                    // Show success popup for card payment
+                    const overlay = document.createElement('div');
+                    overlay.style.position = 'fixed';
+                    overlay.style.top = '0';
+                    overlay.style.left = '0';
+                    overlay.style.width = '100%';
+                    overlay.style.height = '100%';
+                    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                    overlay.style.zIndex = '999';
+                    overlay.style.cursor = 'pointer';
+                    const successMessage = document.createElement('div');
+                    successMessage.style.position = 'fixed';
+                    successMessage.style.top = '50%';
+                    successMessage.style.left = '50%';
+                    successMessage.style.transform = 'translate(-50%, -50%)';
+                    successMessage.style.backgroundColor = '#4CAF50';
+                    successMessage.style.color = 'white';
+                    successMessage.style.padding = '40px';
+                    successMessage.style.borderRadius = '15px';
+                    successMessage.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+                    successMessage.style.zIndex = '1000';
+                    successMessage.style.textAlign = 'center';
+                    successMessage.style.minWidth = '300px';
+
+                    successMessage.innerHTML = `
+                        <div style="font-size: 28px; font-weight: bold; margin-bottom: 6px;">Card payment successful</div>
+                        <div style="font-size: 18px; opacity: 0.9;">Paid: ¥${totalAmount}</div>
+                    `;
+                    document.body.appendChild(overlay);
+                    document.body.appendChild(successMessage);
+                    
+                    const dismiss = () => {
+                        if (document.body.contains(overlay)) document.body.removeChild(overlay);
+                        if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
                         
-                        console.log('Double-check values - Total:', debugTotal, 'Tendered:', debugTendered);
+                        // Clear stored order data
+                        window.payingOrderNumber = null;
+                        window.payingOrderData = null;
                         
-                        if (debugTendered >= debugTotal) {
-                            console.log('Double-check PASSED: Payment is sufficient according to debug panel');
-                            doubleCheckPassed = true;
+                        // Refresh order log
+                        const orderLogContainer = document.querySelector('.order-log-container');
+                        if (orderLogContainer) {
+                            displayOrderLog(orderLogContainer, window.getDisplayName, t, updateOrderInDaily, getOrderByNumber, showCustomAlert);
                         }
+                    };
+                    overlay.addEventListener('click', dismiss);
+                    successMessage.addEventListener('click', dismiss);
+                    
+                } catch (error) {
+                    console.error('Error in card payment process:', error);
+                    showCustomAlert('Error updating order. Please try again.', 'error');
+                }
+            } else if (isCashPayment) {
+                // Handle cash payment (existing logic with debug panel check)
+                const tenderedText = (document.getElementById('tenderedAmount').textContent || '0');
+                const tenderedAmount = parseInt(tenderedText.replace(/[^0-9]/g, ''), 10) || 0;
+                
+                // Double-check using debug panel values
+                const debugContent = document.getElementById('debugContent');
+                let doubleCheckPassed = false;
+                
+                if (debugContent) {
+                    try {
+                        const debugText = debugContent.innerHTML;
+                        const totalMatch = debugText.match(/Total:\s*(\d+)/);
+                        const tenderedMatch = debugText.match(/Tendered:\s*(\d+)/);
+                        
+                        if (totalMatch && tenderedMatch) {
+                            const debugTotal = parseInt(totalMatch[1], 10);
+                            const debugTendered = parseInt(tenderedMatch[1], 10);
+                            
+                            console.log('Double-check values - Total:', debugTotal, 'Tendered:', debugTendered);
+                            
+                            if (debugTendered >= debugTotal) {
+                                console.log('Double-check PASSED: Payment is sufficient according to debug panel');
+                                doubleCheckPassed = true;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error in double-check function:', error);
+                    }
+                }
+                
+                if (!doubleCheckPassed && tenderedAmount < totalAmount) {
+                    showCustomAlert('Insufficient payment amount', 'warning');
+                    return;
+                }
+                
+                try {
+                    // Update the order in Firestore with payment details
+                    // Preserve original timestamp for Pay Later orders - don't update it
+                    const paymentDetails = {
+                        paymentMethod: 'Cash',
+                        tenderedAmount: tenderedAmount,
+                        change: tenderedAmount - totalAmount,
+                        paymentStatus: 'paid'
+                    };
+                    
+                    await window.updateOrderInDaily(parseInt(orderNumber), paymentDetails);
+                    
+                    // Close modal
+                    document.getElementById('paymentModal').style.display = 'none';
+                    
+                    // Clear stored order data
+                    window.payingOrderNumber = null;
+                    window.payingOrderData = null;
+                    
+                    // Refresh order log
+                    const orderLogContainer = document.querySelector('.order-log-container');
+                    if (orderLogContainer) {
+                        await displayOrderLog(orderLogContainer, window.getDisplayName, t, updateOrderInDaily, getOrderByNumber, showCustomAlert);
                     }
                 } catch (error) {
-                    console.error('Error in double-check function:', error);
+                    console.error('Error in payment process:', error);
+                    showCustomAlert('Error updating order. Please try again.', 'error');
                 }
-            }
-            
-            if (!doubleCheckPassed && tenderedAmount < totalAmount) {
-                showCustomAlert('Insufficient payment amount', 'warning');
-                return;
-            }
-            
-            try {
-                // Update the order in Firestore with payment details
-                const paymentDetails = {
-                    paymentMethod: 'Cash',
-                    tenderedAmount: tenderedAmount,
-                    change: tenderedAmount - totalAmount,
-                    paymentStatus: 'paid',
-                    timestamp: window.firebaseServices.Timestamp.now()
-                };
-                
-                await window.updateOrderInDaily(parseInt(orderNumber), paymentDetails);
-                
-                // Close modal
-                document.getElementById('paymentModal').style.display = 'none';
-                
-                // Refresh order log
-                const orderLogContainer = document.querySelector('.order-log-container');
-                if (orderLogContainer) {
-                    await displayOrderLog(orderLogContainer, window.getDisplayName, t, updateOrderInDaily, getOrderByNumber, showCustomAlert);
-                }
-            } catch (error) {
-                console.error('Error in payment process:', error);
-                showCustomAlert('Error updating order. Please try again.', 'error');
+            } else {
+                showCustomAlert('Please select a payment method', 'error');
             }
         });
     } catch (error) {
@@ -1506,6 +1612,61 @@ export async function clearCurrentOrder(getDailyOrdersDoc) {
         });
     } catch (error) {
         console.error('Error clearing current order:', error);
+    }
+}
+
+// Table assignment modal for order log
+export async function openTableAssignModal(orderNumber, getOrderByNumber, showCustomAlert, updateOrderInDaily, displayOrderLog, t) {
+    try {
+        // Get the order data
+        const order = await getOrderByNumber(orderNumber);
+        if (!order) {
+            showCustomAlert('Order not found', 'error');
+            return;
+        }
+        
+        // Store the order number for the table selection
+        window.assigningTableToOrder = orderNumber;
+        window.assigningTableData = order;
+        
+        // Open the table selection modal
+        const tableSelectionModal = document.getElementById('tableSelectionModal');
+        if (tableSelectionModal) {
+            tableSelectionModal.style.display = 'flex';
+            
+            // Update the modal title to show which order we're assigning
+            const modalTitle = tableSelectionModal.querySelector('h2');
+            if (modalTitle) {
+                modalTitle.textContent = `Assign Table to Order #${orderNumber}`;
+            }
+            
+            // If order already has a table, show it as selected
+            if (order.tableNumber && window.tableSelection) {
+                // Set the table selection without updating current order
+                window.tableSelection.setTableSelectionOnly(order.tableNumber);
+                
+                // Update the visual display in the iframe
+                setTimeout(() => {
+                    const iframe = tableSelectionModal.querySelector('iframe');
+                    if (iframe && iframe.contentWindow && iframe.contentWindow.document) {
+                        const iframeDocument = iframe.contentWindow.document;
+                        iframeDocument.querySelectorAll('.table-item').forEach(item => {
+                            const tableNumber = item.getAttribute('data-table');
+                            if (tableNumber === order.tableNumber) {
+                                item.classList.add('selected');
+                            } else {
+                                item.classList.remove('selected');
+                            }
+                        });
+                    }
+                }, 100); // Small delay to ensure iframe is loaded
+            }
+        } else {
+            showCustomAlert('Table selection modal not found', 'error');
+        }
+    } catch (error) {
+        console.error('Error opening table assign modal:', error);
+        showCustomAlert('Error opening table selection. Please try again.', 'error');
     }
 }
 

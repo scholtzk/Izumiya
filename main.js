@@ -15,6 +15,7 @@ import {
     displayOrderLog,
     processPayNow,
     openEditOrderModal,
+    openTableAssignModal,
     renderOrderItems,
     updateItemQuantity,
     removeItemFromOrder,
@@ -62,6 +63,7 @@ window.showTeaOptions = showTeaOptions;
 window.displayOrderLog = displayOrderLog;
 window.processPayNow = processPayNow;
 window.openEditOrderModal = openEditOrderModal;
+window.openTableAssignModal = openTableAssignModal;
 window.resetOrderHistory = resetOrderHistory;
 window.exportTodayOrders = exportTodayOrders;
 window.renderOrderItems = renderOrderItems;
@@ -228,10 +230,7 @@ function selectPaymentMethod(method) {
                     if (retryTotal > 0) {
                         console.log('Pay Later order: retry successful, totalAmount now:', retryTotal);
                         // Update the card total with the correct amount
-                        const surcharge = Math.round(retryTotal * 0.025);
-                        const cardTotal = retryTotal + surcharge;
-                        document.getElementById('cardSurcharge').textContent = surcharge;
-                        document.getElementById('cardTotal').textContent = cardTotal;
+                        document.getElementById('cardTotal').textContent = retryTotal;
                     }
                 }, 100);
             }
@@ -272,12 +271,8 @@ function selectPaymentMethod(method) {
         // Update modal title
         document.querySelector('#paymentModal h2').textContent = 'Card Payment';
         
-        // Calculate and display card surcharge (2.5%)
-        const surcharge = Math.round(totalAmount * 0.025);
-        const cardTotal = totalAmount + surcharge;
-        
-        document.getElementById('cardSurcharge').textContent = surcharge;
-        document.getElementById('cardTotal').textContent = cardTotal;
+        // Display card total
+        document.getElementById('cardTotal').textContent = totalAmount;
     }
 }
 window.selectPaymentMethod = selectPaymentMethod;
@@ -625,10 +620,86 @@ function acceptAsPaid() {
     
     // Process the payment manually using the same flow as successful Square payment
     try {
-        console.log('Manual card payment - window.currentOrder:', window.currentOrder);
-        console.log('Manual card payment - window.currentOrder.orderNumber:', window.currentOrder?.orderNumber);
+        console.log('Manual card payment - window.payingOrderNumber:', window.payingOrderNumber);
+        console.log('Manual card payment - window.payingOrderData:', window.payingOrderData);
         
-        if (window.moveCurrentOrderToCompleted && window.currentOrder) {
+        // Check if we're paying an existing order from Order Log
+        if (window.payingOrderNumber && window.payingOrderData && window.updateOrderInDaily) {
+            console.log('Processing manual card payment for existing order from Order Log:', window.payingOrderNumber);
+            console.log('Paying order data structure:', window.payingOrderData);
+            console.log('Paying order total:', window.payingOrderData.total);
+            
+            // Update the existing order with card payment details
+            // Preserve original timestamp for Pay Later orders
+            const paymentDetails = {
+                paymentMethod: 'Card',
+                tenderedAmount: window.payingOrderData.total,
+                change: 0,
+                paymentStatus: 'paid',
+                squareTransactionId: 'manual_' + Date.now(),
+                squareStatus: 'manual_accept'
+            };
+            
+            window.updateOrderInDaily(parseInt(window.payingOrderNumber), paymentDetails).then(() => {
+                // Clear the stored order data
+                window.payingOrderNumber = null;
+                window.payingOrderData = null;
+                
+                // Show success popup for card payment
+                const overlay = document.createElement('div');
+                overlay.style.position = 'fixed';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                overlay.style.zIndex = '999';
+                overlay.style.cursor = 'pointer';
+                const successMessage = document.createElement('div');
+                successMessage.style.position = 'fixed';
+                successMessage.style.top = '50%';
+                successMessage.style.left = '50%';
+                successMessage.style.transform = 'translate(-50%, -50%)';
+                successMessage.style.backgroundColor = '#4CAF50';
+                successMessage.style.color = 'white';
+                successMessage.style.padding = '40px';
+                successMessage.style.borderRadius = '15px';
+                successMessage.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+                successMessage.style.zIndex = '1000';
+                successMessage.style.textAlign = 'center';
+                successMessage.style.minWidth = '300px';
+
+                successMessage.innerHTML = `
+                    <div style="font-size: 28px; font-weight: bold; margin-bottom: 6px;">Card payment successful</div>
+                    <div style="font-size: 18px; opacity: 0.9;">Paid: ¥${window.payingOrderData.total || 0}</div>
+                `;
+                document.body.appendChild(overlay);
+                document.body.appendChild(successMessage);
+                
+                // Close payment modal
+                const paymentModal = document.getElementById('paymentModal');
+                if (paymentModal) {
+                    paymentModal.style.display = 'none';
+                }
+                
+                const dismiss = () => {
+                    if (document.body.contains(overlay)) document.body.removeChild(overlay);
+                    if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
+                    
+                    // Refresh order log
+                    const orderLogContainer = document.querySelector('.order-log-container');
+                    if (orderLogContainer && window.displayOrderLog) {
+                        window.displayOrderLog(orderLogContainer, window.getDisplayName, window.translate, window.updateOrderInDaily, window.getOrderByNumber, window.showCustomAlert);
+                    }
+                };
+                overlay.addEventListener('click', dismiss);
+                successMessage.addEventListener('click', dismiss);
+            }).catch((error) => {
+                console.error('Error updating order:', error);
+                showCustomAlert('Error updating order. Please try again.', 'error');
+            });
+            
+        } else if (window.moveCurrentOrderToCompleted && window.currentOrder) {
             // Ensure we have a valid order number
             if (!window.currentOrder.orderNumber || isNaN(parseInt(window.currentOrder.orderNumber, 10))) {
                 console.error('Current order has no valid order number, cannot process manual payment');
@@ -1025,7 +1096,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 
 
-    // Add event delegation for Pay Now and Edit buttons in order log
+    // Add event delegation for Pay Now, Edit, and Table Assign buttons in order log
     // Add a check before using window.updateOrderInDaily
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('pay-now-btn')) {
@@ -1044,6 +1115,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 return;
             }
             openEditOrderModal(orderNumber, getOrderByNumber, showCustomAlert, getDisplayName, t, window.updateOrderInDaily, deleteOrderFromDaily, displayOrderLog, window.activeCategory);
+        } else if (e.target.classList.contains('table-assign-btn') || e.target.closest('.table-assign-btn')) {
+            const button = e.target.classList.contains('table-assign-btn') ? e.target : e.target.closest('.table-assign-btn');
+            const orderNumber = button.dataset.orderNumber;
+            openTableAssignModal(orderNumber, getOrderByNumber, showCustomAlert, window.updateOrderInDaily, displayOrderLog, t);
         }
     });
 
