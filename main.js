@@ -411,6 +411,12 @@ function startSquarePaymentVerification() {
                     
                     // Refresh UI based on payment type
                     if (cardPaymentStatus.isPayLater) {
+                        // Pay Later order - close payment modal and refresh order log
+                        const paymentModal = document.getElementById('paymentModal');
+                        if (paymentModal) {
+                            paymentModal.style.display = 'none';
+                        }
+                        
                         if (window.displayOrderLog) {
                             window.displayOrderLog();
                         }
@@ -1326,17 +1332,47 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('processCardBtn').addEventListener('click', function() {
         console.log('Card payment button clicked');
         
+        // Validate order data before processing
+        let orderData = null;
+        let isPayLater = false;
+        
+        if (window.payingOrderNumber && window.payingOrderData && window.updateOrderInDaily) {
+            // Pay Later order
+            orderData = window.payingOrderData;
+            isPayLater = true;
+            console.log('Processing Pay Later order:', window.payingOrderNumber, 'Amount:', orderData.total);
+        } else if (window.currentOrder) {
+            // Current order
+            orderData = window.currentOrder;
+            isPayLater = false;
+            console.log('Processing current order:', orderData.orderNumber, 'Amount:', orderData.total);
+        } else {
+            console.error('No valid order data found for card payment');
+            if (window.showCustomAlert) {
+                window.showCustomAlert('No order data found for card payment', 'error');
+            }
+            return;
+        }
+        
+        // Validate amount
+        if (!orderData.total || orderData.total <= 0) {
+            console.error('Invalid order total:', orderData.total);
+            if (window.showCustomAlert) {
+                window.showCustomAlert('Invalid order total for card payment', 'error');
+            }
+            return;
+        }
+        
         // Use Square integration for card payment
         if (window.SquareIntegration && window.SquareIntegration.processCardPayment) {
             console.log('Square integration available, processing card payment');
             
             // Show waiting popup before opening Square
-            const currentOrder = window.currentOrder;
-            if (currentOrder && currentOrder.orderNumber) {
-                console.log('Current order found, showing waiting popup');
-                showSquarePaymentWaiting(currentOrder.orderNumber);
+            if (orderData.orderNumber) {
+                console.log('Order found, showing waiting popup');
+                showSquarePaymentWaiting(orderData.orderNumber);
             } else {
-                console.warn('No current order or order number found, showing waiting popup anyway');
+                console.warn('No order number found, showing waiting popup anyway');
                 showSquarePaymentWaiting('unknown');
             }
             
@@ -1626,7 +1662,12 @@ async function checkCardPaymentStatusOnLoad() {
                 
                 // Refresh UI based on payment type
                 if (cardPaymentStatus.isPayLater) {
-                    // Pay Later order - refresh order log
+                    // Pay Later order - close payment modal and refresh order log
+                    const paymentModal = document.getElementById('paymentModal');
+                    if (paymentModal) {
+                        paymentModal.style.display = 'none';
+                    }
+                    
                     if (window.displayOrderLog) {
                         window.displayOrderLog();
                     }

@@ -321,14 +321,21 @@ class SquareIntegration {
     // Open Square app with payment amount
     openSquarePayment(amount) {
         console.log('Opening Square payment for amount:', amount);
+        console.log('Amount type:', typeof amount);
+        console.log('Amount validation:', amount > 0, amount !== null, amount !== undefined);
         
         // Validate amount
-        if (!amount || amount <= 0) {
+        if (!amount || amount <= 0 || isNaN(amount)) {
+            console.error('Invalid payment amount:', amount);
             if (window.showCustomAlert) {
                 window.showCustomAlert('Invalid payment amount', 'error');
             }
             return;
         }
+        
+        // Ensure amount is a number and round to avoid decimal issues
+        const finalAmount = Math.round(Number(amount));
+        console.log('Final amount for Square:', finalAmount);
         
         // Get current order data
         const currentOrder = window.currentOrder;
@@ -348,7 +355,7 @@ class SquareIntegration {
         // Prepare Square payment data according to official documentation
         const dataParameter = {
             amount_money: {
-                amount: Math.round(amount), // Amount in cents for JPY
+                amount: finalAmount, // Amount in cents for JPY
                 currency_code: SQUARE_CONFIG.currency
             },
             callback_url: callbackUrl,
@@ -430,19 +437,28 @@ class SquareIntegration {
 
     // Get payment amount for Square
     getSquarePaymentAmount() {
+        console.log('Getting Square payment amount...');
+        console.log('Pay Later data:', window.payingOrderData);
+        console.log('Current order:', window.currentOrder);
+        
         // Check if we're processing a Pay Later order from Order Log
         if (window.payingOrderData && window.payingOrderData.total) {
-            console.log('Using Pay Later order total:', window.payingOrderData.total);
-            return window.payingOrderData.total;
+            const payLaterAmount = window.payingOrderData.total;
+            console.log('Using Pay Later order total:', payLaterAmount);
+            console.log('Pay Later order number:', window.payingOrderNumber);
+            return payLaterAmount;
         }
         
-        // Fallback to current order
-        if (!window.currentOrder) {
-            console.error('No current order found');
-            return 0;
+        // Use current order for regular payments
+        if (window.currentOrder && window.currentOrder.total) {
+            const currentAmount = window.currentOrder.total;
+            console.log('Using current order total:', currentAmount);
+            console.log('Current order number:', window.currentOrder.orderNumber);
+            return currentAmount;
         }
-
-        return window.currentOrder.total || 0;
+        
+        console.error('No valid order data found for Square payment');
+        return 0;
     }
 }
 
