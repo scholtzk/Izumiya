@@ -279,9 +279,10 @@
                             const current = data.orders ? data.orders.current : null;
                             addDebug('Current order', current);
                             
-                            // Get payment amount from URL parameters
-                            const paymentAmount = parseFloat(transactionInfo.amount) || 0;
+                            // Get payment amount from current order (Square doesn't return amount in callback)
+                            const paymentAmount = current ? current.total : 0;
                             addDebug('Payment amount', paymentAmount);
+                            addDebug('Payment amount source', 'Current order total (Square callback does not include amount)');
                             
                             // Check if we have a current order and if it matches payment amount
                             addDebug('Current order check', `Current exists: ${!!current}, Current total: ${current ? current.total : 'N/A'}, Payment amount: ${paymentAmount}`);
