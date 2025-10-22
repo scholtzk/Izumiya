@@ -284,10 +284,26 @@
                             addDebug('Payment amount', paymentAmount);
                             addDebug('Payment amount source', 'Current order total (Square callback does not include amount)');
                             
-                            // Check if we have a current order and if it matches payment amount
+                            // Check if we have a valid current order with items and matching amount
                             addDebug('Current order check', `Current exists: ${!!current}, Current total: ${current ? current.total : 'N/A'}, Payment amount: ${paymentAmount}`);
                             
-                            if (current && current.total === paymentAmount) {
+                            // Validate current order has items and valid total
+                            const hasValidCurrentOrder = current && 
+                                                       current.items && 
+                                                       current.items.length > 0 && 
+                                                       current.total > 0 && 
+                                                       current.total === paymentAmount;
+                            
+                            addDebug('Current order validation', `Has valid current order: ${hasValidCurrentOrder}`);
+                            addDebug('Current order details', {
+                                exists: !!current,
+                                hasItems: current ? !!current.items : false,
+                                itemsCount: current ? (current.items ? current.items.length : 0) : 0,
+                                total: current ? current.total : 0,
+                                totalMatches: current ? (current.total === paymentAmount) : false
+                            });
+                            
+                            if (hasValidCurrentOrder) {
                                 addDebug('Processing path', 'Regular current order payment');
                                 
                                 // Regular current order payment - validate and process
@@ -337,8 +353,8 @@
                                 addDebug('Save result', 'success - Current order completed');
                                 detailsElement.textContent = 'Saved. Returning to POS...';
                             } else {
-                                // Amount doesn't match - search for Pay Later order with matching amount
-                                addDebug('Order search', 'Current order amount does not match, searching unpaid orders...');
+                                // No valid current order - search for Pay Later order with matching amount
+                                addDebug('Order search', 'No valid current order found, searching unpaid orders...');
                                 
                                 const allOrders = data.orders || {};
                                 const unpaidOrders = Object.values(allOrders).filter(order => 
