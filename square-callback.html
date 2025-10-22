@@ -370,8 +370,8 @@
                         addDebug('Full error object', saveErr);
                         addDebug('Error occurred at', new Date().toISOString());
                         addDebug('Transaction info at error', transactionInfo);
-                        addDebug('Current order at error', current);
-                        addDebug('Payment amount at error', paymentAmount);
+                        addDebug('Current order at error', 'Variable not accessible in catch block');
+                        addDebug('Payment amount at error', 'Variable not accessible in catch block');
                         detailsElement.textContent = 'Payment save failed. Retrying...';
                         showDebugPanel();
                         
