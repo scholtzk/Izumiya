@@ -627,6 +627,7 @@ function acceptAsPaid() {
         // Check if we're paying an existing order from Order Log
         if (window.payingOrderNumber && window.payingOrderData && window.updateOrderInDaily) {
             console.log('Processing manual card payment for existing order from Order Log:', window.payingOrderNumber);
+            console.log('Pay Later order data:', window.payingOrderData);
             console.log('Paying order data structure:', window.payingOrderData);
             console.log('Paying order total:', window.payingOrderData.total);
             
@@ -641,12 +642,13 @@ function acceptAsPaid() {
                 squareStatus: 'manual_accept'
             };
             
+            console.log('Updating Pay Later order:', window.payingOrderNumber, 'with payment details:', paymentDetails);
             window.updateOrderInDaily(parseInt(window.payingOrderNumber), paymentDetails).then((result) => {
                 console.log('Order update result:', result);
                 
-                // Clear the stored order data
-                window.payingOrderNumber = null;
-                window.payingOrderData = null;
+                // Don't clear the stored order data immediately - let system health check detect it
+                // window.payingOrderNumber = null;
+                // window.payingOrderData = null;
                 
                 // Close payment modal immediately
                 const paymentModal = document.getElementById('paymentModal');
@@ -694,6 +696,13 @@ function acceptAsPaid() {
                 const dismiss = () => {
                     if (document.body.contains(overlay)) document.body.removeChild(overlay);
                     if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
+                    
+                    // Clear the Pay Later variables after a delay to prevent extra order creation
+                    setTimeout(() => {
+                        window.payingOrderNumber = null;
+                        window.payingOrderData = null;
+                        console.log('Cleared Pay Later variables after delay');
+                    }, 2000); // 2 second delay
                 };
                 overlay.addEventListener('click', dismiss);
                 successMessage.addEventListener('click', dismiss);
@@ -933,6 +942,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             // Check if critical global variables are still valid
             if (!window.currentOrder || typeof window.currentOrder !== 'object') {
+                console.log('System health check: currentOrder is null/undefined');
+                console.log('Pay Later variables:', { payingOrderNumber: window.payingOrderNumber, payingOrderData: window.payingOrderData });
+                
                 // Don't create new order if we're processing Pay Later orders
                 if (window.payingOrderNumber && window.payingOrderData) {
                     console.log('Skipping order recovery - processing Pay Later order');
