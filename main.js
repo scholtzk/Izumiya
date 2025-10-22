@@ -1536,6 +1536,13 @@ async function checkCardPaymentStatusOnLoad() {
                 // Card payment was successful
                 console.log('Card payment completed successfully');
                 
+                // Dismiss any Square payment waiting popup
+                squarePaymentWaiting = false;
+                const waitingOverlay = document.getElementById('squarePaymentWaiting');
+                if (waitingOverlay) {
+                    waitingOverlay.remove();
+                }
+                
                 // Show success message
                 if (window.showCustomAlert) {
                     window.showCustomAlert('Card payment completed successfully!', 'success');
@@ -1555,6 +1562,26 @@ async function checkCardPaymentStatusOnLoad() {
                     if (window.displayOrderLog) {
                         window.displayOrderLog();
                     }
+                }
+                
+                // Clear the card payment document
+                await window.clearCardPaymentDocument();
+                
+            } else if (cardPaymentStatus.status === 'failed') {
+                // Card payment failed
+                console.log('Card payment failed:', cardPaymentStatus.errorCode);
+                
+                // Dismiss any Square payment waiting popup
+                squarePaymentWaiting = false;
+                const waitingOverlay = document.getElementById('squarePaymentWaiting');
+                if (waitingOverlay) {
+                    waitingOverlay.remove();
+                }
+                
+                // Show failure message
+                if (window.showCustomAlert) {
+                    const errorMsg = cardPaymentStatus.errorMessage || 'Payment failed';
+                    window.showCustomAlert(`Card payment failed: ${errorMsg}`, 'error');
                 }
                 
                 // Clear the card payment document

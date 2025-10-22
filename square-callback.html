@@ -428,15 +428,41 @@
                     redirectToProSurf(query);
                     
                 } else if (transactionInfo.error_code) {
-                    // Handle error
+                    // Handle payment failure
+                    console.log('Square payment failed:', transactionInfo.error_code);
+                    addDebug('Payment failure', 'Processing payment failure...');
+                    
                     statusElement.textContent = 'Payment failed';
                     statusElement.className = 'status error';
                     detailsElement.textContent = `Error: ${transactionInfo.error_code}`;
                     showDebugPanel();
                     addDebug('Error code', transactionInfo.error_code);
                     
+                    // Update card payment document with failure status
+                    try {
+                        const cardPaymentRef = window.firebaseServices.doc(window.firebaseDb, 'cardPaymentProcessing', 'current');
+                        const cardPaymentDoc = await window.firebaseServices.getDoc(cardPaymentRef);
+                        
+                        if (cardPaymentDoc.exists()) {
+                            const cardPaymentData = cardPaymentDoc.data();
+                            const updatedCardPayment = {
+                                ...cardPaymentData,
+                                status: 'failed',
+                                errorCode: transactionInfo.error_code,
+                                errorMessage: transactionInfo.error_message || 'Payment failed',
+                                failedAt: window.firebaseServices.Timestamp.now()
+                            };
+                            
+                            await window.firebaseServices.updateDoc(cardPaymentRef, updatedCardPayment);
+                            addDebug('Card payment updated', 'Failure status saved');
+                        }
+                    } catch (error) {
+                        console.error('Error updating card payment document with failure:', error);
+                        addDebug('Card payment update error', error.message);
+                    }
+                    
                     // Redirect to ProSurf immediately
-                    const query = `?square_error=${encodeURIComponent(transactionInfo.error_code)}${orderNumber?`&orderNumber=${encodeURIComponent(orderNumber)}`:''}${total?`&total=${encodeURIComponent(total)}`:''}`;
+                    const query = `?square_error=${encodeURIComponent(transactionInfo.error_code)}`;
                     redirectToProSurf(query);
                     
                 } else {
