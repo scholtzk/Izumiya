@@ -224,7 +224,6 @@
                 
                 // Check for success
                 if (transactionInfo.status === 'ok' || transactionInfo.transaction_id || transactionInfo.client_transaction_id) {
-                    console.log('Square callback: Payment successful, processing...');
                     statusElement.textContent = 'Payment successful!';
                     statusElement.className = 'status success';
                     detailsElement.textContent = 'Saving payment...';
@@ -256,36 +255,71 @@
                             addDebug('Document data', data);
                             
                             const current = data.orders ? data.orders.current : null;
-                            console.log('Square callback: Current order found:', current);
                             addDebug('Current order', current);
                             
-                            if (!current) {
-                                throw new Error('No current order found in Firebase');
-                            }
-                            if (!current.items) {
-                                throw new Error('Current order has no items');
-                            }
-                            if (!current.orderNumber) {
-                                throw new Error('Current order has no order number');
+                            // Get payment amount from URL parameters
+                            const paymentAmount = parseFloat(transactionInfo.amount) || 0;
+                            addDebug('Payment amount', paymentAmount);
+                            
+                            let orderToUpdate = null;
+                            let isCurrentOrder = false;
+                            
+                            // Check if current order amount matches payment amount
+                            if (current && current.total === paymentAmount) {
+                                orderToUpdate = current;
+                                isCurrentOrder = true;
+                                addDebug('Order match', 'Current order amount matches payment');
+                            } else {
+                                // Search through unpaid orders to find matching amount
+                                addDebug('Order search', 'Current order amount does not match, searching unpaid orders...');
+                                
+                                const allOrders = data.orders || {};
+                                const unpaidOrders = Object.values(allOrders).filter(order => 
+                                    order.paymentStatus === 'unpaid' && 
+                                    order.total === paymentAmount
+                                );
+                                
+                                if (unpaidOrders.length > 0) {
+                                    // Find the most recent unpaid order with matching amount
+                                    const mostRecentOrder = unpaidOrders.reduce((latest, order) => {
+                                        if (!latest) return order;
+                                        return order.timestamp && order.timestamp > latest.timestamp ? order : latest;
+                                    });
+                                    
+                                    orderToUpdate = mostRecentOrder;
+                                    addDebug('Order match', `Found unpaid order ${orderToUpdate.orderNumber} with matching amount`);
+                                } else {
+                                    throw new Error(`No order found with amount ${paymentAmount}`);
+                                }
                             }
                             
-                            addDebug('Order validation', 'Passed');
+                            if (!orderToUpdate) {
+                                throw new Error('No matching order found for payment amount');
+                            }
                             
                             const completedOrder = {
-                                ...current,
+                                ...orderToUpdate,
                                 paymentMethod: 'Card',
-                                tenderedAmount: current.total,
+                                tenderedAmount: orderToUpdate.total,
                                 change: 0,
                                 paymentStatus: 'paid',
-                                timestamp: window.firebaseServices.Timestamp.now(),
+                                timestamp: orderToUpdate.timestamp, // Preserve original timestamp
                                 squareTransactionId: transactionInfo.transaction_id || transactionInfo.client_transaction_id,
                                 squareStatus: transactionInfo.status || 'ok'
                             };
                             addDebug('Completed order', completedOrder);
                             
                             const updated = { ...(data.orders || {}) };
-                            delete updated.current;
-                            updated[completedOrder.orderNumber] = completedOrder;
+                            
+                            if (isCurrentOrder) {
+                                // Remove current order and add to completed
+                                delete updated.current;
+                                updated[completedOrder.orderNumber] = completedOrder;
+                            } else {
+                                // Update existing order in place
+                                updated[completedOrder.orderNumber] = completedOrder;
+                            }
+                            
                             addDebug('Updated orders', updated);
                             
                             await window.firebaseServices.updateDoc(dailyOrdersRef, {

@@ -365,7 +365,6 @@ function startSquarePaymentVerification() {
         try {
             const paymentCompleted = await checkSquarePaymentStatus();
             if (paymentCompleted) {
-                console.log('Square payment completed, calling handleSquarePaymentSuccess');
                 clearInterval(checkInterval);
                 handleSquarePaymentSuccess();
             }
@@ -404,8 +403,6 @@ async function checkSquarePaymentStatus() {
 
 // Handle successful Square payment
 async function handleSquarePaymentSuccess() {
-    console.log('Square payment success handler called');
-    console.log('Current order before processing:', window.currentOrder);
     squarePaymentWaiting = false;
     
     // Remove waiting overlay
@@ -629,10 +626,6 @@ function acceptAsPaid() {
         
         // Check if we're paying an existing order from Order Log
         if (window.payingOrderNumber && window.payingOrderData && window.updateOrderInDaily) {
-            console.log('Processing manual card payment for existing order from Order Log:', window.payingOrderNumber);
-            console.log('Pay Later order data:', window.payingOrderData);
-            console.log('Paying order data structure:', window.payingOrderData);
-            console.log('Paying order total:', window.payingOrderData.total);
             
             // Update the existing order with card payment details
             // Preserve original timestamp for Pay Later orders
@@ -645,9 +638,7 @@ function acceptAsPaid() {
                 squareStatus: 'manual_accept'
             };
             
-            console.log('Updating Pay Later order:', window.payingOrderNumber, 'with payment details:', paymentDetails);
             window.updateOrderInDaily(parseInt(window.payingOrderNumber), paymentDetails).then((result) => {
-                console.log('Order update result:', result);
                 
                 // Don't clear the stored order data immediately - let system health check detect it
                 // window.payingOrderNumber = null;
@@ -704,7 +695,6 @@ function acceptAsPaid() {
                     setTimeout(() => {
                         window.payingOrderNumber = null;
                         window.payingOrderData = null;
-                        console.log('Cleared Pay Later variables after delay');
                     }, 2000); // 2 second delay
                 };
                 overlay.addEventListener('click', dismiss);
@@ -942,33 +932,24 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Function to check for memory issues and state corruption
     function checkSystemHealth() {
-        console.log('System health check running...');
         try {
             // Check if critical global variables are still valid
             if (!window.currentOrder || typeof window.currentOrder !== 'object') {
-                console.log('System health check: currentOrder is null/undefined');
-                console.log('Pay Later variables:', { payingOrderNumber: window.payingOrderNumber, payingOrderData: window.payingOrderData });
-                console.log('Square payment waiting:', squarePaymentWaiting);
                 
                 // Don't create new order if we're processing Pay Later orders
                 if (window.payingOrderNumber && window.payingOrderData) {
-                    console.log('Skipping order recovery - processing Pay Later order');
                     return true;
                 }
-                console.warn('window.currentOrder corrupted, attempting recovery');
                 // Don't set orderNumber to null - generate it immediately
                 if (window.generateOrderNumber) {
                     window.generateOrderNumber()
                         .then((orderNumber) => {
-                            console.log('Generated recovery order number:', orderNumber);
                             window.currentOrder = {
                                 items: [],
                                 subtotal: 0,
                                 total: 0,
                                 orderNumber: orderNumber
                             };
-                            console.log('Order recovery successful with number:', orderNumber);
-                            console.log('NEW ORDER CREATED BY SYSTEM HEALTH CHECK - Order Number:', orderNumber);
                         })
                         .catch((error) => {
                             console.error('Order recovery failed:', error);
@@ -979,7 +960,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                                 total: 0,
                                 orderNumber: 1
                             };
-                            console.log('NEW ORDER CREATED BY SYSTEM HEALTH CHECK (FALLBACK) - Order Number: 1');
                         });
                 } else {
                     // Fallback if generateOrderNumber is not available
@@ -989,7 +969,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                         total: 0,
                         orderNumber: 1
                     };
-                    console.log('NEW ORDER CREATED BY SYSTEM HEALTH CHECK (FINAL FALLBACK) - Order Number: 1');
                 }
             }
             
