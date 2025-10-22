@@ -648,6 +648,18 @@ function acceptAsPaid() {
                 window.payingOrderNumber = null;
                 window.payingOrderData = null;
                 
+                // Close payment modal immediately
+                const paymentModal = document.getElementById('paymentModal');
+                if (paymentModal) {
+                    paymentModal.style.display = 'none';
+                }
+                
+                // Refresh order log immediately
+                const orderLogContainer = document.querySelector('.order-log-container');
+                if (orderLogContainer && window.displayOrderLog) {
+                    window.displayOrderLog(orderLogContainer, window.getDisplayName, window.translate, window.updateOrderInDaily, window.getOrderByNumber, window.showCustomAlert);
+                }
+                
                 // Show success popup for card payment
                 const overlay = document.createElement('div');
                 overlay.style.position = 'fixed';
@@ -679,21 +691,9 @@ function acceptAsPaid() {
                 document.body.appendChild(overlay);
                 document.body.appendChild(successMessage);
                 
-                // Close payment modal
-                const paymentModal = document.getElementById('paymentModal');
-                if (paymentModal) {
-                    paymentModal.style.display = 'none';
-                }
-                
                 const dismiss = () => {
                     if (document.body.contains(overlay)) document.body.removeChild(overlay);
                     if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
-                    
-                    // Refresh order log
-                    const orderLogContainer = document.querySelector('.order-log-container');
-                    if (orderLogContainer && window.displayOrderLog) {
-                        window.displayOrderLog(orderLogContainer, window.getDisplayName, window.translate, window.updateOrderInDaily, window.getOrderByNumber, window.showCustomAlert);
-                    }
                 };
                 overlay.addEventListener('click', dismiss);
                 successMessage.addEventListener('click', dismiss);
@@ -742,6 +742,71 @@ function acceptAsPaid() {
             
             window.moveCurrentOrderToCompleted(completedOrder).then(() => {
                 console.log('Current order moved to completed successfully');
+                
+                // Close payment modal immediately
+                const paymentModal = document.getElementById('paymentModal');
+                if (paymentModal) {
+                    paymentModal.style.display = 'none';
+                }
+                
+                // Refresh order log immediately
+                const orderLogContainer = document.querySelector('.order-log-container');
+                if (orderLogContainer && window.displayOrderLog) {
+                    window.displayOrderLog(orderLogContainer, window.getDisplayName, window.translate, window.updateOrderInDaily, window.getOrderByNumber, window.showCustomAlert);
+                }
+                
+                // Show the same success popup as normal card payments
+                const overlay = document.createElement('div');
+                overlay.style.position = 'fixed';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                overlay.style.zIndex = '999';
+                overlay.style.cursor = 'pointer';
+                const successMessage = document.createElement('div');
+                successMessage.style.position = 'fixed';
+                successMessage.style.top = '50%';
+                successMessage.style.left = '50%';
+                successMessage.style.transform = 'translate(-50%, -50%)';
+                successMessage.style.backgroundColor = '#4CAF50';
+                successMessage.style.color = 'white';
+                successMessage.style.padding = '40px';
+                successMessage.style.borderRadius = '15px';
+                successMessage.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+                successMessage.style.zIndex = '1000';
+                successMessage.style.textAlign = 'center';
+                successMessage.style.minWidth = '300px';
+
+                const paidAmount = window.currentOrder ? window.currentOrder.total : 0;
+                successMessage.innerHTML = `
+                    <div style="font-size: 28px; font-weight: bold; margin-bottom: 6px;">Card payment successful</div>
+                    <div style="font-size: 18px; opacity: 0.9;">Paid: ¥${paidAmount}</div>
+                `;
+                document.body.appendChild(overlay);
+                document.body.appendChild(successMessage);
+                
+                const dismiss = async () => {
+                    if (document.body.contains(overlay)) document.body.removeChild(overlay);
+                    if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
+                    
+                    // Initialize new order (same as cash payment)
+                    try {
+                        if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
+                            const newOrder = await window.initializeOrder(window.generateOrderNumber, window.showCustomAlert);
+                            if (newOrder) {
+                                console.log('New order initialized after manual card payment');
+                                // initializeOrder() already handles UI refresh
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error initializing order after manual card payment:', error);
+                    }
+                };
+                overlay.addEventListener('click', dismiss);
+                successMessage.addEventListener('click', dismiss);
+                
             }).catch((error) => {
                 console.error('Error moving current order to completed:', error);
                 
@@ -757,73 +822,6 @@ function acceptAsPaid() {
                 // Don't show error if the order was actually processed
                 console.log('Payment processed. Please check if the order was updated in the order log.');
             });
-            
-            // Show the same success popup as normal card payments
-            const overlay = document.createElement('div');
-            overlay.style.position = 'fixed';
-            overlay.style.top = '0';
-            overlay.style.left = '0';
-            overlay.style.width = '100%';
-            overlay.style.height = '100%';
-            overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-            overlay.style.zIndex = '999';
-            overlay.style.cursor = 'pointer';
-            const successMessage = document.createElement('div');
-            successMessage.style.position = 'fixed';
-            successMessage.style.top = '50%';
-            successMessage.style.left = '50%';
-            successMessage.style.transform = 'translate(-50%, -50%)';
-            successMessage.style.backgroundColor = '#4CAF50';
-            successMessage.style.color = 'white';
-            successMessage.style.padding = '40px';
-            successMessage.style.borderRadius = '15px';
-            successMessage.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
-            successMessage.style.zIndex = '1000';
-            successMessage.style.textAlign = 'center';
-            successMessage.style.minWidth = '300px';
-
-            const paidAmount = window.currentOrder ? window.currentOrder.total : 0;
-            successMessage.innerHTML = `
-                <div style="font-size: 28px; font-weight: bold; margin-bottom: 6px;">Card payment successful</div>
-                <div style="font-size: 18px; opacity: 0.9;">Paid: ¥${paidAmount}</div>
-            `;
-            document.body.appendChild(overlay);
-            document.body.appendChild(successMessage);
-            
-            // Close payment modal
-            const paymentModal = document.getElementById('paymentModal');
-            if (paymentModal) {
-                paymentModal.style.display = 'none';
-            }
-            
-            const dismiss = async () => {
-                if (document.body.contains(overlay)) document.body.removeChild(overlay);
-                if (document.body.contains(successMessage)) document.body.removeChild(successMessage);
-                
-                // Update order log first
-                const container = document.querySelector('.order-log-container');
-                if (container && window.displayOrderLog) {
-                    await window.displayOrderLog(container, window.getDisplayName, window.translate, window.updateOrderInDaily, window.getOrderByNumber, window.showCustomAlert);
-                }
-                
-                // Note: For Square payments, the callback page already clears the current order
-                // No need to clear it again here
-                
-                // Initialize new order (same as cash payment)
-                try {
-                    if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
-                        const newOrder = await window.initializeOrder(window.generateOrderNumber, window.showCustomAlert);
-                        if (newOrder) {
-                            console.log('New order initialized after manual card payment');
-                            // initializeOrder() already handles UI refresh
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error initializing order after manual card payment:', error);
-                }
-            };
-            overlay.addEventListener('click', dismiss);
-            successMessage.addEventListener('click', dismiss);
             
         } else {
             showCustomAlert('Error: Cannot process payment', 'error');
