@@ -140,17 +140,28 @@
 
         // Simple debug helpers
         function showDebugPanel() {
+            console.log('showDebugPanel called');
             const panel = document.getElementById('debugPanel');
-            if (panel) panel.style.display = 'block';
+            if (panel) {
+                panel.style.display = 'block';
+                console.log('Debug panel shown');
+            } else {
+                console.error('Debug panel element not found!');
+            }
         }
         function addDebug(key, value) {
+            console.log(`[DEBUG] ${key}:`, value);
             const el = document.getElementById('debugContent');
-            if (!el) return;
+            if (!el) {
+                console.error('Debug content element not found!');
+                return;
+            }
             const pretty = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
             const row = document.createElement('div');
             row.className = 'debug-row';
             row.innerHTML = `<span class="debug-key">${key}:</span> <pre style="margin:4px 0 0; white-space:pre-wrap;">${pretty}</pre>`;
             el.appendChild(row);
+            console.log('Added debug log:', key, value);
         }
         function clearDebug() {
             const el = document.getElementById('debugContent');
@@ -209,7 +220,11 @@
 
         // Main processing function
         async function processSquareCallback(retryCount = 0) {
+            console.log('=== SQUARE CALLBACK START ===');
+            console.log('Retry count:', retryCount);
+            showDebugPanel(); // Always show debug panel
             try {
+                console.log('Starting try block...');
                 // Wait for Firebase to be fully loaded
                 document.getElementById('details').textContent = 'Connecting to Firebase services...';
                 await waitForFirebase();
@@ -218,12 +233,19 @@
                 const statusElement = document.getElementById('status');
                 const detailsElement = document.getElementById('details');
                 clearDebug();
+                console.log('Adding initial debug logs...');
                 addDebug('URL', window.location.href);
                 addDebug('Query', Object.fromEntries(new URLSearchParams(window.location.search).entries()));
                 addDebug('Transaction info', transactionInfo);
+                console.log('Initial debug logs added');
                 
                 // Check for success
+                console.log('Checking payment success...');
+                addDebug('Payment status check', 'Starting...');
+                
                 if (transactionInfo.status === 'ok' || transactionInfo.transaction_id || transactionInfo.client_transaction_id) {
+                    console.log('Payment successful, processing...');
+                    addDebug('Payment status', 'SUCCESS - Processing payment');
                     statusElement.textContent = 'Payment successful!';
                     statusElement.className = 'status success';
                     detailsElement.textContent = 'Saving payment...';
@@ -362,6 +384,13 @@
                         // Run Firebase operation with timeout protection
                         await Promise.race([firebaseOperation(), firebaseTimeout]);
                     } catch (saveErr) {
+                        console.error('=== SAVE ERROR CAUGHT ===');
+                        console.error('Error type:', typeof saveErr);
+                        console.error('Error message:', saveErr && saveErr.message ? saveErr.message : 'No message');
+                        console.error('Error code:', saveErr && saveErr.code ? saveErr.code : 'No code');
+                        console.error('Error stack:', saveErr && saveErr.stack ? saveErr.stack : 'No stack');
+                        console.error('Full error object:', saveErr);
+                        
                         addDebug('Save result', 'failed');
                         addDebug('Save error type', typeof saveErr);
                         addDebug('Save error message', saveErr && saveErr.message ? saveErr.message : 'No message');
@@ -409,6 +438,8 @@
                     }
                     
                     // Only redirect to ProSurf on successful save
+                    console.log('Payment saved successfully, redirecting...');
+                    addDebug('Redirect', 'Payment saved successfully, redirecting to ProSurf');
                     const txId = transactionInfo.transaction_id || transactionInfo.client_transaction_id || '';
                     const query = `?square_success=1&transaction_id=${encodeURIComponent(txId)}`;
                     redirectToProSurf(query);
