@@ -1585,7 +1585,7 @@ async function checkCardPaymentStatusOnLoad() {
                 await window.clearCardPaymentDocument();
                 
             } else if (cardPaymentStatus.status === 'failed') {
-                // Card payment failed
+                // Card payment failed or cancelled
                 console.log('Card payment failed:', cardPaymentStatus.errorCode);
                 
                 // Dismiss any Square payment waiting popup
@@ -1595,10 +1595,14 @@ async function checkCardPaymentStatusOnLoad() {
                     waitingOverlay.remove();
                 }
                 
-                // Show failure message
+                // Show appropriate message based on error type
                 if (window.showCustomAlert) {
-                    const errorMsg = cardPaymentStatus.errorMessage || 'Payment failed';
-                    window.showCustomAlert(`Card payment failed: ${errorMsg}`, 'error');
+                    if (cardPaymentStatus.errorCode === 'payment_canceled') {
+                        window.showCustomAlert('Card payment cancelled', 'info');
+                    } else {
+                        const errorMsg = cardPaymentStatus.errorMessage || 'Payment failed';
+                        window.showCustomAlert(`Card payment failed: ${errorMsg}`, 'error');
+                    }
                 }
                 
                 // Clear the card payment document
