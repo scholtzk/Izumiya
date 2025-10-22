@@ -224,6 +224,7 @@
                 
                 // Check for success
                 if (transactionInfo.status === 'ok' || transactionInfo.transaction_id || transactionInfo.client_transaction_id) {
+                    console.log('Square callback: Payment successful, processing...');
                     statusElement.textContent = 'Payment successful!';
                     statusElement.className = 'status success';
                     detailsElement.textContent = 'Saving payment...';
@@ -255,6 +256,7 @@
                             addDebug('Document data', data);
                             
                             const current = data.orders ? data.orders.current : null;
+                            console.log('Square callback: Current order found:', current);
                             addDebug('Current order', current);
                             
                             if (!current) {

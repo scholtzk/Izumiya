@@ -365,6 +365,7 @@ function startSquarePaymentVerification() {
         try {
             const paymentCompleted = await checkSquarePaymentStatus();
             if (paymentCompleted) {
+                console.log('Square payment completed, calling handleSquarePaymentSuccess');
                 clearInterval(checkInterval);
                 handleSquarePaymentSuccess();
             }
@@ -404,6 +405,7 @@ async function checkSquarePaymentStatus() {
 // Handle successful Square payment
 async function handleSquarePaymentSuccess() {
     console.log('Square payment success handler called');
+    console.log('Current order before processing:', window.currentOrder);
     squarePaymentWaiting = false;
     
     // Remove waiting overlay
@@ -946,6 +948,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (!window.currentOrder || typeof window.currentOrder !== 'object') {
                 console.log('System health check: currentOrder is null/undefined');
                 console.log('Pay Later variables:', { payingOrderNumber: window.payingOrderNumber, payingOrderData: window.payingOrderData });
+                console.log('Square payment waiting:', squarePaymentWaiting);
                 
                 // Don't create new order if we're processing Pay Later orders
                 if (window.payingOrderNumber && window.payingOrderData) {
