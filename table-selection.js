@@ -72,7 +72,7 @@ export function initTableSelection() {
             const iframeDocument = iframe.contentWindow.document;
             iframeDocument.querySelectorAll('.table-item').forEach(item => {
                 const tableNumber = item.getAttribute('data-table');
-                if (tableNumber === currentTableNumber) {
+                if (currentTableNumber && tableNumber === currentTableNumber) {
                     item.classList.add('selected');
                 } else {
                     item.classList.remove('selected');
@@ -189,6 +189,8 @@ export function initTableSelection() {
             // Set table selection without updating current order (for existing order assignments)
             currentTableNumber = tableNumber;
             updateTableButtonDisplay();
+            // Also update the visual display in the modal if it's open
+            updateTableSelectionDisplay();
         },
         clearTableNumber: () => {
             currentTableNumber = null;

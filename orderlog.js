@@ -1640,10 +1640,15 @@ export async function openTableAssignModal(orderNumber, getOrderByNumber, showCu
                 modalTitle.textContent = `Assign Table to Order #${orderNumber}`;
             }
             
-            // If order already has a table, show it as selected
-            if (order.tableNumber && window.tableSelection) {
-                // Set the table selection without updating current order
-                window.tableSelection.setTableSelectionOnly(order.tableNumber);
+            // Set the table selection based on the order's current table number
+            if (window.tableSelection) {
+                if (order.tableNumber) {
+                    // If order already has a table, show it as selected
+                    window.tableSelection.setTableSelectionOnly(order.tableNumber);
+                } else {
+                    // If no table assigned, clear any previous selection
+                    window.tableSelection.setTableSelectionOnly(null);
+                }
                 
                 // Update the visual display in the iframe
                 setTimeout(() => {

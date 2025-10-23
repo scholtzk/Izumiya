@@ -49,7 +49,7 @@ window.addEventListener('firebaseReady', function() {
     titleWrapper.style.gap = '10px';
 
     const signInLogTitle = document.createElement('h2');
-    signInLogTitle.textContent = "Today:";
+    signInLogTitle.textContent = window.currentLang === 'ja' ? "今日:" : "Today:";
     signInLogTitle.style.marginBottom = '0';
     signInLogTitle.style.color = 'var(--primary)';
 
@@ -95,7 +95,7 @@ window.addEventListener('firebaseReady', function() {
 
     // Create title
     const title = document.createElement('h2');
-    title.textContent = 'Employee Sign-in';
+    title.textContent = window.currentLang === 'ja' ? '従業員サインイン' : 'Employee Sign-in';
     title.style.marginBottom = '20px';
     title.style.color = 'var(--primary)';
     title.style.display = 'flex';
@@ -149,13 +149,13 @@ window.addEventListener('firebaseReady', function() {
         modalContent.style.padding = '20px';
 
         const modalTitle = document.createElement('h2');
-        modalTitle.textContent = 'Setup New Employee';
+        modalTitle.textContent = window.currentLang === 'ja' ? '新しい従業員の設定' : 'Setup New Employee';
         modalTitle.style.marginBottom = '20px';
         modalTitle.style.color = 'var(--primary)';
 
         const nameInput = document.createElement('input');
         nameInput.type = 'text';
-        nameInput.placeholder = 'Employee Name';
+        nameInput.placeholder = window.currentLang === 'ja' ? '従業員名' : 'Employee Name';
         nameInput.style.width = '100%';
         nameInput.style.padding = '10px';
         nameInput.style.marginBottom = '15px';
@@ -165,7 +165,7 @@ window.addEventListener('firebaseReady', function() {
 
         const wageInput = document.createElement('input');
         wageInput.type = 'number';
-        wageInput.placeholder = 'Hourly Wage (円)';
+        wageInput.placeholder = window.currentLang === 'ja' ? '時給 (円)' : 'Hourly Wage (円)';
         wageInput.style.width = '100%';
         wageInput.style.padding = '10px';
         wageInput.style.marginBottom = '15px';
@@ -268,7 +268,7 @@ window.addEventListener('firebaseReady', function() {
 
         const cancelButton = document.createElement('button');
         cancelButton.className = 'action-btn cancel-btn';
-        cancelButton.textContent = 'Cancel';
+        cancelButton.textContent = window.currentLang === 'ja' ? 'キャンセル' : 'Cancel';
         cancelButton.style.flex = '1';
         cancelButton.style.padding = '12px';
         cancelButton.style.borderRadius = '8px';
@@ -496,20 +496,20 @@ window.addEventListener('firebaseReady', function() {
                 employeeInfo.innerHTML = `
                     <div style="font-weight: bold;">${data.employeeName}</div>
                     <div style="font-size: 0.9em; color: #666;">
-                        Started: ${signInTime.toLocaleTimeString()}
+                        ${window.currentLang === 'ja' ? '開始:' : 'Started:'} ${signInTime.toLocaleTimeString()}
                         <br>
-                        Duration: ${formatDuration(signInTime, data.endTime)}
+                        ${window.currentLang === 'ja' ? '時間:' : 'Duration:'} ${formatDuration(signInTime, data.endTime)}
                         ${activeBreak ? `
                             <br>
-                            <span style="color: #dc3545;">Currently on break${currentBreakDuration}</span>
+                            <span style="color: #dc3545;">${window.currentLang === 'ja' ? '現在休憩中' : 'Currently on break'}${currentBreakDuration}</span>
                         ` : ''}
                         ${completedBreaks ? `
                             <br>
-                            <span style="color: #666;">Breaks taken:<br>${completedBreaks}</span>
+                            <span style="color: #666;">${window.currentLang === 'ja' ? '取った休憩:' : 'Breaks taken:'}<br>${completedBreaks}</span>
                         ` : ''}
                         ${shiftEnded ? `
                             <br>
-                            <span style="color: #28a745;">Shift ended at ${data.endTime.toDate().toLocaleTimeString()}</span>
+                            <span style="color: #28a745;">${window.currentLang === 'ja' ? 'シフト終了時間' : 'Shift ended at'} ${data.endTime.toDate().toLocaleTimeString()}</span>
                         ` : ''}
                     </div>
                 `;
@@ -535,7 +535,7 @@ window.addEventListener('firebaseReady', function() {
                 scheduledInfo.innerHTML = `
                     <div style="font-weight: bold; color: #1976d2;">${data.employeeName}</div>
                     <div style="font-size: 0.9em; color: #1976d2;">
-                        Scheduled: ${data.startTime}
+                        ${window.currentLang === 'ja' ? 'スケジュール:' : 'Scheduled:'} ${data.startTime}
                         <br>
                         <span style="color: #666;">(Scheduled shift)</span>
                     </div>
@@ -599,7 +599,7 @@ window.addEventListener('firebaseReady', function() {
 
         // Create OK button
         const okButton = document.createElement('button');
-        okButton.textContent = 'OK';
+        okButton.textContent = window.currentLang === 'ja' ? 'OK' : 'OK';
         okButton.style.padding = '12px 30px';
         okButton.style.border = 'none';
         okButton.style.borderRadius = '8px';
@@ -674,7 +674,7 @@ window.addEventListener('firebaseReady', function() {
 
         // Create Cancel button
         const cancelButton = document.createElement('button');
-        cancelButton.textContent = 'Cancel';
+        cancelButton.textContent = window.currentLang === 'ja' ? 'キャンセル' : 'Cancel';
         cancelButton.style.padding = '12px 25px';
         cancelButton.style.border = '1px solid #e0e0e0';
         cancelButton.style.borderRadius = '8px';
@@ -691,7 +691,7 @@ window.addEventListener('firebaseReady', function() {
 
         // Create Confirm button
         const confirmButton = document.createElement('button');
-        confirmButton.textContent = 'Confirm';
+        confirmButton.textContent = window.currentLang === 'ja' ? '確認' : 'Confirm';
         confirmButton.style.padding = '12px 25px';
         confirmButton.style.border = 'none';
         confirmButton.style.borderRadius = '8px';
@@ -823,7 +823,7 @@ window.addEventListener('firebaseReady', function() {
             const employeeQuery = await getDocs(query(collection(db, 'employees'), where('pin', '==', pin)));
             if (employeeQuery.empty) {
                 const errorContent = document.createElement('div');
-                errorContent.textContent = 'Invalid PIN';
+                errorContent.textContent = window.currentLang === 'ja' ? '無効なPIN' : 'Invalid PIN';
                 errorContent.style.textAlign = 'center';
                 errorContent.style.color = '#dc3545';
                 errorContent.style.padding = '20px';
@@ -885,10 +885,10 @@ window.addEventListener('firebaseReady', function() {
 
                 statusInfo.innerHTML = `
                     <div style="margin-bottom: 10px;">
-                        <strong>Current Shift Start Time:</strong> ${signInTime.toLocaleTimeString()}
+                        <strong>${window.currentLang === 'ja' ? '現在のシフト開始時間:' : 'Current Shift Start Time:'}</strong> ${signInTime.toLocaleTimeString()}
                     </div>
                     <div style="margin-bottom: 10px;">
-                        <strong>Duration:</strong> ${formatDuration(signInTime, shiftData.endTime)}
+                        <strong>${window.currentLang === 'ja' ? '時間:' : 'Duration:'}</strong> ${formatDuration(signInTime, shiftData.endTime)}
                     </div>
                     ${activeBreak ? `
                         <div style="color: #dc3545; margin-bottom: 10px;">
@@ -910,7 +910,7 @@ window.addEventListener('firebaseReady', function() {
 
                     if (activeBreak) {
                         const breakButton = document.createElement('button');
-                        breakButton.textContent = 'End Break';
+                        breakButton.textContent = window.currentLang === 'ja' ? '休憩終了' : 'End Break';
                         breakButton.style.padding = '10px 20px';
                         breakButton.style.backgroundColor = '#dc3545';
                         breakButton.style.color = 'white';
@@ -942,7 +942,7 @@ window.addEventListener('firebaseReady', function() {
                             } catch (error) {
                                 console.error('Error handling break:', error);
                                 const errorContent = document.createElement('div');
-                                errorContent.textContent = 'Error handling break. Please try again.';
+                                errorContent.textContent = window.currentLang === 'ja' ? '休憩処理エラー。もう一度お試しください。' : 'Error handling break. Please try again.';
                                 errorContent.style.textAlign = 'center';
                                 errorContent.style.color = '#dc3545';
                                 errorContent.style.padding = '20px';
@@ -953,7 +953,7 @@ window.addEventListener('firebaseReady', function() {
                         buttonContainer.appendChild(breakButton);
                     } else {
                         const startBreakButton = document.createElement('button');
-                        startBreakButton.textContent = 'Start Break';
+                        startBreakButton.textContent = window.currentLang === 'ja' ? '休憩開始' : 'Start Break';
                         startBreakButton.style.padding = '10px 20px';
                         startBreakButton.style.backgroundColor = 'var(--primary)';
                         startBreakButton.style.color = 'white';
@@ -980,7 +980,7 @@ window.addEventListener('firebaseReady', function() {
                             } catch (error) {
                                 console.error('Error starting break:', error);
                                 const errorContent = document.createElement('div');
-                                errorContent.textContent = 'Error starting break. Please try again.';
+                                errorContent.textContent = window.currentLang === 'ja' ? '休憩開始エラー。もう一度お試しください。' : 'Error starting break. Please try again.';
                                 errorContent.style.textAlign = 'center';
                                 errorContent.style.color = '#dc3545';
                                 errorContent.style.padding = '20px';
@@ -992,7 +992,7 @@ window.addEventListener('firebaseReady', function() {
                     }
 
                     const endShiftButton = document.createElement('button');
-                    endShiftButton.textContent = 'End Shift';
+                    endShiftButton.textContent = window.currentLang === 'ja' ? 'シフト終了' : 'End Shift';
                     endShiftButton.style.padding = '10px 20px';
                     endShiftButton.style.backgroundColor = '#dc3545';
                     endShiftButton.style.color = 'white';
@@ -1017,7 +1017,7 @@ window.addEventListener('firebaseReady', function() {
                         } catch (error) {
                             console.error('Error ending shift:', error);
                             const errorContent = document.createElement('div');
-                            errorContent.textContent = 'Error ending shift. Please try again.';
+                            errorContent.textContent = window.currentLang === 'ja' ? 'シフト終了エラー。もう一度お試しください。' : 'Error ending shift. Please try again.';
                             errorContent.style.textAlign = 'center';
                             errorContent.style.color = '#dc3545';
                             errorContent.style.padding = '20px';
@@ -1034,7 +1034,7 @@ window.addEventListener('firebaseReady', function() {
                 let statusHTML = '';
                 
                 if (completedShifts.length > 0) {
-                    statusHTML += '<div style="margin-bottom: 15px; color: #28a745; font-weight: bold;">Completed Shifts Today:</div>';
+                    statusHTML += `<div style="margin-bottom: 15px; color: #28a745; font-weight: bold;">${window.currentLang === 'ja' ? '今日完了したシフト:' : 'Completed Shifts Today:'}</div>`;
                     
                     completedShifts.forEach((shiftDoc, index) => {
                         const shiftData = shiftDoc.data();
@@ -1046,23 +1046,23 @@ window.addEventListener('firebaseReady', function() {
                         
                         statusHTML += `
                             <div style="margin-bottom: 10px; padding: 10px; background-color: #f8f9fa; border-radius: 5px; border-left: 4px solid #28a745;">
-                                <div><strong>Shift ${index + 1}:</strong></div>
-                                <div>Start: ${signInTime.toLocaleTimeString()}</div>
-                                <div>End: ${endTime.toLocaleTimeString()}</div>
-                                <div>Duration: ${hours}h ${minutes}m</div>
-                                ${shiftData.totalDuration ? `<div>Total: ${Math.floor(shiftData.totalDuration / 60)}h ${shiftData.totalDuration % 60}m</div>` : ''}
+                                <div><strong>${window.currentLang === 'ja' ? 'シフト' : 'Shift'} ${index + 1}:</strong></div>
+                                <div>${window.currentLang === 'ja' ? '開始:' : 'Start:'} ${signInTime.toLocaleTimeString()}</div>
+                                <div>${window.currentLang === 'ja' ? '終了:' : 'End:'} ${endTime.toLocaleTimeString()}</div>
+                                <div>${window.currentLang === 'ja' ? '時間:' : 'Duration:'} ${hours}h ${minutes}m</div>
+                                ${shiftData.totalDuration ? `<div>${window.currentLang === 'ja' ? '合計:' : 'Total:'} ${Math.floor(shiftData.totalDuration / 60)}h ${shiftData.totalDuration % 60}m</div>` : ''}
                             </div>
                         `;
                     });
                 } else {
-                    statusHTML += '<div style="color: #666; margin-bottom: 15px;">No shifts completed today</div>';
+                    statusHTML += `<div style="color: #666; margin-bottom: 15px;">${window.currentLang === 'ja' ? '今日完了したシフトはありません' : 'No shifts completed today'}</div>`;
                 }
 
                 statusInfo.innerHTML = statusHTML;
 
                 // Add "Start New Shift" button
                 const startNewShiftButton = document.createElement('button');
-                startNewShiftButton.textContent = 'Start New Shift';
+                startNewShiftButton.textContent = window.currentLang === 'ja' ? '新しいシフト開始' : 'Start New Shift';
                 startNewShiftButton.style.padding = '10px 20px';
                 startNewShiftButton.style.backgroundColor = 'var(--primary)';
                 startNewShiftButton.style.color = 'white';
@@ -1099,7 +1099,7 @@ window.addEventListener('firebaseReady', function() {
                     } catch (error) {
                         console.error('Error starting new shift:', error);
                         const errorContent = document.createElement('div');
-                        errorContent.textContent = 'Error starting new shift. Please try again.';
+                        errorContent.textContent = window.currentLang === 'ja' ? '新しいシフト開始エラー。もう一度お試しください。' : 'Error starting new shift. Please try again.';
                         errorContent.style.textAlign = 'center';
                         errorContent.style.color = '#dc3545';
                         errorContent.style.padding = '20px';
@@ -1116,7 +1116,7 @@ window.addEventListener('firebaseReady', function() {
         } catch (error) {
             console.error('Error processing sign-in:', error);
             const errorContent = document.createElement('div');
-            errorContent.textContent = 'Error processing sign-in. Please try again.';
+            errorContent.textContent = window.currentLang === 'ja' ? 'サインイン処理エラー。もう一度お試しください。' : 'Error processing sign-in. Please try again.';
             errorContent.style.textAlign = 'center';
             errorContent.style.color = '#dc3545';
             errorContent.style.padding = '20px';
@@ -1134,7 +1134,7 @@ window.addEventListener('firebaseReady', function() {
             const querySnapshot = await getDocs(q);
             
             if (!querySnapshot.empty) {
-                document.getElementById('setupStatus').textContent = 'PIN already exists';
+                document.getElementById('setupStatus').textContent = window.currentLang === 'ja' ? 'PINは既に存在します' : 'PIN already exists';
                 document.getElementById('setupStatus').style.color = 'red';
                 return;
             }
@@ -1154,7 +1154,7 @@ window.addEventListener('firebaseReady', function() {
             }
 
             // Show success message in main container
-            signInStatus.textContent = 'Employee added successfully!';
+            signInStatus.textContent = window.currentLang === 'ja' ? '従業員が正常に追加されました！' : 'Employee added successfully!';
             signInStatus.style.color = 'green';
 
             // Clear success message after 3 seconds
@@ -1163,7 +1163,7 @@ window.addEventListener('firebaseReady', function() {
             }, 3000);
         } catch (error) {
             console.error('Error saving employee:', error);
-            document.getElementById('setupStatus').textContent = 'Error saving employee. Please try again.';
+            document.getElementById('setupStatus').textContent = window.currentLang === 'ja' ? '従業員保存エラー。もう一度お試しください。' : 'Error saving employee. Please try again.';
             document.getElementById('setupStatus').style.color = 'red';
         }
     }
@@ -1348,7 +1348,7 @@ window.addEventListener('firebaseReady', function() {
         viewToggleContainer.style.marginLeft = '20px';
 
         const monthViewBtn = document.createElement('button');
-        monthViewBtn.textContent = 'Month';
+        monthViewBtn.textContent = window.currentLang === 'ja' ? '月' : 'Month';
         monthViewBtn.style.padding = '8px 16px';
         monthViewBtn.style.border = '1px solid var(--primary)';
         monthViewBtn.style.borderRadius = '6px';
@@ -1362,7 +1362,7 @@ window.addEventListener('firebaseReady', function() {
         };
 
         const weekViewBtn = document.createElement('button');
-        weekViewBtn.textContent = 'Week';
+        weekViewBtn.textContent = window.currentLang === 'ja' ? '週' : 'Week';
         weekViewBtn.style.padding = '8px 16px';
         weekViewBtn.style.border = '1px solid var(--primary)';
         weekViewBtn.style.borderRadius = '6px';
@@ -1380,7 +1380,7 @@ window.addEventListener('firebaseReady', function() {
         
         // Add Today button
         const todayBtn = document.createElement('button');
-        todayBtn.textContent = 'Today';
+        todayBtn.textContent = window.currentLang === 'ja' ? '今日' : 'Today';
         todayBtn.style.padding = '8px 16px';
         todayBtn.style.border = '1px solid #28a745';
         todayBtn.style.borderRadius = '6px';
@@ -1486,7 +1486,7 @@ window.addEventListener('firebaseReady', function() {
                             <div style="font-weight: bold; font-size: 12px;">${data.employeeName}</div>
                             <div style="color: #666; font-size: 11px;">
                                 ${data.signInTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                ${data.endTime ? ` - ${data.endTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ' - Present'}
+                                ${data.endTime ? ` - ${data.endTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : window.currentLang === 'ja' ? ' - 現在' : ' - Present'}
                             </div>
                         `;
                         cell.appendChild(record);
@@ -1512,7 +1512,7 @@ window.addEventListener('firebaseReady', function() {
                         record.innerHTML = `
                             <div style="font-weight: bold; font-size: 12px; color: #1976d2;">${data.employeeName}</div>
                             <div style="color: #1976d2; font-size: 11px;">
-                                Scheduled: ${data.startTime}
+                                ${window.currentLang === 'ja' ? 'スケジュール:' : 'Scheduled:'} ${data.startTime}
                             </div>
                             <div style="position: absolute; top: 2px; right: 2px; font-size: 10px; color: #f44336; cursor: pointer;" title="Delete scheduled shift">×</div>
                         `;
@@ -1523,7 +1523,7 @@ window.addEventListener('firebaseReady', function() {
                             if (e.target.style.position === 'absolute') {
                                 e.stopPropagation();
                                 showCustomConfirm(
-                                    `Delete scheduled shift for ${data.employeeName}?`,
+                                    `${window.currentLang === 'ja' ? 'スケジュールされたシフトを削除しますか' : 'Delete scheduled shift for'} ${data.employeeName}?`,
                                     async () => {
                                         try {
                                             await deleteDoc(doc.ref);
@@ -1709,7 +1709,7 @@ window.addEventListener('firebaseReady', function() {
 
         // Add week display with date range
         const weekDisplay = document.createElement('div');
-        weekDisplay.textContent = `Week View - ${weekStart.toLocaleDateString()} to ${weekEnd.toLocaleDateString()}`;
+        weekDisplay.textContent = `${window.currentLang === 'ja' ? '週表示' : 'Week View'} - ${weekStart.toLocaleDateString()} to ${weekEnd.toLocaleDateString()}`;
         weekDisplay.style.fontWeight = 'bold';
         weekDisplay.style.color = 'var(--primary)';
         weekDisplay.style.fontSize = '14px';
@@ -1737,7 +1737,7 @@ window.addEventListener('firebaseReady', function() {
         viewToggleContainer.style.marginLeft = '20px';
 
         const monthViewBtn = document.createElement('button');
-        monthViewBtn.textContent = 'Month';
+        monthViewBtn.textContent = window.currentLang === 'ja' ? '月' : 'Month';
         monthViewBtn.style.padding = '8px 16px';
         monthViewBtn.style.border = '1px solid var(--primary)';
         monthViewBtn.style.borderRadius = '6px';
@@ -1751,7 +1751,7 @@ window.addEventListener('firebaseReady', function() {
         };
 
         const weekViewBtn = document.createElement('button');
-        weekViewBtn.textContent = 'Week';
+        weekViewBtn.textContent = window.currentLang === 'ja' ? '週' : 'Week';
         weekViewBtn.style.padding = '8px 16px';
         weekViewBtn.style.border = '1px solid var(--primary)';
         weekViewBtn.style.borderRadius = '6px';
@@ -1769,7 +1769,7 @@ window.addEventListener('firebaseReady', function() {
         
         // Add Today button
         const todayBtn = document.createElement('button');
-        todayBtn.textContent = 'Today';
+        todayBtn.textContent = window.currentLang === 'ja' ? '今日' : 'Today';
         todayBtn.style.padding = '8px 16px';
         todayBtn.style.border = '1px solid #28a745';
         todayBtn.style.borderRadius = '6px';
@@ -1817,7 +1817,7 @@ window.addEventListener('firebaseReady', function() {
         timeHeader.style.display = 'flex';
         timeHeader.style.alignItems = 'center';
         timeHeader.style.justifyContent = 'center';
-        timeHeader.textContent = 'Time';
+        timeHeader.textContent = window.currentLang === 'ja' ? '時間' : 'Time';
         timeColumn.appendChild(timeHeader);
 
         // Create time grid container to match day column height
@@ -2000,7 +2000,7 @@ window.addEventListener('firebaseReady', function() {
                         <div style="font-weight: bold; color: #2e7d32; margin-bottom: 2px; font-size: 9px;">${shift.data.employeeName}</div>
                         <div style="color: #4caf50; font-size: 8px;">
                             ${shift.signInTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            ${shift.data.endTime ? ` - ${shift.endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ' - Present'}
+                            ${shift.data.endTime ? ` - ${shift.endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : window.currentLang === 'ja' ? ' - 現在' : ' - Present'}
                         </div>
                         <div style="color: #4caf50; font-size: 7px; margin-top: 1px;">
                             ${Math.floor(shift.height / 60)}h ${shift.height % 60}m
@@ -2200,7 +2200,7 @@ window.addEventListener('firebaseReady', function() {
                 <div style="font-size: 0.9em; color: #666;">
                     Started: ${signInTime.toLocaleTimeString()}
                     <br>
-                    Duration: ${formatDuration(signInTime, data.endTime)}
+                    ${window.currentLang === 'ja' ? '時間:' : 'Duration:'} ${formatDuration(signInTime, data.endTime)}
                     ${completedBreaks ? `
                         <br>
                         <span style="color: #666;">Breaks taken:<br>${completedBreaks}</span>
@@ -2493,7 +2493,7 @@ window.addEventListener('firebaseReady', function() {
 
         // Cancel button
         const cancelButton = document.createElement('button');
-        cancelButton.textContent = 'Cancel';
+        cancelButton.textContent = window.currentLang === 'ja' ? 'キャンセル' : 'Cancel';
         cancelButton.style.flex = '1';
         cancelButton.style.padding = '12px';
         cancelButton.style.border = '1px solid #e0e0e0';
@@ -2726,7 +2726,7 @@ window.addEventListener('firebaseReady', function() {
 
         // Cancel button
         const cancelButton = document.createElement('button');
-        cancelButton.textContent = 'Cancel';
+        cancelButton.textContent = window.currentLang === 'ja' ? 'キャンセル' : 'Cancel';
         cancelButton.style.flex = '1';
         cancelButton.style.padding = '12px';
         cancelButton.style.border = '1px solid #e0e0e0';
@@ -2742,7 +2742,7 @@ window.addEventListener('firebaseReady', function() {
 
         // Update button
         const updateButton = document.createElement('button');
-        updateButton.textContent = 'Update Shift';
+        updateButton.textContent = window.currentLang === 'ja' ? 'シフト更新' : 'Update Shift';
         updateButton.style.flex = '1';
         updateButton.style.padding = '12px';
         updateButton.style.border = 'none';
@@ -2836,7 +2836,7 @@ window.addEventListener('firebaseReady', function() {
             
             console.log('Successfully deleted scheduled shift');
             console.log('Shift marked as completed:', completedShift);
-            showCustomAlert('Shift marked as completed successfully!', 'success');
+            showCustomAlert(window.currentLang === 'ja' ? 'シフトが正常に完了としてマークされました！' : 'Shift marked as completed successfully!', 'success');
             return true;
         } catch (error) {
             console.error('Error marking shift as completed:', error);
@@ -2997,7 +2997,7 @@ window.addEventListener('firebaseReady', function() {
         breaksSection.style.gap = '8px';
 
         const breaksLabel = document.createElement('label');
-        breaksLabel.textContent = 'Breaks:';
+        breaksLabel.textContent = window.currentLang === 'ja' ? '休憩:' : 'Breaks:';
         breaksLabel.style.fontWeight = 'bold';
         breaksLabel.style.color = '#333';
 
@@ -3010,9 +3010,16 @@ window.addEventListener('firebaseReady', function() {
         // Add existing breaks
         if (shiftData.breaks && shiftData.breaks.length > 0) {
             shiftData.breaks.forEach((breakItem, index) => {
-                const startTimeStr = breakItem.startTime.toDate().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
-                const endTimeStr = breakItem.endTime.toDate().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
-                addBreakRow(breaksContainer, startTimeStr, endTimeStr, index);
+                // Check if startTime and endTime exist and are valid
+                if (breakItem.startTime && breakItem.endTime) {
+                    const startTimeStr = breakItem.startTime.toDate().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+                    const endTimeStr = breakItem.endTime.toDate().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+                    addBreakRow(breaksContainer, startTimeStr, endTimeStr, index);
+                } else if (breakItem.startTime) {
+                    // If only startTime exists (break started but not ended), show as ongoing
+                    const startTimeStr = breakItem.startTime.toDate().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+                    addBreakRow(breaksContainer, startTimeStr, 'Ongoing', index);
+                }
             });
         }
 
@@ -3049,7 +3056,7 @@ window.addEventListener('firebaseReady', function() {
 
         // Cancel button
         const cancelButton = document.createElement('button');
-        cancelButton.textContent = 'Cancel';
+        cancelButton.textContent = window.currentLang === 'ja' ? 'キャンセル' : 'Cancel';
         cancelButton.style.flex = '1';
         cancelButton.style.padding = '12px';
         cancelButton.style.border = '1px solid #e0e0e0';
@@ -3065,7 +3072,7 @@ window.addEventListener('firebaseReady', function() {
 
         // Update button
         const updateButton = document.createElement('button');
-        updateButton.textContent = 'Update Shift';
+        updateButton.textContent = window.currentLang === 'ja' ? 'シフト更新' : 'Update Shift';
         updateButton.style.flex = '1';
         updateButton.style.padding = '12px';
         updateButton.style.border = 'none';
@@ -3350,7 +3357,7 @@ window.addEventListener('firebaseReady', function() {
 
         // Update button
         const updateButton = document.createElement('button');
-        updateButton.textContent = 'Update Shift';
+        updateButton.textContent = window.currentLang === 'ja' ? 'シフト更新' : 'Update Shift';
         updateButton.style.padding = '12px';
         updateButton.style.border = 'none';
         updateButton.style.borderRadius = '8px';
@@ -3394,7 +3401,7 @@ window.addEventListener('firebaseReady', function() {
 
         // Mark as completed button
         const markCompletedButton = document.createElement('button');
-        markCompletedButton.textContent = 'Mark as Completed';
+        markCompletedButton.textContent = window.currentLang === 'ja' ? '完了としてマーク' : 'Mark as Completed';
         markCompletedButton.style.padding = '12px';
         markCompletedButton.style.border = 'none';
         markCompletedButton.style.borderRadius = '8px';
@@ -3421,7 +3428,7 @@ window.addEventListener('firebaseReady', function() {
 
         // Delete button
         const deleteButton = document.createElement('button');
-        deleteButton.textContent = 'Delete Shift';
+        deleteButton.textContent = window.currentLang === 'ja' ? 'シフト削除' : 'Delete Shift';
         deleteButton.style.padding = '12px';
         deleteButton.style.border = '1px solid #dc3545';
         deleteButton.style.borderRadius = '8px';
@@ -3432,7 +3439,7 @@ window.addEventListener('firebaseReady', function() {
         deleteButton.style.fontWeight = 'bold';
         deleteButton.onclick = () => {
             showCustomConfirm(
-                `Delete scheduled shift for ${shiftData.employeeName}?`,
+                `${window.currentLang === 'ja' ? 'スケジュールされたシフトを削除しますか' : 'Delete scheduled shift for'} ${shiftData.employeeName}?`,
                 async () => {
                     try {
                         await deleteDoc(shiftDocRef);
@@ -3448,7 +3455,7 @@ window.addEventListener('firebaseReady', function() {
 
         // Cancel button
         const cancelButton = document.createElement('button');
-        cancelButton.textContent = 'Cancel';
+        cancelButton.textContent = window.currentLang === 'ja' ? 'キャンセル' : 'Cancel';
         cancelButton.style.padding = '12px';
         cancelButton.style.border = '1px solid #e0e0e0';
         cancelButton.style.borderRadius = '8px';
@@ -3614,10 +3621,10 @@ window.addEventListener('firebaseReady', function() {
                             shiftDiv.innerHTML = `
                                 <div style="font-weight: bold;">${shift.date}</div>
                                 <div style="color: #666; margin-top: 5px;">
-                                    Start: ${signInTime.toLocaleTimeString()}
-                                    ${shift.endTime ? `<br>End: ${shift.endTime.toDate().toLocaleTimeString()}` : '<br>Currently working'}
-                                    <br>Duration: ${Math.floor(workDuration / 60)}h ${workDuration % 60}m
-                                    ${breakTimes ? `<br>Breaks:<br>${breakTimes}` : ''}
+                                    ${window.currentLang === 'ja' ? '開始:' : 'Start:'} ${signInTime.toLocaleTimeString()}
+                                    ${shift.endTime ? `<br>${window.currentLang === 'ja' ? '終了:' : 'End:'} ${shift.endTime.toDate().toLocaleTimeString()}` : `<br>${window.currentLang === 'ja' ? '現在作業中' : 'Currently working'}`}
+                                    <br>${window.currentLang === 'ja' ? '時間:' : 'Duration:'} ${Math.floor(workDuration / 60)}h ${workDuration % 60}m
+                                    ${breakTimes ? `<br>${window.currentLang === 'ja' ? '休憩:' : 'Breaks:'}<br>${breakTimes}` : ''}
                                 </div>
                             `;
 
