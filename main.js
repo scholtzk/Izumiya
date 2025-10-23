@@ -431,6 +431,13 @@ function startSquarePaymentVerification() {
                     
                     // Clear the card payment document
                     await window.clearCardPaymentDocument();
+                    
+                    // Clear Pay Later variables to prevent stale data
+                    if (cardPaymentStatus.isPayLater) {
+                        console.log('Clearing Pay Later variables after successful payment (real-time)');
+                        window.payingOrderNumber = null;
+                        window.payingOrderData = null;
+                    }
                     return;
                 } else if (cardPaymentStatus.status === 'failed') {
                     clearInterval(checkInterval);
@@ -1378,6 +1385,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             // Open Square app
             window.SquareIntegration.processCardPayment();
+            
+            // Clear Pay Later variables immediately after initiating Square payment
+            // This prevents stale data from being used in future payments
+            if (isPayLater) {
+                console.log('Clearing Pay Later variables after Square payment initiation');
+                window.payingOrderNumber = null;
+                window.payingOrderData = null;
+            }
         } else {
             // Silently fall back to cash payment
             console.log('Square integration not available, falling back to cash payment');
@@ -1683,6 +1698,13 @@ async function checkCardPaymentStatusOnLoad() {
                 
                 // Clear the card payment document
                 await window.clearCardPaymentDocument();
+                
+                // Clear Pay Later variables to prevent stale data
+                if (cardPaymentStatus.isPayLater) {
+                    console.log('Clearing Pay Later variables after successful payment');
+                    window.payingOrderNumber = null;
+                    window.payingOrderData = null;
+                }
                 
             } else if (cardPaymentStatus.status === 'failed') {
                 // Card payment failed or cancelled
