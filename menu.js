@@ -22,6 +22,8 @@ export const menuData = {
         { name: 'Matcha Latte', name_ja: '抹茶ラテ', price: 690, hasMilk: true },
         { name: 'Hot Cocoa', name_ja: 'ホットココア', price: 650, hasMilk: true },
         { name: 'Tea', name_ja: '紅茶', price: 550, hasMilk: false, hasTea: true },
+        { name: 'Flat White', name_ja: 'フラットホワイト', price: 690, hasMilk: true },
+        { name: 'Extra Shot', name_ja: 'エクストラショット', price: 100, hasMilk: false,},
         { type: 'divider' },
         { name: 'Ice Americano', name_ja: 'アイスアメリカーノ', price: 650, hasMilk: false },
         { name: 'Ice Latte', name_ja: 'アイスラテ', price: 690, hasMilk: true },
