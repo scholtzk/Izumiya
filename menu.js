@@ -55,7 +55,7 @@ export const menuData = {
         { name: 'Tuna Sandwich', name_ja: 'ツナサンド', price: 1500, section: 3 },
         { name: 'Salmon Sandwich', name_ja: 'サーモンサンド', price: 1700, section: 3 },
         { name: 'Fries', name_ja: 'フライドポテト', price: 480, section: 3 },
-        { name: 'Nachos', name_ja: 'ナチョス', price: 1200, section: 3 },
+        { name: 'Nachos', name_ja: 'ナチョス', price: 1250, section: 3 },
         { type: 'divider' },
         { name: 'Ice Cream', name_ja: 'アイスクリーム', price: 490, hasFlavor: true, section: 4 },
         { name: 'Cake', name_ja: 'ケーキ', price: 690, hasFlavor: true, section: 4 },
