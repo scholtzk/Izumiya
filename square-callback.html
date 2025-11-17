@@ -204,6 +204,37 @@
             }
             return dailyOrdersRef;
         }
+        
+        // Helper: Generate order number if missing (fallback)
+        async function generateOrderNumberFallback() {
+            try {
+                const dailyOrdersRef = await getDailyOrdersDoc();
+                const doc = await window.firebaseServices.getDoc(dailyOrdersRef);
+                const data = doc.data() || { orders: {} };
+                
+                const orders = data.orders || {};
+                const completedOrders = Object.entries(orders)
+                    .filter(([key, order]) => key !== 'current' && order && order.orderNumber)
+                    .map(([key, order]) => order);
+                
+                if (completedOrders.length === 0) {
+                    return 1;
+                }
+                
+                let highestOrderNumber = 0;
+                completedOrders.forEach(order => {
+                    const orderNum = parseInt(order.orderNumber, 10);
+                    if (!isNaN(orderNum) && orderNum > highestOrderNumber) {
+                        highestOrderNumber = orderNum;
+                    }
+                });
+                
+                return highestOrderNumber + 1;
+            } catch (error) {
+                console.error('Error generating fallback order number:', error);
+                return 1;
+            }
+        }
 
         // Open ProSurf with query parameters (no redirect to main website)
         function redirectToProSurf(query) {
@@ -339,8 +370,20 @@
                                     throw new Error('No current order found');
                                 }
                                 
+                                // Validate and fix order number if missing or invalid
+                                let orderNumber = current.orderNumber;
+                                if (!orderNumber || isNaN(parseInt(orderNumber, 10)) || parseInt(orderNumber, 10) < 1) {
+                                    addDebug('Order number validation', `Invalid order number: ${orderNumber}, generating fallback`);
+                                    console.warn('Current order has invalid order number:', orderNumber, 'Generating fallback order number');
+                                    orderNumber = await generateOrderNumberFallback();
+                                    addDebug('Generated fallback order number', orderNumber);
+                                } else {
+                                    orderNumber = parseInt(orderNumber, 10);
+                                }
+                                
                                 const completedOrder = {
                                     ...current,
+                                    orderNumber: orderNumber, // Ensure valid order number
                                     paymentMethod: 'Card',
                                     tenderedAmount: current.total,
                                     change: 0,
@@ -352,7 +395,35 @@
                                 
                                 const updated = { ...dailyData.orders };
                                 delete updated.current;
-                                updated[completedOrder.orderNumber] = completedOrder;
+                                
+                                // Check for duplicate order number before saving
+                                if (updated[orderNumber] && updated[orderNumber].orderNumber === orderNumber) {
+                                    const existingOrder = updated[orderNumber];
+                                    const existingTimestamp = existingOrder.timestamp?.seconds || existingOrder.timestamp?.toMillis() || 0;
+                                    const newTimestamp = completedOrder.timestamp?.seconds || completedOrder.timestamp?.toMillis() || Date.now();
+                                    
+                                    // If different orders (different timestamps), prevent overwrite
+                                    if (existingTimestamp !== newTimestamp) {
+                                        addDebug('Duplicate detection', `Order number ${orderNumber} already exists! Generating new number to prevent overwrite`);
+                                        console.warn(`Order number ${orderNumber} already exists! Existing timestamp: ${existingTimestamp}, New timestamp: ${newTimestamp}`);
+                                        // Generate new order number to prevent overwrite
+                                        const validOrderKeys = Object.keys(updated)
+                                            .filter(key => key !== 'current' && !isNaN(parseInt(key, 10)))
+                                            .map(key => parseInt(key, 10));
+                                        const highestOrderNumber = validOrderKeys.length > 0 ? Math.max(...validOrderKeys) : 0;
+                                        const newOrderNumber = highestOrderNumber + 1;
+                                        addDebug('New order number assigned', newOrderNumber);
+                                        console.warn(`Assigning new order number ${newOrderNumber} to prevent overwrite of order ${orderNumber}`);
+                                        completedOrder.orderNumber = newOrderNumber;
+                                        updated[newOrderNumber] = completedOrder;
+                                    } else {
+                                        // Same order being updated, proceed normally
+                                        updated[orderNumber] = completedOrder;
+                                    }
+                                } else {
+                                    // No duplicate, save normally
+                                    updated[orderNumber] = completedOrder;
+                                }
                                 
                                 await window.firebaseServices.updateDoc(dailyOrdersRef, {
                                     orders: updated,

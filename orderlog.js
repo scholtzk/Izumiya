@@ -55,6 +55,13 @@ export async function addOrderToDaily(completedOrder) {
 
 export async function moveCurrentOrderToCompleted(completedOrder) {
     try {
+        // Validate order number before proceeding
+        if (!completedOrder.orderNumber || isNaN(parseInt(completedOrder.orderNumber, 10)) || parseInt(completedOrder.orderNumber, 10) < 1) {
+            console.error('Invalid order number in completedOrder:', completedOrder.orderNumber);
+            throw new Error(`Invalid order number: ${completedOrder.orderNumber}. Cannot save order.`);
+        }
+        
+        const orderNumber = parseInt(completedOrder.orderNumber, 10);
         const dailyOrdersRef = await getDailyOrdersDoc();
         const doc = await window.firebaseServices.getDoc(dailyOrdersRef);
         const data = doc.data();
@@ -62,7 +69,34 @@ export async function moveCurrentOrderToCompleted(completedOrder) {
         // Remove the current order and add the completed order
         const updatedOrders = { ...data.orders };
         delete updatedOrders.current; // Remove current order
-        updatedOrders[completedOrder.orderNumber] = completedOrder; // Add completed order
+        
+        // Check for duplicate order number - if it exists, append timestamp to prevent overwrite
+        if (updatedOrders[orderNumber] && updatedOrders[orderNumber].orderNumber === orderNumber) {
+            const existingOrder = updatedOrders[orderNumber];
+            const existingTimestamp = existingOrder.timestamp?.seconds || existingOrder.timestamp?.toMillis() || 0;
+            const newTimestamp = completedOrder.timestamp?.seconds || completedOrder.timestamp?.toMillis() || Date.now();
+            
+            // Only warn if it's a different order (different timestamp or different items)
+            if (existingTimestamp !== newTimestamp) {
+                console.warn(`Order number ${orderNumber} already exists! Existing order timestamp: ${existingTimestamp}, New order timestamp: ${newTimestamp}`);
+                console.warn('This indicates a duplicate order number assignment. The new order will overwrite the existing one.');
+                // Generate a new unique order number to prevent overwrite
+                const validOrderKeys = Object.keys(updatedOrders)
+                    .filter(key => key !== 'current' && !isNaN(parseInt(key, 10)))
+                    .map(key => parseInt(key, 10));
+                const highestOrderNumber = validOrderKeys.length > 0 ? Math.max(...validOrderKeys) : 0;
+                const newOrderNumber = highestOrderNumber + 1;
+                console.warn(`Assigning new order number ${newOrderNumber} to prevent overwrite of order ${orderNumber}`);
+                completedOrder.orderNumber = newOrderNumber;
+                updatedOrders[newOrderNumber] = completedOrder;
+            } else {
+                // Same order being updated, proceed normally
+                updatedOrders[orderNumber] = completedOrder;
+            }
+        } else {
+            // No duplicate, save normally
+            updatedOrders[orderNumber] = completedOrder;
+        }
         
         await window.firebaseServices.updateDoc(dailyOrdersRef, {
             orders: updatedOrders,
@@ -223,11 +257,33 @@ export async function generateOrderNumber() {
         // Get all completed orders (exclude 'current')
         const orders = data.orders;
         const completedOrders = Object.entries(orders)
-            .filter(([key, order]) => key !== 'current' && order.orderNumber)
+            .filter(([key, order]) => {
+                // Exclude 'current' and invalid keys
+                if (key === 'current') return false;
+                // Check for orders with invalid keys (undefined, null, etc.)
+                if (key === 'undefined' || key === 'null' || key === '0' || isNaN(parseInt(key, 10))) {
+                    console.warn(`Found order with invalid key: "${key}". This order may have been saved incorrectly.`);
+                    // Still include it if it has a valid orderNumber property
+                    return order && order.orderNumber;
+                }
+                return order && order.orderNumber;
+            })
             .map(([key, order]) => order);
         
         console.log('All orders in Firestore:', orders);
         console.log('Completed orders found:', completedOrders);
+        
+        // Also check for orders saved with invalid keys that might have valid orderNumbers
+        Object.entries(orders).forEach(([key, order]) => {
+            if (key !== 'current' && order && order.orderNumber) {
+                const keyNum = parseInt(key, 10);
+                const orderNum = parseInt(order.orderNumber, 10);
+                // If key doesn't match orderNumber, this is a problem
+                if (!isNaN(orderNum) && (isNaN(keyNum) || keyNum !== orderNum)) {
+                    console.warn(`Order mismatch: Key "${key}" does not match orderNumber ${orderNum}. This order may be stored incorrectly.`);
+                }
+            }
+        });
         
         if (completedOrders.length === 0) {
             // No completed orders today, start with 1

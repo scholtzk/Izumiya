@@ -622,6 +622,9 @@ async function fetchOrders(start, end) {
     }
 }
 
+// Make fetchOrders available globally
+window.fetchOrders = fetchOrders;
+
 // Update sales trend chart
 function updateSalesTrendChart(orders) {
     const salesByDate = {};
