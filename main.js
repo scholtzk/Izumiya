@@ -441,8 +441,24 @@ function startSquarePaymentVerification() {
                         // Refresh UI based on payment type
                         if (cardPaymentStatus.isPayLater) {
                             // Pay Later order - refresh order log
-                            if (window.displayOrderLog) {
-                                window.displayOrderLog();
+                            const orderLogContainer = document.querySelector('.order-log-container');
+                            if (orderLogContainer && window.displayOrderLog) {
+                                console.log('Refreshing order log for Pay Later order after card payment success');
+                                try {
+                                    await window.displayOrderLog(
+                                        orderLogContainer,
+                                        window.getDisplayName,
+                                        window.translate || window.t || ((k) => k),
+                                        window.updateOrderInDaily,
+                                        window.getOrderByNumber,
+                                        window.showCustomAlert
+                                    );
+                                    console.log('Order log refreshed successfully for Pay Later order');
+                                } catch (error) {
+                                    console.error('Error refreshing order log for Pay Later order:', error);
+                                }
+                            } else {
+                                console.log('Order log container not found - will refresh when Order Log tab is opened');
                             }
                         } else {
                             // Current order - initialize new order and refresh order log
@@ -455,8 +471,23 @@ function startSquarePaymentVerification() {
                                     console.error('Error initializing new order:', error);
                                 }
                             }
-                            if (window.displayOrderLog) {
-                                window.displayOrderLog();
+                            // Refresh order log for current orders too
+                            const orderLogContainer = document.querySelector('.order-log-container');
+                            if (orderLogContainer && window.displayOrderLog) {
+                                console.log('Refreshing order log after current order card payment success');
+                                try {
+                                    await window.displayOrderLog(
+                                        orderLogContainer,
+                                        window.getDisplayName,
+                                        window.translate || window.t || ((k) => k),
+                                        window.updateOrderInDaily,
+                                        window.getOrderByNumber,
+                                        window.showCustomAlert
+                                    );
+                                    console.log('Order log refreshed successfully for current order');
+                                } catch (error) {
+                                    console.error('Error refreshing order log for current order:', error);
+                                }
                             }
                         }
                         
@@ -558,8 +589,24 @@ function startSquarePaymentVerificationFallback() {
                     // Refresh UI based on payment type
                     if (cardPaymentStatus.isPayLater) {
                         // Pay Later order - refresh order log
-                        if (window.displayOrderLog) {
-                            window.displayOrderLog();
+                        const orderLogContainer = document.querySelector('.order-log-container');
+                        if (orderLogContainer && window.displayOrderLog) {
+                            console.log('Refreshing order log for Pay Later order after card payment success (fallback)');
+                            try {
+                                await window.displayOrderLog(
+                                    orderLogContainer,
+                                    window.getDisplayName,
+                                    window.translate || window.t || ((k) => k),
+                                    window.updateOrderInDaily,
+                                    window.getOrderByNumber,
+                                    window.showCustomAlert
+                                );
+                                console.log('Order log refreshed successfully for Pay Later order (fallback)');
+                            } catch (error) {
+                                console.error('Error refreshing order log for Pay Later order (fallback):', error);
+                            }
+                        } else {
+                            console.log('Order log container not found - will refresh when Order Log tab is opened (fallback)');
                         }
                     } else {
                         // Current order - initialize new order and refresh order log
@@ -572,8 +619,23 @@ function startSquarePaymentVerificationFallback() {
                                 console.error('Error initializing new order (fallback):', error);
                             }
                         }
-                        if (window.displayOrderLog) {
-                            window.displayOrderLog();
+                        // Refresh order log for current orders too
+                        const orderLogContainer = document.querySelector('.order-log-container');
+                        if (orderLogContainer && window.displayOrderLog) {
+                            console.log('Refreshing order log after current order card payment success (fallback)');
+                            try {
+                                await window.displayOrderLog(
+                                    orderLogContainer,
+                                    window.getDisplayName,
+                                    window.translate || window.t || ((k) => k),
+                                    window.updateOrderInDaily,
+                                    window.getOrderByNumber,
+                                    window.showCustomAlert
+                                );
+                                console.log('Order log refreshed successfully for current order (fallback)');
+                            } catch (error) {
+                                console.error('Error refreshing order log for current order (fallback):', error);
+                            }
                         }
                     }
                     
@@ -1864,8 +1926,24 @@ async function checkCardPaymentStatusOnLoad() {
                 // Refresh UI based on payment type
                 if (cardPaymentStatus.isPayLater) {
                     // Pay Later order - refresh order log
-                    if (window.displayOrderLog) {
-                        window.displayOrderLog();
+                    const orderLogContainer = document.querySelector('.order-log-container');
+                    if (orderLogContainer && window.displayOrderLog) {
+                        console.log('Refreshing order log for Pay Later order after card payment success (on load)');
+                        try {
+                            await window.displayOrderLog(
+                                orderLogContainer,
+                                window.getDisplayName,
+                                window.translate || window.t || ((k) => k),
+                                window.updateOrderInDaily,
+                                window.getOrderByNumber,
+                                window.showCustomAlert
+                            );
+                            console.log('Order log refreshed successfully for Pay Later order (on load)');
+                        } catch (error) {
+                            console.error('Error refreshing order log for Pay Later order (on load):', error);
+                        }
+                    } else {
+                        console.log('Order log container not found - will refresh when Order Log tab is opened (on load)');
                     }
                 } else {
                     // Current order - initialize new order and refresh order log
@@ -1878,8 +1956,23 @@ async function checkCardPaymentStatusOnLoad() {
                             console.error('Error initializing new order (on load):', error);
                         }
                     }
-                    if (window.displayOrderLog) {
-                        window.displayOrderLog();
+                    // Refresh order log for current orders too
+                    const orderLogContainer = document.querySelector('.order-log-container');
+                    if (orderLogContainer && window.displayOrderLog) {
+                        console.log('Refreshing order log after current order card payment success (on load)');
+                        try {
+                            await window.displayOrderLog(
+                                orderLogContainer,
+                                window.getDisplayName,
+                                window.translate || window.t || ((k) => k),
+                                window.updateOrderInDaily,
+                                window.getOrderByNumber,
+                                window.showCustomAlert
+                            );
+                            console.log('Order log refreshed successfully for current order (on load)');
+                        } catch (error) {
+                            console.error('Error refreshing order log for current order (on load):', error);
+                        }
                     }
                 }
                 
