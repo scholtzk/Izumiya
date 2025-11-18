@@ -282,6 +282,7 @@ window.selectPaymentMethod = selectPaymentMethod;
 let squarePaymentWaiting = false;
 let squarePaymentTimeout = null;
 let squarePaymentOrderNumber = null;
+let cardPaymentListenerUnsubscribe = null; // Store unsubscribe function for Firebase listener
 
 // Show Square payment waiting popup
 async function showSquarePaymentWaiting(orderNumber) {
@@ -370,14 +371,151 @@ async function showSquarePaymentWaiting(orderNumber) {
         cancelSquarePayment();
     });
     
-    // Start verification polling
+    // Start real-time verification listener
     startSquarePaymentVerification();
     
     console.log('Square payment waiting popup displayed successfully');
 }
 
-// Start polling for payment verification
+// Start real-time Firebase listener for payment verification
 function startSquarePaymentVerification() {
+    // Clean up any existing listener first
+    if (cardPaymentListenerUnsubscribe) {
+        console.log('Cleaning up existing card payment listener');
+        cardPaymentListenerUnsubscribe();
+        cardPaymentListenerUnsubscribe = null;
+    }
+    
+    // Set up real-time Firebase listener for card payment status
+    try {
+        const cardPaymentRef = window.firebaseServices.doc(window.firebaseDb, 'cardPaymentProcessing', 'current');
+        
+        console.log('Setting up real-time Firebase listener for card payment status');
+        
+        // Use onSnapshot for real-time updates - this will fire immediately when the document changes
+        cardPaymentListenerUnsubscribe = window.firebaseServices.onSnapshot(
+            cardPaymentRef,
+            async (docSnapshot) => {
+                // Only process if we're still waiting for payment
+                if (!squarePaymentWaiting) {
+                    console.log('Payment waiting flag is false, ignoring listener update');
+                    return;
+                }
+                
+                try {
+                    if (!docSnapshot.exists()) {
+                        console.log('Card payment document does not exist');
+                        return;
+                    }
+                    
+                    const cardPaymentStatus = docSnapshot.data();
+                    console.log('Card payment status update received:', cardPaymentStatus);
+                    
+                    if (cardPaymentStatus.status === 'success') {
+                        console.log('Card payment completed successfully - detected via real-time listener');
+                        
+                        // Clean up listener immediately to prevent duplicate handling
+                        if (cardPaymentListenerUnsubscribe) {
+                            cardPaymentListenerUnsubscribe();
+                            cardPaymentListenerUnsubscribe = null;
+                        }
+                        
+                        // Dismiss popup and handle success
+                        squarePaymentWaiting = false;
+                        const waitingOverlay = document.getElementById('squarePaymentWaiting');
+                        if (waitingOverlay) {
+                            waitingOverlay.remove();
+                        }
+                        
+                        if (window.showCustomAlert) {
+                            window.showCustomAlert('Card payment completed successfully!', 'success');
+                        }
+                        
+                        // Refresh UI based on payment type
+                        if (cardPaymentStatus.isPayLater) {
+                            // Pay Later order - close payment modal and refresh order log
+                            const paymentModal = document.getElementById('paymentModal');
+                            if (paymentModal) {
+                                paymentModal.style.display = 'none';
+                            }
+                            
+                            if (window.displayOrderLog) {
+                                window.displayOrderLog();
+                            }
+                        } else {
+                            if (window.initializeOrder) {
+                                window.initializeOrder();
+                            }
+                            if (window.displayOrderLog) {
+                                window.displayOrderLog();
+                            }
+                        }
+                        
+                        // Clear the card payment document
+                        await window.clearCardPaymentDocument();
+                        
+                        // Clear Pay Later variables to prevent stale data
+                        if (cardPaymentStatus.isPayLater) {
+                            console.log('Clearing Pay Later variables after successful payment (real-time)');
+                            window.payingOrderNumber = null;
+                            window.payingOrderData = null;
+                        }
+                        
+                    } else if (cardPaymentStatus.status === 'failed') {
+                        console.log('Card payment failed - detected via real-time listener');
+                        
+                        // Clean up listener immediately to prevent duplicate handling
+                        if (cardPaymentListenerUnsubscribe) {
+                            cardPaymentListenerUnsubscribe();
+                            cardPaymentListenerUnsubscribe = null;
+                        }
+                        
+                        // Dismiss popup and handle failure
+                        squarePaymentWaiting = false;
+                        const waitingOverlay = document.getElementById('squarePaymentWaiting');
+                        if (waitingOverlay) {
+                            waitingOverlay.remove();
+                        }
+                        
+                        if (window.showCustomAlert) {
+                            if (cardPaymentStatus.errorCode === 'payment_canceled') {
+                                window.showCustomAlert('Card payment cancelled', 'info');
+                            } else {
+                                const errorMsg = cardPaymentStatus.errorMessage || 'Payment failed';
+                                window.showCustomAlert(`Card payment failed: ${errorMsg}`, 'error');
+                            }
+                        }
+                        
+                        // Clear the card payment document
+                        await window.clearCardPaymentDocument();
+                    }
+                    // If status is still 'processing', do nothing - wait for next update
+                } catch (error) {
+                    console.error('Error handling card payment status update:', error);
+                }
+            },
+            (error) => {
+                console.error('Error in card payment listener:', error);
+                // Don't clean up listener on error - Firebase will retry automatically
+                // But we can fall back to polling if listener fails
+                console.log('Falling back to polling mechanism due to listener error');
+                startSquarePaymentVerificationFallback();
+            }
+        );
+        
+        console.log('Real-time Firebase listener set up successfully');
+        
+    } catch (error) {
+        console.error('Error setting up card payment listener:', error);
+        // Fall back to polling if listener setup fails
+        console.log('Falling back to polling mechanism');
+        startSquarePaymentVerificationFallback();
+    }
+}
+
+// Fallback polling mechanism (kept as backup)
+function startSquarePaymentVerificationFallback() {
+    console.log('Starting fallback polling mechanism');
     const checkInterval = setInterval(async () => {
         if (!squarePaymentWaiting) {
             clearInterval(checkInterval);
@@ -385,15 +523,7 @@ function startSquarePaymentVerification() {
         }
         
         try {
-            // Check Square payment status
-            const paymentCompleted = await checkSquarePaymentStatus();
-            if (paymentCompleted) {
-                clearInterval(checkInterval);
-                handleSquarePaymentSuccess();
-                return;
-            }
-            
-            // Also check card payment document status
+            // Check card payment document status
             const cardPaymentStatus = await window.checkCardPaymentStatus();
             if (cardPaymentStatus) {
                 if (cardPaymentStatus.status === 'success') {
@@ -411,12 +541,10 @@ function startSquarePaymentVerification() {
                     
                     // Refresh UI based on payment type
                     if (cardPaymentStatus.isPayLater) {
-                        // Pay Later order - close payment modal and refresh order log
                         const paymentModal = document.getElementById('paymentModal');
                         if (paymentModal) {
                             paymentModal.style.display = 'none';
                         }
-                        
                         if (window.displayOrderLog) {
                             window.displayOrderLog();
                         }
@@ -429,19 +557,15 @@ function startSquarePaymentVerification() {
                         }
                     }
                     
-                    // Clear the card payment document
                     await window.clearCardPaymentDocument();
                     
-                    // Clear Pay Later variables to prevent stale data
                     if (cardPaymentStatus.isPayLater) {
-                        console.log('Clearing Pay Later variables after successful payment (real-time)');
                         window.payingOrderNumber = null;
                         window.payingOrderData = null;
                     }
                     return;
                 } else if (cardPaymentStatus.status === 'failed') {
                     clearInterval(checkInterval);
-                    // Dismiss popup and handle failure
                     squarePaymentWaiting = false;
                     const waitingOverlay = document.getElementById('squarePaymentWaiting');
                     if (waitingOverlay) {
@@ -457,13 +581,12 @@ function startSquarePaymentVerification() {
                         }
                     }
                     
-                    // Clear the card payment document
                     await window.clearCardPaymentDocument();
                     return;
                 }
             }
         } catch (error) {
-            console.error('Error checking Square payment status:', error);
+            console.error('Error checking Square payment status (fallback):', error);
         }
     }, 2000); // Check every 2 seconds
 }
@@ -674,6 +797,13 @@ async function handleSquarePaymentSuccess() {
 // Cancel Square payment
 async function cancelSquarePayment() {
     squarePaymentWaiting = false;
+    
+    // Clean up Firebase listener
+    if (cardPaymentListenerUnsubscribe) {
+        console.log('Cleaning up card payment listener on cancel');
+        cardPaymentListenerUnsubscribe();
+        cardPaymentListenerUnsubscribe = null;
+    }
     
     // Remove waiting overlay
     const waitingOverlay = document.getElementById('squarePaymentWaiting');
@@ -1185,6 +1315,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Function to perform cleanup
     function performCleanup() {
         try {
+            // Clean up Firebase listener
+            if (cardPaymentListenerUnsubscribe) {
+                console.log('Cleaning up card payment listener on page unload');
+                cardPaymentListenerUnsubscribe();
+                cardPaymentListenerUnsubscribe = null;
+            }
+            
             if (paymentModalCleanup && typeof paymentModalCleanup === 'function') {
                 paymentModalCleanup();
             }
@@ -1483,9 +1620,24 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (document.hidden) {
             // App is going to background, perform minimal cleanup
             console.log('App going to background, performing cleanup');
+            // Note: We keep the Firebase listener active so it can detect updates even when app is backgrounded
+            // The listener will fire when the app returns to foreground
         } else {
             // App is coming back to foreground, check system health
             console.log('App returning to foreground, checking system health');
+            // Re-check card payment status when app returns to foreground
+            // This handles the case where payment completed while app was backgrounded
+            if (squarePaymentWaiting) {
+                console.log('Payment was waiting, re-checking status after returning to foreground');
+                window.checkCardPaymentStatus().then(status => {
+                    if (status && (status.status === 'success' || status.status === 'failed')) {
+                        // Status changed while backgrounded - listener should have caught it, but double-check
+                        console.log('Payment status changed while app was backgrounded:', status.status);
+                    }
+                }).catch(err => {
+                    console.error('Error checking payment status after returning to foreground:', err);
+                });
+            }
             setTimeout(() => {
                 if (!checkSystemHealth()) {
                     console.warn('System health check failed after returning to foreground');
@@ -1655,6 +1807,13 @@ async function clearCardPaymentDocument() {
 // Check card payment status on app load
 async function checkCardPaymentStatusOnLoad() {
     try {
+        // Clean up any existing listener from previous session
+        if (cardPaymentListenerUnsubscribe) {
+            console.log('Cleaning up existing card payment listener on app load');
+            cardPaymentListenerUnsubscribe();
+            cardPaymentListenerUnsubscribe = null;
+        }
+        
         const cardPaymentStatus = await window.checkCardPaymentStatus();
         if (cardPaymentStatus) {
             console.log('Card payment status found:', cardPaymentStatus);

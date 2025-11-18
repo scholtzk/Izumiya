@@ -1216,7 +1216,8 @@ async function showOpenTillModal() {
         input.type = 'number';
         input.min = '0';
         input.step = '1';
-        input.value = '0';
+        input.value = '';
+        input.placeholder = '0';
         input.style.width = '56px';
         input.style.flexShrink = '0';
         input.style.padding = '6px 8px';
@@ -1304,7 +1305,8 @@ async function showOpenTillModal() {
             e.preventDefault();
             const currentValue = parseInt(input.value) || 0;
             const newValue = Math.max(0, currentValue - 1);
-            input.value = newValue;
+            // Show empty string if value is 0, otherwise show the value
+            input.value = newValue === 0 ? '' : newValue.toString();
             input.dispatchEvent(new Event('input'));
         };
         
@@ -1384,22 +1386,55 @@ async function showOpenTillModal() {
             const cashflowDoc = await window.firebaseServices.getDoc(cashflowRef);
             
             if (cashflowDoc.exists()) {
+                // Load existing open float data
                 const data = cashflowDoc.data();
                 if (data.floatAmounts && Array.isArray(data.floatAmounts)) {
                     data.floatAmounts.forEach(item => {
                         if (floatInputRefs[item.denomination]) {
-                            floatInputRefs[item.denomination].value = item.count;
+                            // Show blank if count is 0, otherwise show the count
+                            floatInputRefs[item.denomination].value = item.count === 0 ? '' : item.count.toString();
                             floatInputRefs[item.denomination].dispatchEvent(new Event('input'));
                         }
                     });
                 }
             } else {
-                denominations.forEach(denom => {
-                    if (floatInputRefs[denom.value]) {
-                        floatInputRefs[denom.value].value = '0';
-                        floatInputRefs[denom.value].dispatchEvent(new Event('input'));
+                // No open document exists - load yesterday's close float amounts
+                const previousDay = new Date(selectedDate);
+                previousDay.setDate(previousDay.getDate() - 1);
+                const previousDateKey = formatDateForCashFlow(previousDay) + '-close';
+                const previousCashflowRef = window.firebaseServices.doc(window.firebaseDb, 'cashflow', previousDateKey);
+                const previousCashflowDoc = await window.firebaseServices.getDoc(previousCashflowRef);
+                
+                if (previousCashflowDoc.exists()) {
+                    const previousData = previousCashflowDoc.data();
+                    // Load yesterday's new float amounts (which becomes today's open float)
+                    if (previousData.newFloatAmounts && Array.isArray(previousData.newFloatAmounts)) {
+                        previousData.newFloatAmounts.forEach(item => {
+                            if (floatInputRefs[item.denomination]) {
+                                // Show blank if count is 0, otherwise show the count
+                                floatInputRefs[item.denomination].value = item.count === 0 ? '' : item.count.toString();
+                                floatInputRefs[item.denomination].dispatchEvent(new Event('input'));
+                            }
+                        });
+                        console.log('Loaded yesterday\'s close float as today\'s open float');
+                    } else {
+                        // Fallback: if no breakdown exists, set all to blank
+                        denominations.forEach(denom => {
+                            if (floatInputRefs[denom.value]) {
+                                floatInputRefs[denom.value].value = '';
+                                floatInputRefs[denom.value].dispatchEvent(new Event('input'));
+                            }
+                        });
                     }
-                });
+                } else {
+                    // No previous day data - set all to blank
+                    denominations.forEach(denom => {
+                        if (floatInputRefs[denom.value]) {
+                            floatInputRefs[denom.value].value = '';
+                            floatInputRefs[denom.value].dispatchEvent(new Event('input'));
+                        }
+                    });
+                }
             }
         } catch (error) {
             console.error('Error loading existing data:', error);
@@ -1659,7 +1694,8 @@ async function showCloseTillModal() {
         input.type = 'number';
         input.min = '0';
         input.step = '1';
-        input.value = '0';
+        input.value = '';
+        input.placeholder = '0';
         input.style.width = '56px';
         input.style.flexShrink = '0';
         input.style.padding = '6px 8px';
@@ -1747,7 +1783,8 @@ async function showCloseTillModal() {
             e.preventDefault();
             const currentValue = parseInt(input.value) || 0;
             const newValue = Math.max(0, currentValue - 1);
-            input.value = newValue;
+            // Show empty string if value is 0, otherwise show the value
+            input.value = newValue === 0 ? '' : newValue.toString();
             input.dispatchEvent(new Event('input'));
         };
         
@@ -2024,7 +2061,8 @@ async function showCloseTillModal() {
                 if (data.actualAmounts && Array.isArray(data.actualAmounts)) {
                     data.actualAmounts.forEach(item => {
                         if (inputRefs[item.denomination]) {
-                            inputRefs[item.denomination].value = item.count;
+                            // Show blank if count is 0, otherwise show the count
+                            inputRefs[item.denomination].value = item.count === 0 ? '' : item.count.toString();
                             // Trigger update to refresh display
                             inputRefs[item.denomination].dispatchEvent(new Event('input'));
                         }
@@ -2035,7 +2073,8 @@ async function showCloseTillModal() {
                 if (data.newFloatAmounts && Array.isArray(data.newFloatAmounts)) {
                     data.newFloatAmounts.forEach(item => {
                         if (newFloatInputRefs[item.denomination]) {
-                            newFloatInputRefs[item.denomination].value = item.count;
+                            // Show blank if count is 0, otherwise show the count
+                            newFloatInputRefs[item.denomination].value = item.count === 0 ? '' : item.count.toString();
                             // Trigger update to refresh display
                             newFloatInputRefs[item.denomination].dispatchEvent(new Event('input'));
                         }
@@ -2048,14 +2087,14 @@ async function showCloseTillModal() {
                     // We'll save in new format going forward
                 }
             } else {
-                // Clear inputs if no data exists
+                // Clear inputs if no data exists - set to blank
                 denominations.forEach(denom => {
                     if (inputRefs[denom.value]) {
-                        inputRefs[denom.value].value = '0';
+                        inputRefs[denom.value].value = '';
                         inputRefs[denom.value].dispatchEvent(new Event('input'));
                     }
                     if (newFloatInputRefs[denom.value]) {
-                        newFloatInputRefs[denom.value].value = '0';
+                        newFloatInputRefs[denom.value].value = '';
                         newFloatInputRefs[denom.value].dispatchEvent(new Event('input'));
                     }
                 });

@@ -20,7 +20,7 @@
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
-        import { getFirestore, collection, addDoc, getDocs, query, orderBy, updateDoc, doc, deleteDoc, getDoc, Timestamp, setDoc, where, connectFirestoreEmulator, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, updateDoc, doc, deleteDoc, getDoc, Timestamp, setDoc, where, connectFirestoreEmulator, enableNetwork, disableNetwork, onSnapshot } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -100,6 +100,7 @@
             deleteDoc: async (...args) => await retryFirestoreOperation(() => deleteDoc(...args)),
             getDoc: async (...args) => await retryFirestoreOperation(() => getDoc(...args)),
             getDocs: async (...args) => await retryFirestoreOperation(() => getDocs(...args)),
+            onSnapshot, // Real-time listener (no retry wrapper needed - it handles reconnection automatically)
             query,
             where,
             orderBy,
