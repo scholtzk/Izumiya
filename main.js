@@ -431,20 +431,29 @@ function startSquarePaymentVerification() {
                             window.showCustomAlert('Card payment completed successfully!', 'success');
                         }
                         
+                        // Close payment modal for all payment types
+                        const paymentModal = document.getElementById('paymentModal');
+                        if (paymentModal) {
+                            paymentModal.style.display = 'none';
+                            console.log('Payment modal closed after successful card payment');
+                        }
+                        
                         // Refresh UI based on payment type
                         if (cardPaymentStatus.isPayLater) {
-                            // Pay Later order - close payment modal and refresh order log
-                            const paymentModal = document.getElementById('paymentModal');
-                            if (paymentModal) {
-                                paymentModal.style.display = 'none';
-                            }
-                            
+                            // Pay Later order - refresh order log
                             if (window.displayOrderLog) {
                                 window.displayOrderLog();
                             }
                         } else {
-                            if (window.initializeOrder) {
-                                window.initializeOrder();
+                            // Current order - initialize new order and refresh order log
+                            if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
+                                console.log('Initializing new order after card payment success');
+                                try {
+                                    await window.initializeOrder(window.generateOrderNumber, window.showCustomAlert);
+                                    console.log('New order initialized successfully');
+                                } catch (error) {
+                                    console.error('Error initializing new order:', error);
+                                }
                             }
                             if (window.displayOrderLog) {
                                 window.displayOrderLog();
@@ -539,18 +548,29 @@ function startSquarePaymentVerificationFallback() {
                         window.showCustomAlert('Card payment completed successfully!', 'success');
                     }
                     
+                    // Close payment modal for all payment types
+                    const paymentModal = document.getElementById('paymentModal');
+                    if (paymentModal) {
+                        paymentModal.style.display = 'none';
+                        console.log('Payment modal closed after successful card payment (fallback)');
+                    }
+                    
                     // Refresh UI based on payment type
                     if (cardPaymentStatus.isPayLater) {
-                        const paymentModal = document.getElementById('paymentModal');
-                        if (paymentModal) {
-                            paymentModal.style.display = 'none';
-                        }
+                        // Pay Later order - refresh order log
                         if (window.displayOrderLog) {
                             window.displayOrderLog();
                         }
                     } else {
-                        if (window.initializeOrder) {
-                            window.initializeOrder();
+                        // Current order - initialize new order and refresh order log
+                        if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
+                            console.log('Initializing new order after card payment success (fallback)');
+                            try {
+                                await window.initializeOrder(window.generateOrderNumber, window.showCustomAlert);
+                                console.log('New order initialized successfully (fallback)');
+                            } catch (error) {
+                                console.error('Error initializing new order (fallback):', error);
+                            }
                         }
                         if (window.displayOrderLog) {
                             window.displayOrderLog();
@@ -1834,21 +1854,29 @@ async function checkCardPaymentStatusOnLoad() {
                     window.showCustomAlert('Card payment completed successfully!', 'success');
                 }
                 
+                // Close payment modal for all payment types
+                const paymentModal = document.getElementById('paymentModal');
+                if (paymentModal) {
+                    paymentModal.style.display = 'none';
+                    console.log('Payment modal closed after successful card payment (on load)');
+                }
+                
                 // Refresh UI based on payment type
                 if (cardPaymentStatus.isPayLater) {
-                    // Pay Later order - close payment modal and refresh order log
-                    const paymentModal = document.getElementById('paymentModal');
-                    if (paymentModal) {
-                        paymentModal.style.display = 'none';
-                    }
-                    
+                    // Pay Later order - refresh order log
                     if (window.displayOrderLog) {
                         window.displayOrderLog();
                     }
                 } else {
-                    // Current order - refresh current order and order log
-                    if (window.initializeOrder) {
-                        window.initializeOrder();
+                    // Current order - initialize new order and refresh order log
+                    if (window.initializeOrder && window.generateOrderNumber && window.showCustomAlert) {
+                        console.log('Initializing new order after card payment success (on load)');
+                        try {
+                            await window.initializeOrder(window.generateOrderNumber, window.showCustomAlert);
+                            console.log('New order initialized successfully (on load)');
+                        } catch (error) {
+                            console.error('Error initializing new order (on load):', error);
+                        }
                     }
                     if (window.displayOrderLog) {
                         window.displayOrderLog();
